@@ -14,16 +14,34 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
+import { usePage } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import { Users, BookOpen, Folder, LayoutGrid } from 'lucide-vue-next'
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const page = usePage()
+const user = page.props.auth.user
+
+const mainNavItems = ref<NavItem[]>([])
+
+if (user?.role === 'admin') {
+    mainNavItems.value = [
+        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+        { title: 'User Management', href: '/users', icon: Users },
+        { title: 'System Settings', href: '/settings', icon: Folder },
+    ]
+} else if (user?.role === 'teacher') {
+    mainNavItems.value = [
+        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+        { title: 'My Classes', href: '/classes', icon: Folder },
+        { title: 'Assignments', href: '/assignments', icon: BookOpen },
+    ]
+} else {
+    mainNavItems.value = [
+        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+        { title: 'My Courses', href: '/courses', icon: BookOpen },
+    ]
+}
 
 const footerNavItems: NavItem[] = [
     {
