@@ -8,6 +8,9 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ForumController;
+
+Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
 
 Route::middleware(['auth'])->group(function () {
     Route::middleware('can:isAdmin')->group(function () {
@@ -16,7 +19,7 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
-Route::get('/users', [UserController::class, 'index']);
+Route::get('/users', [UserController::class, 'index'])->name('users.index');
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -42,3 +45,9 @@ Route::get('/test-gate', function () {
         'isAdmin' => Gate::allows('isAdmin'),
     ];
 });
+
+// Add this line for your forum
+Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+
+// You'll probably want a "create post" page later, so you can add this too:
+// Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');
