@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { Head, router, Link } from '@inertiajs/vue3'; // 👈 1. Import Link
+import { ref, watch, defineProps } from 'vue';
 import { type BreadcrumbItem } from '@/types';
+import { route } from 'ziggy-js';
 
 // Props from the controller
 const props = defineProps<{
@@ -11,20 +12,21 @@ const props = defineProps<{
             id: number;
             name: string;
             email: string;
-            role: string;
-            created_at: string; // We'll get this from the controller
+            roles: Array<{ name: string }>; // It's an array of role objects
+            created_at: string;
         }>;
-        // ... pagination links etc. if you use pagination
+        links: Array<any>;
     };
     filters: {
         role: string;
         sort: string;
     };
+    roles: string[];
 }>();
 
 // Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Manage User', href: route('users.index') },
+    { title: 'Users', href: route('users.index') },
 ];
 
 // Refs for filter and sort dropdowns
@@ -57,30 +59,31 @@ watch([roleFilter, sortOrder], () => {
         },
     );
 });
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 </script>
 
 <template>
-    <Head title="Manage User" />
+    <Head title="Users" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="max-w-4xl mx-auto p-4 bg-transparent">
             <div class="flex justify-between items-center mb-4">
-                <h1 class="text-2xl font-bold">User Management</h1>
                 <div class="flex space-x-4">
                     <div>
                         <label for="role" class="block text-sm font-medium">Role</label>
                         <select v-model="roleFilter" id="role" class="rounded border px-3 py-2">
                             <option value="">All Roles</option>
-                            <option value="admin">Admin</option>
-                            <option value="user">User</option>
+                            <option v-for="role in roles" :key="role" :value="role">
+                            {{ capitalize(role) }}
+                        </option>
                             </select>
                     </div>
 
                     <div>
                         <label for="sort" class="block text-sm font-medium">Sort By</label>
                         <select v-model="sortOrder" id="sort" class="rounded border px-3 py-2">
-                            <option value="latest">Latest (Newest First)</option>
-                            <option value="oldest">Oldest (Oldest First)</option>
+                            <option value="latest">Latest</option>
+                            <option value="oldest">Oldest</option>
                         </select>
                     </div>
                 </div>
@@ -94,6 +97,7 @@ watch([roleFilter, sortOrder], () => {
                             <th class="p-3 text-left">Email</th>
                             <th class="p-3 text-left">Role</th>
                             <th class="p-3 text-left">Account Age</th>
+                            <th class="p-3 text-left">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -104,7 +108,9 @@ watch([roleFilter, sortOrder], () => {
                         >
                             <td class="p-3">{{ user.name }}</td>
                             <td class="p-3">{{ user.email }}</td>
-                            <td class="p-3 capitalize">{{ user.role }}</td>
+                            <td class="p-3 capitalize">
+                                {{ user.roles[0]?.name || 'N/A' }}
+                            </td>
                             <td class="p-3">{{ formatAccountAge(user.created_at) }}</td>
                         </tr>
                         <tr v-if="users.data.length === 0">
@@ -112,6 +118,25 @@ watch([roleFilter, sortOrder], () => {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div v-if="users.links.length > 3" class="mt-4">
+                <div class="flex flex-wrap -mb-1">
+                    <template v-for="(link, key) in users.links" :key="key">
+                        <div
+                            v-if="link.url === null"
+                            class="mr-1 mb-1 px-4 py-3 text-sm leading-4 text-gray-400 border rounded"
+                            v-html="link.label"
+                        />
+                        <Link
+                            v-else
+                            class="mr-1 mb-1 px-4 py-3 text-sm leading-4 border rounded hover:bg-white focus:border-indigo-500 focus:text-indigo-500"
+                            :class="{ 'bg-blue-600 text-white': link.active }"
+                            :href="link.url"
+                            v-html="link.label"
+                        />
+                    </template>
+                </div>
             </div>
         </div>
     </AppLayout>

@@ -23,10 +23,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // 👇 Add your role-based gate here
         Gate::define('isAdmin', function ($user) {
-    // Use raw attribute
-    return strtolower(trim($user->getAttribute('role'))) === 'admin';
-});
+            // This uses the Spatie package to check the 'model_has_roles' table
+            return $user->hasRole('admin');
+        });
     }
 }
