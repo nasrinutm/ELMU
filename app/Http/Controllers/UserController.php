@@ -7,6 +7,8 @@ use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash; // <-- Added this
 use Spatie\Permission\Models\Role;
+use Illuminate\Validation\Rule; // <-- ADD THIS
+use Illuminate\Support\Arr;      // <-- ADD THIS
 
 class UserController extends Controller
 {
@@ -35,9 +37,9 @@ class UserController extends Controller
         // Now, render the component with all the props
         return Inertia::render('Users/Index', [
             'users' => $users,
-            
+
             'roles' => Role::all()->pluck('name'),
-            
+
             'filters' => [
                 'role' => $request->input('role', ''), // Default to empty string
                 'sort' => $request->input('sort', 'latest'), // Default to 'latest'
@@ -77,5 +79,70 @@ class UserController extends Controller
 
         // 4. Redirect (this is still correct)
         return redirect()->route('users.index')->with('success', 'User created successfully!');
+    }
+    public function edit(User $user)
+    {
+        return Inertia::render('Admin/Users/Edit', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->getRoleNames()->first(), // Get the user's *current* role
+            ],
+            'roles' => Role::all()->pluck('name') // Get *all* available roles
+        ]);
+    }
+
+    public function update(Request $request, User $user)
+    {
+        // 1. VALIDATE THE DATA
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users')->ignore($user->id), // Ignore this user's current username
+            ],
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users')->ignore($user->id), // Ignore this user's current email
+            ],
+            'password' => 'nullable|string|min:8|confirmed', // 'nullable' makes it optional
+            'role' => 'required|string|exists:roles,name',
+        ]);
+
+
+        // 2. PREPARE THE DATA TO UPDATE
+        $data = $request->only('name', 'username', 'email', 'role');
+
+        // 3. HANDLE THE PASSWORD (only update if a new one was typed)
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        // 4. UPDATE THE USER
+        $user->update(Arr::except($data, ['role'])); // Update user fields, except 'role'
+
+        // 5. SYNC THE ROLE
+        $user->syncRoles($data['role']);
+
+        // 6. REDIRECT
+        return redirect()->route('users.index')->with('success', 'User updated successfully!');
+    }
+    public function destroy(User $user)
+    {
+        // Protection: Prevent an admin from deleting their own account
+        if ($user->id === auth()->id()) {
+            return redirect()->back()
+                ->with('error', 'You cannot delete your own account.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('users.index')
+            ->with('success', 'User deleted successfully.');
     }
 }

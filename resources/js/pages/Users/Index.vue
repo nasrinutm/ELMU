@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router, Link } from '@inertiajs/vue3'; // 👈 1. Import Link
+import { Head, router, Link, usePage } from '@inertiajs/vue3'; // Import usePage
 import { ref, watch, defineProps } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
@@ -24,6 +24,23 @@ const props = defineProps<{
     roles: string[];
 }>();
 
+// 2. DEFINE THE PAGE PROPS TYPE (with constraint fix)
+type PageProps = {
+    flash?: { // 'flash' is optional
+        success?: string;
+        error?: string; // <-- 1. ADD 'error' TO YOUR TYPE
+    };
+    // Add the missing properties from the error message
+    // We can set them to 'any' to satisfy the constraint
+    name: any;
+    quote: any;
+    auth: any;
+    sidebarOpen: any;
+};
+
+// 3. GET THE TYPED page OBJECT
+const page = usePage<PageProps>();
+
 // Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Users', href: route('users.index') },
@@ -39,7 +56,7 @@ const formatAccountAge = (dateString: string) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) return 'Today';
     if (days === 1) return '1 day ago';
     return `${days} days ago`;
@@ -67,6 +84,21 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="max-w-4xl mx-auto p-4 bg-transparent">
+
+            <div
+                v-if="page.props.flash?.success"
+                class="mb-4 p-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-lg"
+            >
+                {{ page.props.flash.success }}
+            </div>
+
+            <div
+                v-if="page.props.flash?.error"
+                class="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg"
+            >
+                {{ page.props.flash.error }}
+            </div>
+
             <div class="flex justify-between items-center mb-4">
                 <div class="flex space-x-4">
                     <div>
@@ -76,7 +108,7 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
                             <option v-for="role in roles" :key="role" :value="role">
                             {{ capitalize(role) }}
                         </option>
-                            </select>
+                        </select>
                     </div>
 
                     <div>
@@ -112,9 +144,27 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
                                 {{ user.roles[0]?.name || 'N/A' }}
                             </td>
                             <td class="p-3">{{ formatAccountAge(user.created_at) }}</td>
+
+                            <td class="p-3">
+                                <Link
+                                    :href="route('users.edit', user.id)"
+                                    class="font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                >
+                                    Edit
+                                </Link>
+
+                                <Link
+                                    :href="route('users.destroy', user.id)"
+                                    method="delete"
+                                    as="button"
+                                    class="ml-4 font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                >
+                                    Delete
+                                </Link>
+                            </td>
                         </tr>
                         <tr v-if="users.data.length === 0">
-                            <td colspan="4" class="p-3 text-center">No users found.</td>
+                            <td colspan="5" class="p-3 text-center">No users found.</td>
                         </tr>
                     </tbody>
                 </table>

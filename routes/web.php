@@ -18,10 +18,13 @@ Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
 // });
 
 Route::middleware(['auth'])->group(function () {
-    Route::middleware(['role:admin'])->prefix('admin')->group(function () {    
+    Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index'); // view all user
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');// add user
-        Route::post('/users', [UserController::class, 'store'])->name('users.store');//submit new user  
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');//submit new user
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit'); // Show edit form
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 });
 
@@ -43,7 +46,7 @@ Route::get('/test-gate', function () {
     if (!$user) return 'No user logged in';
 
     // This is the Spatie function that checks the 'model_has_roles' table
-    $user->hasRole('admin'); 
+    $user->hasRole('admin');
 
     return [
         'class' => get_class($user),
