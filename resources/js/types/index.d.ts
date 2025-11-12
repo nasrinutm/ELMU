@@ -48,6 +48,8 @@ export interface Post {
     user: User; // A post has one user
     replies: Reply[]; // A post has many replies
     replies_count?: number; // For the forum index page
+    can_update: boolean; 
+    can_delete: boolean;
 }
 
 // This defines the structure for a single Reply
@@ -59,4 +61,6 @@ export interface Reply {
     post_id: number;
     parent_id: number | null;
     children: Reply[]; // A reply can have many children (other replies)
+    can_update: boolean; //
+    can_delete: boolean;
 }

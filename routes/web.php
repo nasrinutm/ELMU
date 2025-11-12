@@ -8,15 +8,6 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\UserController;
 
-
-
-// Route::middleware(['auth'])->group(function () {
-//     Route::middleware('can:isAdmin')->group(function () {
-//         Route::get('/admin/register', [UserManagementController::class, 'create'])->name('admin.register');
-//         Route::post('/admin/register', [UserManagementController::class, 'store']);
-//     });
-// });
-
 Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index'); // view all user
@@ -30,10 +21,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
     Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');
     Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
-    
-    // We add this route so the 'store' method can redirect to the new post
-    // You will need to create the show() method and Forum/Show.vue component later
     Route::get('/forum/{post}', [ForumController::class, 'show'])->name('forum.show');
+    Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
+    Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
+    Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
+    Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
+    Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
+    Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 });
 
 
