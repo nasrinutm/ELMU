@@ -43,9 +43,9 @@ if (user.value?.roles.includes('admin')) {
         { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
         { title: 'My Classes', href: '/classes', icon: Folder },
         { title: 'Assignments', href: '/assignments', icon: BookOpen },
+        { title: 'Forum', href: '/forum', icon: BookOpen }
     ]
 } else {
-    // This will be the default for 'student' or any other role
     mainNavItems.value = [
         { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
         { title: 'My Courses', href: '/courses', icon: BookOpen },

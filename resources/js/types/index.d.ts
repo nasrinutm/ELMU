@@ -39,3 +39,24 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export interface Post {
+    id: number;
+    title: string;
+    body: string;
+    created_at: string;
+    user: User; // A post has one user
+    replies: Reply[]; // A post has many replies
+    replies_count?: number; // For the forum index page
+}
+
+// This defines the structure for a single Reply
+export interface Reply {
+    id: number;
+    body: string;
+    created_at: string;
+    user: User; // A reply has one user
+    post_id: number;
+    parent_id: number | null;
+    children: Reply[]; // A reply can have many children (other replies)
+}

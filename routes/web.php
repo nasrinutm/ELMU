@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\UserController;
 
-Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+
 
 // Route::middleware(['auth'])->group(function () {
 //     Route::middleware('can:isAdmin')->group(function () {
@@ -26,6 +26,14 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
+
+    Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+    Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');
+    Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
+    
+    // We add this route so the 'store' method can redirect to the new post
+    // You will need to create the show() method and Forum/Show.vue component later
+    Route::get('/forum/{post}', [ForumController::class, 'show'])->name('forum.show');
 });
 
 
@@ -55,9 +63,3 @@ Route::get('/test-gate', function () {
         'isAdmin' => Gate::allows('isAdmin'), // This will be true *after* you fix AuthServiceProvider
     ];
 });
-
-// Add this line for your forum
-Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
-
-// You'll probably want a "create post" page later, so you can add this too:
-// Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');

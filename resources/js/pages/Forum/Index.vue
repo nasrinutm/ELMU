@@ -49,7 +49,7 @@ const formatDate = (dateString: string) => {
                 <h1 class="text-2xl font-bold">Forum Discussions</h1>
                 
                 <Link
-                    :href="route('forum.index')" 
+                    :href="route('forum.create')" 
                     class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700"
                 >
                     Create New Post
@@ -71,7 +71,7 @@ const formatDate = (dateString: string) => {
                     >
                         <div class="w-full md:w-3/5 mb-2 md:mb-0">
                             <Link
-                                :href="route('forum.index')" 
+                                :href="route('forum.show', { post: post.id })"
                                 class="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
                             >
                                 {{ post.title }}

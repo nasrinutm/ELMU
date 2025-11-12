@@ -13,25 +13,17 @@ return new class extends Migration
     {
         Schema::create('replies', function (Blueprint $table) {
             $table->id();
-            $table->text('body');
+            $table->text('body'); // The content of the reply
 
-            // Foreign key for the user
+            // Foreign key for the user who replied
             $table->foreignId('user_id')
                   ->constrained('users')
                   ->onDelete('cascade');
 
-            // Foreign key for the post
+            // Foreign key for the post this reply belongs to
             $table->foreignId('post_id')
                   ->constrained('posts')
-                  ->onDelete('cascade');
-
-            // 👇 --- ADD THIS BLOCK --- 👇
-            // This is the recursive part. It can be null.
-            $table->foreignId('parent_id')
-                  ->nullable()
-                  ->constrained('replies') // Points to its own table!
-                  ->onDelete('cascade'); // If parent reply is deleted, delete children
-            // 👆 --- END OF BLOCK --- 👆
+                  ->onDelete('cascade'); // If post is deleted, delete replies
 
             $table->timestamps();
         });
@@ -42,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('posts');
+        Schema::dropIfExists('replies');
     }
 };
