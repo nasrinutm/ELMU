@@ -5,8 +5,8 @@ namespace App\Providers;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Post;
-use App\Models\Reply;  // 👈 2. Import
-use App\Policies\PostPolicy;   // 👈 3. Import
+use App\Models\Reply;
+use App\Policies\PostPolicy;   
 use App\Policies\ReplyPolicy;
 
 class AuthServiceProvider extends ServiceProvider
@@ -17,7 +17,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        Post::class => PostPolicy::class,   // 👈 5. Add this
+        Post::class => PostPolicy::class,
         Reply::class => ReplyPolicy::class,
     ];
 
