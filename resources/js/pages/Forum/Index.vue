@@ -43,24 +43,24 @@ const formatDate = (dateString: string) => {
     <Head title="Forum" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-4xl mx-auto p-4 bg-transparent">
+        <div class="w-full mx-auto p-4 bg-transparent">
             
             <div class="flex justify-between items-center mb-4">
-                <h1 class="text-2xl font-bold">Forum Discussions</h1>
+                <h1 class="text-xl font-semibold">Forum Discussions</h1>
                 
                 <Link
-                    :href="route('forum.index')" 
+                    :href="route('forum.create')" 
                     class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700"
                 >
                     Create New Post
                 </Link>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
                 <div class="hidden md:flex bg-gray-100 dark:bg-gray-700 p-3">
-                    <div class="w-3/5 font-semibold">Topic</div>
-                    <div class="w-1/5 font-semibold text-center">Replies</div>
-                    <div class="w-1/5 font-semibold text-right">Last Activity</div>
+                    <div class="w-3/5 font-semibold text-lg">Topics</div>
+                    <div class="w-1/5 font-semibold text-center text-lg">Replies</div>
+                    <div class="w-1/5 font-semibold text-right text-lg mr-px">Last Activity</div>
                 </div>
 
                 <div v-if="posts.data.length > 0">
@@ -71,13 +71,13 @@ const formatDate = (dateString: string) => {
                     >
                         <div class="w-full md:w-3/5 mb-2 md:mb-0">
                             <Link
-                                :href="route('forum.index')" 
-                                class="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                :href="route('forum.show', { post: post.id })"
+                                class="font-semibold text-black dark:text-blue-400"
                             >
                                 {{ post.title }}
                             </Link>
                             <div class="text-sm text-gray-600 dark:text-gray-400">
-                                Started by {{ post.user.name }}
+                                {{ post.user.name }}
                             </div>
                         </div>
 
