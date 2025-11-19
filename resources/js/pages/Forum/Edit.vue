@@ -31,7 +31,7 @@ const submit = () => {
 <template>
     <Head title="Edit Post" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-4xl mx-auto p-4">
+        <div class="w-full mx-auto p-4">
             <h1 class="text-2xl font-bold mb-4">Edit Post</h1>
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
                 <form @submit.prevent="submit" class="space-y-4">

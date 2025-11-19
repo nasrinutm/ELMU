@@ -7,6 +7,27 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ChatbotController;
+use Gemini\Laravel\Facades\Gemini;
+
+Route::get('/test-models', function () {
+    try {
+        // This fetches all available models from Google
+        $response = Gemini::models()->list();
+        
+        // Extract just the names to make it readable
+        $models = collect($response->models)
+            ->map(fn ($model) => [
+                'name' => $model->name,
+                'display_name' => $model->displayName,
+                'capabilities' => $model->supportedGenerationMethods
+            ]);
+
+        return $models;
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
@@ -40,6 +61,8 @@ Route::get('/', function () {
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::post('/chat', [ChatbotController::class, 'send'])->name('chat.send');
 
 require __DIR__.'/settings.php';
 

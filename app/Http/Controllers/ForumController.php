@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Post; // <-- Uncomment this when you have a Post model
 use App\Models\Reply;
 
-class ForumController extends Controller
+class ForumController extends BaseController
 {
+    use AuthorizesRequests, ValidatesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -79,7 +83,7 @@ class ForumController extends Controller
 
     public function storeReply(Request $request)
     {
-        // 1. Validate the incoming data
+        // 1. Validate incoming data
         $request->validate([
             'body' => 'required|string',
             'post_id' => 'required|exists:posts,id',
@@ -103,7 +107,7 @@ class ForumController extends Controller
         // 1. Authorize the action
         $this->authorize('update', $post);
 
-        // 2. Return the Edit page (we'll create this)
+        // 2. Return the Edit page 
         return Inertia::render('Forum/Edit', [
             'post' => $post
         ]);
