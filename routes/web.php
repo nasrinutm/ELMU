@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\ChatbotUploadController;
 use Gemini\Laravel\Facades\Gemini;
 
 Route::get('/test-models', function () {
@@ -29,6 +30,8 @@ Route::get('/test-models', function () {
     }
 });
 
+Route::get('/setup-ai', [App\Http\Controllers\ChatbotController::class, 'setupStore']);
+
 Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index'); // view all user
@@ -37,6 +40,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit'); // Show edit form
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/chatbot', [ChatbotUploadController::class, 'index'])
+                ->name('chatbot.details');
+
+            // Show the upload form
+            Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])
+                ->name('upload.create');
+
+            // Handle the upload
+            Route::post('/chatbot/upload', [ChatbotUploadController::class, 'store'])
+                ->name('upload.store');
+
+            // Delete a file
+            Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
+                ->where('fileName', '.*') // Allows slashes in ID if needed
+                ->name('upload.delete');
     });
 
     Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
