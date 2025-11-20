@@ -27,12 +27,14 @@ const mainNavItems = ref<NavItem[]>([])
 if (user.value?.roles.includes('admin')) {
     mainNavItems.value = [
         { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-        { title: 'Manage Users', href: route('users.index'), icon: Users }
+        { title: 'Manage User', href: route('users.index'), icon: Users },
+        { title: 'Forum', href: '/forum', icon: BookOpen }
     ]
 } else if (user.value?.roles.includes('teacher')) {
     mainNavItems.value = [
         { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
         { title: 'Materials', href: route('materials.index'), icon: FileText },
+        { title: 'Forum', href: '/forum', icon: BookOpen }
     ]
 } else {
     mainNavItems.value = [
