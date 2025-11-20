@@ -7,10 +7,10 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
+// REMOVE: import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
+import { LogOut } from 'lucide-vue-next'; // REMOVE: Settings icon
 
 interface Props {
     user: User;
@@ -30,6 +30,11 @@ defineProps<Props>();
         </div>
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
+
+    <!--
+        DELETE THIS ENTIRE GROUP (Settings Link)
+    -->
+    <!--
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full" :href="edit()" prefetch as="button">
@@ -39,6 +44,8 @@ defineProps<Props>();
         </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />
+    -->
+
     <DropdownMenuItem :as-child="true">
         <Link
             class="block w-full"
