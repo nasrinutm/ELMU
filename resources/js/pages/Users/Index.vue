@@ -1,18 +1,24 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router, Link, usePage } from '@inertiajs/vue3'; // Import usePage
-import { ref, watch, defineProps } from 'vue';
-import { type BreadcrumbItem } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input'; // Ensure you have these components
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge'; // Ensure you have Badge component
+import { Separator } from '@/components/ui/separator';
 import { route } from 'ziggy-js';
+import { Edit, Trash2, UserPlus, Filter, Search, User } from 'lucide-vue-next';
+import { type BreadcrumbItem, type AppPageProps } from '@/types';
 
-// Props from the controller
 const props = defineProps<{
     users: {
         data: Array<{
             id: number;
             name: string;
+            username: string;
             email: string;
-            roles: Array<{ name: string }>; // It's an array of role objects
+            roles: Array<{ name: string }>;
             created_at: string;
         }>;
         links: Array<any>;
@@ -24,33 +30,38 @@ const props = defineProps<{
     roles: string[];
 }>();
 
-// 2. DEFINE THE PAGE PROPS TYPE (with constraint fix)
-type PageProps = {
-    flash?: { // 'flash' is optional
-        success?: string;
-        error?: string; // <-- 1. ADD 'error' TO YOUR TYPE
-    };
-    // Add the missing properties from the error message
-    // We can set them to 'any' to satisfy the constraint
-    name: any;
-    quote: any;
-    auth: any;
-    sidebarOpen: any;
-};
+const page = usePage<AppPageProps>();
 
-// 3. GET THE TYPED page OBJECT
-const page = usePage<PageProps>();
-
-// Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: route('dashboard') },
     { title: 'Users', href: route('users.index') },
 ];
 
-// Refs for filter and sort dropdowns
 const roleFilter = ref(props.filters.role || '');
 const sortOrder = ref(props.filters.sort || 'latest');
 
-// Function to format the date (Account Age)
+const deleteUser = (id: number) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+        router.delete(route('users.destroy', id));
+    }
+};
+
+const debounce = (fn: (...args: any[]) => void, delay = 300) => {
+    let timeout: ReturnType<typeof setTimeout>;
+    return (...args: any[]) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+    };
+};
+
+watch([roleFilter, sortOrder], debounce(([newRole, newSort]) => {
+    router.get(
+        route('users.index'),
+        { role: newRole, sort: newSort },
+        { preserveState: true, replace: true },
+    );
+}, 300));
+
 const formatAccountAge = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -62,132 +73,196 @@ const formatAccountAge = (dateString: string) => {
     return `${days} days ago`;
 };
 
-// Watch for changes in the refs and reload the page with new query params
-watch([roleFilter, sortOrder], () => {
-    router.get(
-        route('users.index'),
-        {
-            role: roleFilter.value,
-            sort: sortOrder.value,
-        },
-        {
-            preserveState: true, // Keep the user's scroll position
-            replace: true, // Don't create new history entries
-        },
-    );
-});
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Helper for role badge colors
+const getRoleBadgeVariant = (roleName: string) => {
+    if (roleName === 'admin') return 'destructive'; // Red
+    if (roleName === 'teacher') return 'default'; // Blue (default theme)
+    return 'secondary'; // Yellow
+};
 </script>
 
 <template>
-    <Head title="Users" />
+    <Head title="Manage Users" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-4xl mx-auto p-4 bg-transparent">
+        <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
 
-            <div
-                v-if="page.props.flash?.success"
-                class="mb-4 p-4 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-lg"
-            >
+            <!-- Flash Messages -->
+            <div v-if="page.props.flash?.success" class="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-green-600"></span>
                 {{ page.props.flash.success }}
             </div>
-
-            <div
-                v-if="page.props.flash?.error"
-                class="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg"
-            >
+            <div v-if="page.props.flash?.error" class="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-red-600"></span>
                 {{ page.props.flash.error }}
             </div>
 
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex space-x-4">
-                    <div>
-                        <label for="role" class="block text-sm font-medium">Role</label>
-                        <select v-model="roleFilter" id="role" class="rounded border px-3 py-2">
-                            <option value="">All Roles</option>
-                            <option v-for="role in roles" :key="role" :value="role">
-                            {{ capitalize(role) }}
-                        </option>
-                        </select>
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="space-y-2">
+                    <h1 class="text-3xl font-bold tracking-tight text-[#FFD900]">
+                        Manage Users
+                    </h1>
+                    <p class="text-[#FFD900]">
+                        View, create, and manage system users.
+                    </p>
+                </div>
+
+                <Link :href="route('users.create')">
+                    <Button class="bg-[#FFD900] text-[#003366] hover:bg-[#FFD900]/90 font-bold shadow-lg">
+                        <UserPlus class="w-4 h-4 mr-2" />
+                        Add New User
+                    </Button>
+                </Link>
+            </div>
+
+            <Separator class="bg-slate-600/50" />
+
+            <!-- Filters Card (Yellow Background) -->
+            <div class="rounded-xl border-none bg-[#FFD900] p-6 shadow-sm">
+                <div class="flex flex-col sm:flex-row gap-6">
+                    <!-- Role Filter -->
+                    <div class="w-full sm:w-1/3 space-y-2">
+                        <Label for="roleFilter" class="text-xs font-bold uppercase tracking-wider text-[#003366]">
+                            Filter by Role
+                        </Label>
+                        <div class="relative">
+                            <Filter class="absolute left-3 top-2.5 h-4 w-4 text-white z-10" />
+                            <select
+                                id="roleFilter"
+                                v-model="roleFilter"
+                                class="h-10 w-full rounded-md border-transparent bg-[#003366] pl-9 px-3 text-sm text-white shadow-none focus:outline-none focus:ring-2 focus:ring-white appearance-none"
+                            >
+                                <option value="">All Roles</option>
+                                <option v-for="role in roles" :key="role" :value="role">
+                                    {{ capitalize(role) }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div>
-                        <label for="sort" class="block text-sm font-medium">Sort By</label>
-                        <select v-model="sortOrder" id="sort" class="rounded border px-3 py-2">
-                            <option value="latest">Latest</option>
-                            <option value="oldest">Oldest</option>
-                        </select>
+                    <!-- Sort Filter -->
+                    <div class="w-full sm:w-1/3 space-y-2">
+                        <Label for="sortOrder" class="text-xs font-bold uppercase tracking-wider text-[#003366]">
+                            Sort By
+                        </Label>
+                        <div class="relative">
+                            <Search class="absolute left-3 top-2.5 h-4 w-4 text-white z-10" />
+                            <select
+                                id="sortOrder"
+                                v-model="sortOrder"
+                                class="h-10 w-full rounded-md border-transparent bg-[#003366] pl-9 px-3 text-sm text-white shadow-none focus:outline-none focus:ring-2 focus:ring-white appearance-none"
+                            >
+                                <option value="latest">Latest Joined</option>
+                                <option value="oldest">Oldest Joined</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-                <table class="w-full">
-                    <thead class="bg-gray-100 dark:bg-gray-700">
+            <!-- Users Table Card -->
+            <div class="rounded-xl border-none bg-white shadow-sm overflow-hidden">
+                <table class="w-full text-sm text-left">
+                    <!--
+                         Header: Yellow Background (#FFD900)
+                         Text: Dark Blue (#003366)
+                    -->
+                    <thead class="bg-[#FFD900] border-b border-[#003366]/20 text-[#003366] uppercase text-xs font-bold tracking-wider">
                         <tr>
-                            <th class="p-3 text-left">Name</th>
-                            <th class="p-3 text-left">Email</th>
-                            <th class="p-3 text-left">Role</th>
-                            <th class="p-3 text-left">Account Age</th>
-                            <th class="p-3 text-left">Actions</th>
+                            <th class="p-4 pl-6">Name</th>
+                            <th class="p-4">Email</th>
+                            <th class="p-4">Role</th>
+                            <th class="p-4">Account Age</th>
+                            <th class="p-4 text-right pr-6">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-[#003366]/10">
                         <tr
                             v-for="user in users.data"
                             :key="user.id"
-                            class="border-t dark:border-gray-600"
+                            class="group hover:bg-slate-50 transition-colors"
                         >
-                            <td class="p-3">{{ user.name }}</td>
-                            <td class="p-3">{{ user.email }}</td>
-                            <td class="p-3 capitalize">
-                                {{ user.roles[0]?.name || 'N/A' }}
+                            <td class="p-4 pl-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-10 w-10 rounded-full bg-[#003366] text-white flex items-center justify-center shrink-0 border border-[#003366]/10">
+                                        <User class="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-[#003366]">{{ user.name }}</div>
+                                        <div class="text-xs text-[#003366]/60">@{{ user.username }}</div>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="p-3">{{ formatAccountAge(user.created_at) }}</td>
-
-                            <td class="p-3">
-                                <Link
-                                    :href="route('users.edit', user.id)"
-                                    class="font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            <td class="p-4 text-[#003366]">{{ user.email }}</td>
+                            <td class="p-4">
+                                <Badge
+                                    :variant="getRoleBadgeVariant(user.roles[0]?.name)"
+                                    class="uppercase px-2 border-none"
+                                    :class="{
+                                        'bg-[#003366] text-white': user.roles[0]?.name === 'teacher',
+                                        'bg-[#FFD900] text-[#003366]': user.roles[0]?.name === 'student',
+                                        'bg-red-600 text-white': user.roles[0]?.name === 'admin'
+                                    }"
                                 >
-                                    Edit
-                                </Link>
+                                    {{ user.roles[0]?.name || 'N/A' }}
+                                </Badge>
+                            </td>
+                            <td class="p-4 text-[#003366]/80">{{ formatAccountAge(user.created_at) }}</td>
 
-                                <Link
-                                    :href="route('users.destroy', user.id)"
-                                    method="delete"
-                                    as="button"
-                                    class="ml-4 font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                >
-                                    Delete
-                                </Link>
+                            <td class="p-4 text-right pr-6">
+                                <div class="flex items-center justify-end gap-2">
+                                    <!-- Edit Button (Solid Blue) -->
+                                    <Button
+                                        size="sm"
+                                        class="h-8 bg-[#003366] text-white hover:bg-[#002244] border-none shadow-sm"
+                                        as-child
+                                    >
+                                        <Link :href="route('users.edit', user.id)">
+                                            <Edit class="w-3 h-3 mr-1" /> Edit
+                                        </Link>
+                                    </Button>
+
+                                    <!-- Delete Button (Solid Red) -->
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        class="h-8 shadow-sm bg-red-600 hover:bg-red-700 text-white"
+                                        @click="deleteUser(user.id)"
+                                    >
+                                        <Trash2 class="w-3 h-3 mr-1" /> Delete
+                                    </Button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="users.data.length === 0">
-                            <td colspan="5" class="p-3 text-center">No users found.</td>
+                            <td colspan="5" class="p-12 text-center text-[#003366]">
+                                <p class="font-medium">No users found.</p>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div v-if="users.links.length > 3" class="mt-4">
-                <div class="flex flex-wrap -mb-1">
+            <!-- Pagination -->
+            <div v-if="users.links.length > 3" class="mt-4 flex justify-center">
+                <div class="flex flex-wrap gap-1">
                     <template v-for="(link, key) in users.links" :key="key">
-                        <div
-                            v-if="link.url === null"
-                            class="mr-1 mb-1 px-4 py-3 text-sm leading-4 text-gray-400 border rounded"
-                            v-html="link.label"
-                        />
-                        <Link
-                            v-else
-                            class="mr-1 mb-1 px-4 py-3 text-sm leading-4 border rounded hover:bg-white focus:border-indigo-500 focus:text-indigo-500"
-                            :class="{ 'bg-blue-600 text-white': link.active }"
-                            :href="link.url"
-                            v-html="link.label"
-                        />
+                        <div v-if="link.url === null" class="px-3 py-1 text-sm text-[#003366]/50 border border-[#003366]/20 rounded bg-[#FFD900]" v-html="link.label" />
+                        <Link v-else
+                              class="px-3 py-1 text-sm border rounded transition-colors"
+                              :class="{
+                                  'bg-[#003366] text-[#FFD900] border-[#003366] font-bold': link.active,
+                                  'bg-white text-[#003366] border-white hover:bg-white/90': !link.active
+                              }"
+                              :href="link.url"
+                              v-html="link.label" />
                     </template>
                 </div>
             </div>
+
         </div>
     </AppLayout>
 </template>

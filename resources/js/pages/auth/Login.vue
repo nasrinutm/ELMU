@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AuthBase from '@/layouts/AuthLayout.vue';
+import AuthBase from '@/layouts/auth/AuthCardLayout.vue';
 import { store } from '@/routes/login';
-import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
@@ -27,7 +25,7 @@ defineProps<{
 
         <div
             v-if="status"
-            class="mb-4 text-center text-sm font-medium text-green-600"
+            class="mb-4 text-center text-sm font-medium text-green-400"
         >
             {{ status }}
         </div>
@@ -40,7 +38,8 @@ defineProps<{
         >
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
+                    <!-- Label White for contrast -->
+                    <Label for="email" class="text-white">Email address</Label>
                     <Input
                         id="email"
                         type="email"
@@ -50,21 +49,14 @@ defineProps<{
                         :tabindex="1"
                         autocomplete="email"
                         placeholder="email@example.com"
+                        class="bg-white text-white border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
-                    <InputError :message="errors.email" />
+                    <InputError :message="errors.email" class="text-red-300" />
                 </div>
 
                 <div class="grid gap-2">
                     <div class="flex items-center justify-between">
-                        <Label for="password">Password</Label>
-                        <TextLink
-                            v-if="canResetPassword"
-                            :href="request()"
-                            class="text-sm"
-                            :tabindex="5"
-                        >
-                            Forgot password?
-                        </TextLink>
+                        <Label for="password" class="text-white">Password</Label>
                     </div>
                     <Input
                         id="password"
@@ -74,33 +66,38 @@ defineProps<{
                         :tabindex="2"
                         autocomplete="current-password"
                         placeholder="Password"
+                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
-                    <InputError :message="errors.password" />
+                    <InputError :message="errors.password" class="text-red-300" />
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <Label for="remember" class="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" :tabindex="3" />
+                    <Label for="remember" class="flex items-center space-x-3 text-white">
+                        <Checkbox
+                            id="remember"
+                            name="remember"
+                            :tabindex="3"
+                            class="border-white data-[state=checked]:bg-[#FFD900] data-[state=checked]:text-[#003366]"
+                        />
                         <span>Remember me</span>
                     </Label>
                 </div>
 
+                <!-- Yellow Button -->
                 <Button
                     type="submit"
-                    class="mt-4 w-full"
+                    class="mt-4 w-full bg-[#FFD900] text-[#003366] hover:bg-[#e6c300] font-bold"
                     :tabindex="4"
                     :disabled="processing"
                     data-test="login-button"
                 >
                     <LoaderCircle
                         v-if="processing"
-                        class="h-4 w-4 animate-spin"
+                        class="h-4 w-4 animate-spin mr-2"
                     />
                     Log in
                 </Button>
             </div>
-
-            
         </Form>
     </AuthBase>
 </template>
