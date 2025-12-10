@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
-import { store } from '@/routes/register';
+import store from '@/routes/register';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+
+// changed: handle route module shape where the form helper is nested under `.store`
+const registerStore = (store as any)?.store ?? (store as any);
 </script>
 
 <template>
@@ -19,7 +22,7 @@ import { LoaderCircle } from 'lucide-vue-next';
         <Head title="Register" />
 
         <Form
-            v-bind="store.form()"
+            v-bind="registerStore.form()"
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"
