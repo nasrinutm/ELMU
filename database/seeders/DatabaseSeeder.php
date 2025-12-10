@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,5 +21,17 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        $manageActivities = Permission::firstOrCreate(['name' => 'manage activities']);
+
+        // 2. Ensure the Role exists
+        $teacherRole = Role::firstOrCreate(['name' => 'Teacher']);
+
+        // 3. Assign the Permission to the Role
+        $teacherRole->givePermissionTo($manageActivities);
+
+        // Optional: Assign the permission to the 'admin' role too if needed
+        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+        $adminRole->givePermissionTo($manageActivities);
     }
 }
