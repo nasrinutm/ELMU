@@ -42,7 +42,7 @@ const formatBytes = (bytes) => {
             
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">AI System Status</h1>
+                    <h1 class="text-2xl font-bold text-gray-900 ">AI System Status</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Monitor the model and knowledge base.</p>
                 </div>
                 <Link 
@@ -55,47 +55,47 @@ const formatBytes = (bytes) => {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl flex items-center gap-4 shadow-sm">
+                <div class="p-6 bg-white rounded-xl flex items-center gap-4 shadow-xl border-1 border-gray-100">
                     <div class="p-3 bg-purple-100 text-purple-600 rounded-lg">
                         <Cpu class="w-6 h-6" />
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Model</p>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ systemInfo.model }}</h3>
+                        <h3 class="text-lg font-bold text-gray-900">{{ systemInfo.model }}</h3>
                     </div>
                 </div>
 
-                <div class="p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl flex items-center gap-4 shadow-sm">
+                <div class="p-6 bg-white rounded-xl flex items-center gap-4 shadow-xl border-1 border-gray-100">
                     <div class="p-3 bg-green-100 text-green-600 rounded-lg">
                         <Database class="w-6 h-6" />
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Knowledge Store</p>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate w-32" :title="systemInfo.store_id">
+                        <h3 class="text-lg font-bold text-gray-900 truncate w-64" :title="systemInfo.store_id">
                             {{ systemInfo.store_id.substring(0, 15) }}...
                         </h3>
                     </div>
                 </div>
 
-                <div class="p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl flex items-center gap-4 shadow-sm">
+                <div class="p-6 bg-white rounded-xl flex items-center gap-4 shadow-xl border-1 border-gray-100">
                     <div class="p-3 bg-blue-100 text-blue-600 rounded-lg">
                         <FileText class="w-6 h-6" />
                     </div>
                     <div>
                         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Indexed Documents</p>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ files.length }} Files</h3>
+                        <h3 class="text-lg font-bold text-gray-900">{{ files.length }} Files</h3>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
+            <div class="bg-white rounded-xl shadow-xl border-1 border-gray-100 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-zinc-700">
-                    <h3 class="font-bold text-gray-900 dark:text-white">Active Knowledge Base</h3>
+                    <h3 class="font-bold text-gray-900">Active Knowledge Base</h3>
                 </div>
                 
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
-                        <thead class="bg-gray-50 dark:bg-zinc-800/50 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                        <thead class="bg-gray-300 text-gray-900 uppercase text-xs">
                             <tr>
                                 <th class="px-6 py-3">File Name</th>
                                 <th class="px-6 py-3">Size</th>
@@ -107,10 +107,10 @@ const formatBytes = (bytes) => {
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-zinc-700">
                             <tr v-for="file in files" :key="file.name" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition">
-                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                    {{ file.display_name }}
+                                <td class="px-6 py-4 font-medium text-gray-900 ">
+                                    {{ file.display_name }} 
                                 </td>
-                                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                                <td class="px-6 py-4 text-gray-500">
                                     {{ formatBytes(file.size_bytes) }}
                                 </td>
                                 <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
@@ -126,7 +126,7 @@ const formatBytes = (bytes) => {
                                         {{ file.state }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                                <td class="px-6 py-4 text-gray-500">
                                     {{ file.created_at }}
                                 </td>
                                 <td class="px-6 py-4 text-right">

@@ -1,34 +1,30 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, useForm, Link, router} from '@inertiajs/vue3';
+import { Head, useForm, Link, router } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type Post, type Reply as ReplyType } from '@/types';
 import { route } from 'ziggy-js';
-import Reply from '@/components/Reply.vue'; // <-- We will create this next
+import Reply from '@/components/Reply.vue';
 
-// Props
 const props = defineProps<{
     post: Post & {
         user: { name: string, username: string };
-        replies: ReplyType[]; // Top-level replies
+        replies: ReplyType[];
     };
 }>();
 
-// Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/' },
     { title: 'Forum', href: route('forum.index') },
-    { title: 'Post', href: '#' }, // Current page
+    { title: 'Post', href: '#' },
 ];
 
-// Form for adding a new (top-level) reply
 const replyForm = useForm({
     body: '',
     post_id: props.post.id,
-    parent_id: null as number | null, // null = top-level reply
+    parent_id: null as number | null,
 });
 
 const submitReply = () => {
-    replyForm.post(route('replies.store'), { // We need to add this route
+    replyForm.post(route('replies.store'), {
         preserveScroll: true,
         onSuccess: () => replyForm.reset(),
     });
@@ -45,15 +41,18 @@ const deletePost = () => {
     <Head :title="post.title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="w-full mx-auto p-4 bg-transparent">
+        <div class="w-full mx-auto p-4">
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <!-- MAIN TOPIC POST -->
+            <!-- Changed: bg-white, text-black, added border to match Reply.vue style -->
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
                 <div class="p-6">
-                    <h1 class="text-3xl font-bold mb-2">{{ post.title }}</h1>
-                    <div class="flex justify-between items-center mb-4">
+                    <h1 class="text-3xl font-bold mb-2 text-black">{{ post.title }}</h1>
+                    
+                    <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
                         <!-- Left Side: "Posted by" -->
-                        <div class="text-sm text-gray-600 dark:text-gray-400">
-                            Posted by @{{ post.user.username }}
+                        <div class="text-sm text-gray-600">
+                            Posted by <span class="font-semibold text-black">@{{ post.user.username }}</span>
                         </div>
                         
                         <!-- Right Side: "Edit/Delete" buttons -->
@@ -61,27 +60,30 @@ const deletePost = () => {
                             <Link
                                 v-if="post.can_update"
                                 :href="route('forum.edit', post.id)"
-                                class="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                class="font-medium text-blue-600 hover:underline"
                             >
                                 Edit
                             </Link>
                             <button
                                 v-if="post.can_delete"
                                 @click="deletePost"
-                                class="font-medium text-red-500 hover:underline"
+                                class="font-medium text-red-600 hover:underline"
                             >
                                 Delete
                             </button>
                         </div>
                     </div>
-                    <div class="prose dark:prose-invert max-w-none">
+
+                    <!-- Post Body: Enforce black text -->
+                    <div class="prose max-w-none text-black leading-relaxed">
                         <p>{{ post.body }}</p>
                     </div>
                 </div>
             </div>
 
+            <!-- REPLIES SECTION -->
             <div class="mt-6">
-                <h2 class="text-xl font-bold mb-4">Replies</h2>
+                <h2 class="text-xl font-bold mb-4 text-black">Replies</h2>
 
                 <div class="space-y-4">
                     <Reply 
@@ -92,26 +94,35 @@ const deletePost = () => {
                     />
                 </div>
 
-                <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+                <!-- MAIN REPLY FORM -->
+                <!-- Changed: bg-white container with light inputs -->
+                <div class="mt-6 bg-white rounded-xl shadow-md border border-gray-200 p-6">
                     <form @submit.prevent="submitReply">
-                        <label for="body" class="block mb-2 font-medium">Your Reply</label>
+                        <label for="body" class="block mb-2 text-sm font-medium text-black">
+                            Write a Reply
+                        </label>
+                        
+                        <!-- Textarea: Light gray background, black text, blue focus ring -->
                         <textarea
                             id="body"
                             v-model="replyForm.body"
                             rows="5"
-                            class="w-full rounded border px-3 py-2"
-                            placeholder="Write your reply..."
+                            class="w-full p-4 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-inner"
+                            placeholder="Share your thoughts..."
                         ></textarea>
-                        <p v-if="replyForm.errors.body" class="text-red-500 text-sm mt-1">
+                        
+                        <p v-if="replyForm.errors.body" class="text-red-500 text-sm mt-2 font-medium">
                             {{ replyForm.errors.body }}
                         </p>
+
                         <div class="flex justify-end mt-4">
                             <button
                                 type="submit"
                                 :disabled="replyForm.processing"
-                                class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
                             >
-                                Post Reply
+                                <span v-if="replyForm.processing">Posting...</span>
+                                <span v-else>Post Reply</span>
                             </button>
                         </div>
                     </form>

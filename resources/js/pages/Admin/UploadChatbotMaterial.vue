@@ -44,13 +44,13 @@ const submit = () => {
         
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             
-            <div class="w-full max-w-2xl mx-auto bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
+            <div class="w-full max-w-2xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                 
-                <div class="p-6 border-b border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50">
-                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">
+                <div class="p-6 border-b border-gray-200 bg-gray-50">
+                    <h2 class="text-lg font-bold text-gray-900">
                         Upload Knowledge Base
                     </h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p class="text-sm text-gray-500 mt-1">
                         Upload PDFs or text files to train the AI assistant.
                     </p>
                 </div>
@@ -58,20 +58,20 @@ const submit = () => {
                 <div class="p-6">
                     <form @submit.prevent="submit" class="space-y-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="block text-sm font-medium text-gray-700">
                                 Document Title
                             </label>
                             <input 
                                 v-model="form.title" 
                                 type="text" 
-                                class="mt-1 block w-full border border-gray-300 dark:border-zinc-600 rounded-md p-2 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                                class="mt-1 block w-full border border-gray-300 rounded-md p-2 bg-white text-gray-900  focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="e.g., Physics Chapter 1"
                             />
                             <div v-if="form.errors.title" class="text-red-500 text-xs mt-1">{{ form.errors.title }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="block text-sm font-medium text-gray-700">
                                 File (PDF, TXT, CSV)
                             </label>
                             <input 
@@ -82,19 +82,18 @@ const submit = () => {
                                     file:rounded-full file:border-0
                                     file:text-sm file:font-semibold
                                     file:bg-blue-50 file:text-blue-700
-                                    dark:file:bg-blue-900/30 dark:file:text-blue-400
-                                    hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
+                                    hover:file:bg-blue-100
                                     cursor-pointer"
                             />
                             
-                            <div v-if="form.progress" class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-3">
+                            <div v-if="form.progress" class="w-full bg-gray-200 rounded-full h-2.5 mt-3">
                                 <div class="bg-blue-600 h-2.5 rounded-full" :style="{ width: form.progress.percentage + '%' }"></div>
                             </div>
                             
                             <div v-if="form.errors.file" class="text-red-500 text-xs mt-1">{{ form.errors.file }}</div>
                         </div>
 
-                        <div v-if="uploadStatus" class="p-3 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm font-medium">
+                        <div v-if="uploadStatus" class="p-3 rounded-md bg-blue-50 text-blue-700 text-sm font-medium">
                             {{ uploadStatus }}
                         </div>
 

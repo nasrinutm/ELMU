@@ -56,8 +56,8 @@ const formatDate = (dateString: string) => {
                 </Link>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
-                <div class="hidden md:flex bg-gray-100 dark:bg-gray-700 p-3">
+            <div class="bg-white rounded-xl overflow-hidden">
+                <div class="hidden md:flex bg-gray-100 p-3">
                     <div class="w-3/5 font-semibold text-lg">Topics</div>
                     <div class="w-1/5 font-semibold text-center text-lg">Replies</div>
                     <div class="w-1/5 font-semibold text-right text-lg mr-px">Last Activity</div>

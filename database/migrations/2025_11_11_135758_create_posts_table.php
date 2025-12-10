@@ -11,35 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('replies', function (Blueprint $table) {
+        Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->text('body');
-
-            // Foreign key for the user
+            
+            // Foreign key for the user who created the post
             $table->foreignId('user_id')
                   ->constrained('users')
                   ->onDelete('cascade');
 
-            // Foreign key for the post
-            $table->foreignId('post_id')
-                  ->constrained('posts')
-                  ->onDelete('cascade');
-
-            // 👇 --- ADD THIS BLOCK --- 👇
-            // This is the recursive part. It can be null.
-            $table->foreignId('parent_id')
-                  ->nullable()
-                  ->constrained('replies') // Points to its own table!
-                  ->onDelete('cascade'); // If parent reply is deleted, delete children
-            // 👆 --- END OF BLOCK --- 👆
-
+            // REMOVED: post_id and parent_id, as they create dependencies/confusion
+            
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('posts');
