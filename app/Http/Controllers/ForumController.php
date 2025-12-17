@@ -76,8 +76,14 @@ class ForumController extends BaseController
             }
         ]);
 
+        $canUpdate = \Illuminate\Support\Facades\Gate::allows('update', $post);
+        $canDelete = \Illuminate\Support\Facades\Gate::allows('delete', $post);
+
         return Inertia::render('Forum/Show', [
-            'post' => $post
+            'post' => array_merge($post->toArray(), [
+                'can_update' => $canUpdate,
+                'can_delete' => $canDelete,
+            ])
         ]);
     }
 

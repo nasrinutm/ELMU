@@ -13,21 +13,21 @@ class GeminiFileSearch
 
     public function __construct()
     {
-        $this->apiKey = env('GEMINI_API_KEY');
-        $this->storeName = env('GEMINI_STORE_ID');
+        $this->apiKey = config('gemini.api_key');
+        $this->storeName = config('gemini.store_id');
     }
 
     /**
      * 1. CHAT: Send a message using the File Search Store (RAG)
      */
-    public function chatWithStore($storeName, $userMessage)
+    public function chatWithStore($storeName, $userMessage, $strictInstruction)
     {
         // Use Gemini 2.5 Flash for speed and cost-efficiency
         $model = 'models/gemini-2.5-flash';
 
         $url = "{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}";
 
-        $strictInstruction = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.";
+        //$strictInstruction = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.";
         
         // Combine the strict instruction with the user's question
         $combinedPrompt = $strictInstruction . " Pertanyaan pengguna: " . $userMessage;

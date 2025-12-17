@@ -22,7 +22,7 @@ const page = usePage();
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton
-                    as-child
+                    size="lg" as-child
                     :is-active="urlIsActive(item.href, page.url)"
                     :tooltip="item.title"
                 >

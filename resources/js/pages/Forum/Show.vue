@@ -4,11 +4,16 @@ import { Head, useForm, Link, router } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type Post, type Reply as ReplyType } from '@/types';
 import { route } from 'ziggy-js';
 import Reply from '@/components/Reply.vue';
+import { ref } from 'vue'; // Import ref for modal state
+import { Trash2 } from 'lucide-vue-next'; // Import Trash2 icon
 
 const props = defineProps<{
     post: Post & {
         user: { name: string, username: string };
         replies: ReplyType[];
+        // Assumed properties for authorization check
+        can_update: boolean; 
+        can_delete: boolean;
     };
 }>();
 
@@ -23,6 +28,28 @@ const replyForm = useForm({
     parent_id: null as number | null,
 });
 
+// --- CUSTOM MODAL STATE ---
+const isDeleteModalOpen = ref(false);
+
+// 1. Function to open the custom confirmation modal
+const openDeleteModal = () => {
+    isDeleteModalOpen.value = true;
+};
+
+// 2. Function to handle the actual deletion when confirmed
+const confirmDelete = () => {
+    isDeleteModalOpen.value = false;
+    // Perform the action (deletion)
+    router.delete(route('forum.destroy', props.post.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Redirect or show a success message after deletion
+            router.get(route('forum.index')); 
+        }
+    });
+};
+// --- END CUSTOM MODAL LOGIC ---
+
 const submitReply = () => {
     replyForm.post(route('replies.store'), {
         preserveScroll: true,
@@ -30,11 +57,7 @@ const submitReply = () => {
     });
 };
 
-const deletePost = () => {
-    if (confirm('Are you sure you want to delete this post?')) {
-        router.delete(route('forum.destroy', props.post.id));
-    }
-};
+// REMOVED THE OLD deletePost FUNCTION, replaced by openDeleteModal and confirmDelete
 </script>
 
 <template>
@@ -43,30 +66,26 @@ const deletePost = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="w-full mx-auto p-4">
 
-            <!-- MAIN TOPIC POST -->
-            <!-- Changed: bg-white, text-black, added border to match Reply.vue style -->
             <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
                 <div class="p-6">
                     <h1 class="text-3xl font-bold mb-2 text-black">{{ post.title }}</h1>
                     
                     <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
-                        <!-- Left Side: "Posted by" -->
                         <div class="text-sm text-gray-600">
                             Posted by <span class="font-semibold text-black">@{{ post.user.username }}</span>
                         </div>
                         
-                        <!-- Right Side: "Edit/Delete" buttons -->
-                        <div v-if="post.can_update || post.can_delete" class="flex space-x-3 text-sm">
+                        <div v-if="props.post.can_update || props.post.can_delete" class="flex space-x-3 text-sm">
                             <Link
-                                v-if="post.can_update"
-                                :href="route('forum.edit', post.id)"
+                                v-if="props.post.can_update"
+                                :href="route('forum.edit', props.post.id)"
                                 class="font-medium text-blue-600 hover:underline"
                             >
                                 Edit
                             </Link>
                             <button
-                                v-if="post.can_delete"
-                                @click="deletePost"
+                                v-if="props.post.can_delete"
+                                @click="openDeleteModal"
                                 class="font-medium text-red-600 hover:underline"
                             >
                                 Delete
@@ -74,14 +93,12 @@ const deletePost = () => {
                         </div>
                     </div>
 
-                    <!-- Post Body: Enforce black text -->
                     <div class="prose max-w-none text-black leading-relaxed">
                         <p>{{ post.body }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- REPLIES SECTION -->
             <div class="mt-6">
                 <h2 class="text-xl font-bold mb-4 text-black">Replies</h2>
 
@@ -94,15 +111,12 @@ const deletePost = () => {
                     />
                 </div>
 
-                <!-- MAIN REPLY FORM -->
-                <!-- Changed: bg-white container with light inputs -->
                 <div class="mt-6 bg-white rounded-xl shadow-md border border-gray-200 p-6">
                     <form @submit.prevent="submitReply">
                         <label for="body" class="block mb-2 text-sm font-medium text-black">
                             Write a Reply
                         </label>
                         
-                        <!-- Textarea: Light gray background, black text, blue focus ring -->
                         <textarea
                             id="body"
                             v-model="replyForm.body"
@@ -129,5 +143,31 @@ const deletePost = () => {
                 </div>
             </div>
         </div>
-    </AppLayout>
+        
+        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div class="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Trash2 class="w-6 h-6 text-red-500" />
+                    ELMU - Confirm Deletion
+                </h2>
+                <p class="mt-4 text-gray-700">
+                    Are you sure you want to permanently delete the post titled **"{{ post.title }}"**?
+                </p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button 
+                        @click="isDeleteModalOpen = false" 
+                        class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        @click="confirmDelete" 
+                        class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        OK, Delete Post
+                    </button>
+                </div>
+            </div>
+        </div>
+        </AppLayout>
 </template>

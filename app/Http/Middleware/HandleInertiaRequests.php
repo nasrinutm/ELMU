@@ -51,6 +51,14 @@ class HandleInertiaRequests extends Middleware
                     'roles' => $request->user()->getRoleNames(), // This is the Spatie function
                 ] : null,
             ],
+            // --- NEW: Flash Messages Block ---
+            'flash' => [
+                // The 'success' key from the controller's ->with('success', ...)
+                'success' => fn () => $request->session()->get('success'),
+                // It's good practice to share 'error' as well for general errors
+                'error' => fn () => $request->session()->get('error'),
+            ],
+            // --- END NEW BLOCK ---
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

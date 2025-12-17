@@ -13,7 +13,7 @@ class PostPolicy
     public function update(User $user, Post $post): bool
     {
         // Rule: Admin can update any post, anytime.
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('admin') || $user->hasRole('teacher')) {
             return true;
         }
 

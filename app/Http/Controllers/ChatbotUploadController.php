@@ -91,14 +91,22 @@ class ChatbotUploadController extends Controller
         return \Inertia\Inertia::render('Admin/ChatbotDetails', [
             'files' => $files,
             'systemInfo' => $systemInfo
-    ]);
+        ]);
     }
 
-    public function destroy($fileName)
+    public function destroy($geminiDocumentName)
     {
-        
-        $this->ragService->deleteFile($fileName);
-        
-        return back()->with('success', 'File deleted from AI memory.');
+        try {
+            // 1. Delete from Gemini API
+            $this->ragService->deleteFile($geminiDocumentName);
+
+            // 2. Delete the record from your local database
+            ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->delete();
+
+            return back()->with('success', 'File deleted from AI memory.');
+        } catch (\Exception $e) {
+            Log::error("RAG Deletion Error: " . $e->getMessage());
+            return back()->withErrors(['error' => 'Deletion failed: ' . $e->getMessage()]);
+        }
     }
 }

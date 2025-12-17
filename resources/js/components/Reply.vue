@@ -3,13 +3,16 @@ import { ref } from 'vue';
 import { type Reply as ReplyType } from '@/types';
 import { useForm, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
-import Reply from '@/components/Reply.vue'; 
+import { Trash2 } from 'lucide-vue-next'; // Import Trash2 icon
 
 // Props
 const props = defineProps<{
     reply: ReplyType & {
         user: { name: string, username: string };
         children: ReplyType[]; 
+        // Assuming 'can_update' and 'can_delete' are passed on the reply object
+        can_update: boolean;
+        can_delete: boolean; 
     };
     post_id: number;
 }>();
@@ -17,6 +20,25 @@ const props = defineProps<{
 // State
 const showReplyForm = ref(false);
 const showEditForm = ref(false);
+
+// --- CUSTOM MODAL STATE ---
+const isDeleteModalOpen = ref(false);
+
+// 1. Function to open the custom confirmation modal
+const openDeleteModal = () => {
+    isDeleteModalOpen.value = true;
+};
+
+// 2. Function to handle the actual deletion when confirmed
+const confirmDelete = () => {
+    isDeleteModalOpen.value = false;
+    // Perform the action (deletion)
+    router.delete(route('replies.destroy', props.reply.id), {
+        preserveScroll: true,
+    });
+};
+// --- END CUSTOM MODAL LOGIC ---
+
 
 // Form for replying to THIS reply
 const nestedReplyForm = useForm({
@@ -47,34 +69,21 @@ const submitEdit = () => {
     });
 };
 
-const deleteReply = () => {
-    if (confirm('Are you sure you want to delete this reply?')) {
-        router.delete(route('replies.destroy', props.reply.id), {
-            preserveScroll: true,
-        });
-    }
-};
+// REMOVED THE OLD deleteReply FUNCTION, replaced by openDeleteModal and confirmDelete
 </script>
 
 <template>
-    <!-- Changed: Removed dark:bg-gray-800 and dark:border-gray-700 -->
     <div class="bg-white rounded-xl shadow-md border border-gray-200 mb-4">
         <div class="p-5">
-            <!-- Header: User info -->
             <div class="flex items-center justify-between mb-2">
-                <!-- Changed: Force text-black -->
                 <div class="font-semibold text-black">
                     @{{ reply.user.username }}
                 </div>
-                <!-- Changed: Removed dark:text-gray-400 -->
                 <span class="text-xs text-gray-500">
-                    <!-- You can add a date here later, e.g., reply.created_at -->
-                </span>
+                    </span>
             </div>
             
-            <!-- MODE 1: EDITING -->
             <form v-if="showEditForm" @submit.prevent="submitEdit" class="mt-2 space-y-3">
-                <!-- Changed: Input forced to light theme style -->
                 <textarea
                     v-model="editForm.body"
                     rows="3"
@@ -102,17 +111,13 @@ const deleteReply = () => {
                 </div>
             </form>
 
-            <!-- MODE 2: VIEWING (Default) -->
             <div v-else>
-                <!-- Changed: Force text-black -->
                 <p class="text-black leading-relaxed">
                     {{ reply.body }}
                 </p>
 
-                <!-- ACTION BUTTONS ROW -->
                 <div class="flex items-center gap-4 mt-4 text-sm font-medium">
                     
-                    <!-- Reply Button -->
                     <button 
                         @click="showReplyForm = !showReplyForm"
                         class="text-blue-600 hover:text-blue-700 transition-colors"
@@ -120,11 +125,10 @@ const deleteReply = () => {
                         {{ showReplyForm ? 'Cancel Reply' : 'Reply' }}
                     </button>
 
-                    <!-- Edit/Delete Buttons (Only if authorized) -->
-                    <template v-if="reply.can_update || reply.can_delete">
+                    <template v-if="props.reply.can_update || props.reply.can_delete">
                         
                         <button
-                            v-if="reply.can_update"
+                            v-if="props.reply.can_update"
                             @click="showEditForm = true"
                             class="text-gray-500 hover:text-gray-700 transition-colors"
                         >
@@ -132,8 +136,8 @@ const deleteReply = () => {
                         </button>
 
                         <button
-                            v-if="reply.can_delete"
-                            @click="deleteReply"
+                            v-if="props.reply.can_delete"
+                            @click="openDeleteModal"
                             class="text-red-600 hover:text-red-700 transition-colors"
                         >
                             Delete
@@ -142,8 +146,6 @@ const deleteReply = () => {
                 </div>
             </div>
 
-            <!-- NESTED REPLY FORM -->
-            <!-- Changed: Border color fixed to light gray/blue -->
             <form v-if="showReplyForm" @submit.prevent="submitNestedReply" class="mt-4 pl-4 border-l-2 border-blue-100">
                 <textarea
                     v-model="nestedReplyForm.body"
@@ -165,15 +167,45 @@ const deleteReply = () => {
                 </div>
             </form>
 
-            <!-- RECURSIVE CHILDREN (Nested Replies) -->
-            <div v-if="reply.children && reply.children.length > 0" class="mt-4 ml-2 pl-4 border-l-2 border-gray-100 space-y-4">
+            <div v-if="props.reply.children && props.reply.children.length > 0" class="mt-4 ml-2 pl-4 border-l-2 border-gray-100 space-y-4">
                 <Reply
-                    v-for="childReply in reply.children"
+                    v-for="childReply in props.reply.children"
                     :key="childReply.id"
                     :reply="childReply"
-                    :post_id="post_id"
+                    :post_id="props.post_id"
                 />
             </div>
         </div>
     </div>
-</template>
+    
+    <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div class="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Trash2 class="w-6 h-6 text-red-500" />
+                ELMU - Confirm Deletion
+            </h2>
+            <p class="mt-4 text-gray-700">
+                Are you sure you want to permanently delete this reply?
+            </p>
+            <p class="italic text-gray-500 text-sm mt-2 max-h-16 overflow-hidden">
+                (Content: "{{ props.reply.body.substring(0, 100) }}...")
+            </p>
+            <div class="mt-6 flex justify-end gap-3">
+                <button 
+                    type="button"
+                    @click="isDeleteModalOpen = false" 
+                    class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                    Cancel
+                </button>
+                <button 
+                    type="button"
+                    @click="confirmDelete" 
+                    class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                    OK, Delete Reply
+                </button>
+            </div>
+        </div>
+    </div>
+    </template>

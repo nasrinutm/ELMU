@@ -6,15 +6,24 @@ use Illuminate\Http\Request;
 use App\Services\GeminiFileSearch; 
 //use Gemini\Laravel\Facades\Gemini; // Keep the old one for fallback
 use Illuminate\Support\Facades\Log;
+use App\Models\Setting;
 
 class ChatbotController extends Controller
 {
     protected $ragService;
 
+    const DEFAULT_PROMPT = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.";
+    const PROMPT_KEY = 'ai_strict_instruction';
 
     public function __construct(GeminiFileSearch $ragService)
     {
         $this->ragService = $ragService;
+    }
+
+    protected function getInstruction()
+    {
+        return Setting::where('key', self::PROMPT_KEY)
+            ->value('value') ?? self::DEFAULT_PROMPT;
     }
 
     public function send(Request $request)
@@ -26,8 +35,10 @@ class ChatbotController extends Controller
             $storeId = env('GEMINI_STORE_ID');
 
             if ($storeId) {
-          
-                $reply = $this->ragService->chatWithStore($storeId, $request->message);
+                
+                $strictInstruction = $this->getInstruction();
+
+                $reply = $this->ragService->chatWithStore($storeId, $request->message, $strictInstruction);
             // } else {
             //  Standard Mode (Fallback)
             //  
@@ -50,6 +61,35 @@ class ChatbotController extends Controller
         }
     }
     
+    public function editPrompt()
+    {
+        // Get the current instruction
+        $currentInstruction = $this->getInstruction(); // <-- USES NEW HELPER
+
+        return \Inertia\Inertia::render('Admin/ChatbotPromptEdit', [
+            'currentInstruction' => $currentInstruction,
+        ]);
+    }
+    
+    // NEW: Method to save the prompt
+    public function updatePrompt(Request $request)
+    {
+        $request->validate([
+            'instruction' => 'required|string|max:2048',
+        ]);
+        
+        $newInstruction = $request->input('instruction');
+
+        // Save the new instruction to the database
+        Setting::updateOrCreate(
+            ['key' => self::PROMPT_KEY],
+            ['value' => $newInstruction]
+        );
+        
+        return redirect()
+            ->route('chatbot.details')
+            ->with('success', 'AI strict instruction updated successfully!');
+    }
     
     public function setupStore() {
         $id = $this->ragService->createStore("LMS Main Store");
