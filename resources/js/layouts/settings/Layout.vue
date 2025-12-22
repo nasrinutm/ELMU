@@ -3,29 +3,30 @@ import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toUrl, urlIsActive } from '@/lib/utils';
-import { edit as editProfile } from '@/routes/profile';
-import { show } from '@/routes/two-factor';
-import { edit as editPassword } from '@/routes/user-password';
+import profileRoutes from '@/routes/profile';
+import userPasswordRoutes from '@/routes/user-password';
+import TwoFactorRoutes from '@/routes/two-factor';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 
 const sidebarNavItems: NavItem[] = [
     {
         title: 'Profile',
-        href: editProfile(),
+        href: profileRoutes.edit(),
     },
     {
         title: 'Password',
-        href: editPassword(),
+        href: userPasswordRoutes.edit(),
     },
     {
         title: 'Two-Factor Auth',
-        href: show(),
+        // changed: cast to any and call url() safely
+        href: (TwoFactorRoutes as any)?.show?.url?.() ?? '',
     },
     // DELETED: Appearance link was here
 ];
 
-const currentPath = typeof window !== undefined ? window.location.pathname : '';
+const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
 </script>
 
 <template>

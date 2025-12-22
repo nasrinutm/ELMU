@@ -42,23 +42,22 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
+            
+            // Authentication Data
             'auth' => [
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
                     'username' => $request->user()->username,
                     'email' => $request->user()->email,
-                    'roles' => $request->user()->getRoleNames(), // This is the Spatie function
+                    'roles' => $request->user()->getRoleNames(), // Spatie roles
                 ] : null,
             ],
-            // --- NEW: Flash Messages Block ---
             'flash' => [
-                // The 'success' key from the controller's ->with('success', ...)
                 'success' => fn () => $request->session()->get('success'),
-                // It's good practice to share 'error' as well for general errors
                 'error' => fn () => $request->session()->get('error'),
             ],
-            // --- END NEW BLOCK ---
+
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

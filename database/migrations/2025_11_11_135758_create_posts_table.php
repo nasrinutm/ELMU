@@ -25,6 +25,16 @@ return new class extends Migration
             $table->timestamps();
         });
     }
+{
+    // ONLY create the posts table here
+    // Schema::create('posts', function (Blueprint $table) {
+    //     $table->id();
+    //     $table->foreignId('user_id')->constrained()->onDelete('cascade');
+    //     $table->string('title');
+    //     $table->text('content');
+    //     $table->timestamps();
+    // });
+}
 
     public function down(): void
     {
