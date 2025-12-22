@@ -18,18 +18,33 @@ class ForumController extends BaseController
      */
     public function index(Request $request)
     {
-        // 2. Replace the sample data with this query
         $posts = Post::query()
-            ->with('user:id,name')  // Eager-load the user's name
-            ->withCount('allReplies as replies_count') // Get the count from the 'allReplies' relationship
-            ->latest() // Newest first
-            ->paginate(20)
-            ->withQueryString();
+        ->with('user:id,name')
+        ->withCount('allReplies as replies_count')
+        // --- SEARCH ---
+        ->when($request->input('search'), function ($query, $search) {
+            $query->where('title', 'like', "%{$search}%")
+                  ->orWhere('body', 'like', "%{$search}%");
+        })
+        // --- SORTING ---
+        ->when($request->input('sort'), function ($query, $sort) {
+            if ($sort === 'popular') {
+                $query->orderBy('replies_count', 'desc');
+            } elseif ($sort === 'oldest') {
+                $query->orderBy('created_at', 'asc');
+            } else {
+                $query->latest();
+            }
+        }, function ($query) {
+            $query->latest(); // Default sort
+        })
+        ->paginate(20)
+        ->withQueryString();
 
-        return Inertia::render('Forum/Index', [
-            'posts' => $posts,
-            'filters' => (object)[], 
-        ]);
+    return Inertia::render('Forum/Index', [
+        'posts' => $posts,
+        'filters' => $request->only(['search', 'sort']), // Pass values back to Vue
+    ]);
     }
 
     /**
