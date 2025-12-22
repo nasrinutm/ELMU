@@ -50,29 +50,6 @@ const mainNavItems = computed<NavItem[]>(() => {
     }
 });
 
-// Menu Logic
-if (user.value?.roles.includes('admin')) {
-    mainNavItems.value = [
-        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-        { title: 'Manage User', href: route('users.index'), icon: Users },
-        { title: 'Forum', href: '/forum', icon: BookOpen },
-        { title: 'Chatbot', href: '/admin/chatbot', icon: BookOpen },
-    ]
-} else if (user.value?.roles.includes('teacher')) {
-    mainNavItems.value = [
-        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-        { title: 'Materials', href: route('materials.index'), icon: FileText },
-        { title: 'Forum', href: '/forum', icon: BookOpen }
-    ]
-} else {
-    mainNavItems.value = [
-        { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-        { title: 'Learning Materials', href: route('materials.index'), icon: BookOpen },
-        { title: 'Forum', href: '/forum', icon: BookOpen }
-    ]
-}
-
-// Empty footer to remove Github Repo
 const footerNavItems: NavItem[] = [];
 </script>
 

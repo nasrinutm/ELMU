@@ -54,7 +54,6 @@ Route::get('/', function () {
 // Setup AI Store
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
-
 // --- AUTHENTICATED ROUTES ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
