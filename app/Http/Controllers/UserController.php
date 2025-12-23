@@ -135,10 +135,10 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         // Protection: Prevent an admin from deleting their own account
-        if ($user->id === auth()->id()) {
-            return redirect()->back()
-                ->with('error', 'You cannot delete your own account.');
-        }
+        // if ($user->id === auth()->id()) {
+        //     return redirect()->back()
+        //         ->with('error', 'You cannot delete your own account.');
+        // }
 
         $user->delete();
 
