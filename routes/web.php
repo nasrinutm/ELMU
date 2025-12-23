@@ -6,12 +6,14 @@ use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MaterialController;
-use App\Models\User;
-use App\Models\Material;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
 use Gemini\Laravel\Facades\Gemini;
+use App\Models\User;
+use App\Models\Material;
+use App\Http\Controllers\ActivityController;
+
 
 Route::get('/test-models', function () {
     try {
@@ -28,33 +30,64 @@ Route::get('/test-models', function () {
 
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
+// --- PUBLIC ROUTES ---
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
 
+//Route::get('/test-models', function () {
+   // try {
+    //    $response = Gemini::models()->list();
+   //     return collect($response->models)->map(fn ($model) => [
+//            'name' => $model->name,
+//            'display_name' => $model->displayName,
+ //           'capabilities' => $model->supportedGenerationMethods
+ //       ]);
+ //   } catch (\Exception $e) {
+ //       return "Error: " . $e->getMessage();
+//    }
+//});
+
+// Setup AI Store
+Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
+
 // --- AUTHENTICATED ROUTES ---
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
+
+    
 
     // 1. DASHBOARD
     Route::get('/dashboard', function () {
-        $stats = [
-            'users' => User::count(),
-            'materials' => Material::count(),
-            'my_materials' => Material::where('user_id', Auth::id())->count(),
-        ];
+    // --- ADD THIS CHECK ---
+    // If the user is an Admin, redirect them to the User Management page (or your Admin Dashboard)
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+    
+    if ($user->hasRole('admin')) {
+        return redirect()->route('users.index'); // Redirect to the Admin User List
+    }
+    // ----------------------
 
-        $recentMaterials = Material::with('user:id,name')
-            ->latest()
-            ->take(5)
-            ->get();
+    // Standard Dashboard Logic (For Teachers & Students)
+    $stats = [
+        'users' => User::count(),
+        'materials' => Material::count(),
+        'my_materials' => Material::where('user_id', Auth::id())->count(),
+    ];
 
-        return Inertia::render('Dashboard', [
-            'stats' => $stats,
-            'recentMaterials' => $recentMaterials
-        ]);
-    })->middleware(['verified'])->name('dashboard');
+    $recentMaterials = Material::with('user:id,name')
+        ->latest()
+        ->take(5)
+        ->get();
+
+    return Inertia::render('Dashboard', [
+        'stats' => $stats,
+        'recentMaterials' => $recentMaterials
+    ]);
+})->name('dashboard');
 
     // 2. CHATBOT (Moved outside of dashboard closure)
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
@@ -106,7 +139,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
         Route::put('/{material}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
-    });
-});
 
+});
+    // 6. ACTIVITY ROUTES (Teacher + General)
+    Route::resource('activities', ActivityController::class);
+    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
+        ->name('activities.download');
+    Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
+    Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+    });
+
+// Include settings routes (Profile, etc.)
 require __DIR__.'/settings.php';
