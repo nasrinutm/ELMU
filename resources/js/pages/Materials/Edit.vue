@@ -54,7 +54,7 @@ const submit = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="py-12">
             <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white bg-gray-800 overflow-hidden shadow-md sm:rounded-lg">
+                <div class="bg-white  overflow-hidden shadow-md sm:rounded-lg">
                     <div class="p-6 bg-[#ffd900]   border-[#003366]">
 
                         <h3 class="text-lg font-medium text-gray-900 mb-4">
@@ -94,7 +94,7 @@ const submit = () => {
                                 <Label for="description">Description (Optional)</Label>
                                 <textarea
                                     id="description"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 bg-[#003366] dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                     v-model="form.description"
                                     rows="4"
                                 ></textarea>

@@ -85,7 +85,6 @@ class MaterialController extends Controller
 
     public function update(Request $request, Material $material)
     {
-        // ... (Keep existing update code - usually editing is one by one) ...
          $request->validate([
             'name' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
