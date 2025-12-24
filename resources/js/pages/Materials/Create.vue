@@ -17,10 +17,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // 2. Setup the form (Changed file to files array)
 const form = useForm({
-    name: '', // Used as a prefix or fallback title
+    name: '',
     subject: '',
     description: '',
-    files: [] as File[], // Array of files
+    files: [] as File[],
 });
 
 // 3. Handle File Input
@@ -42,7 +42,6 @@ const removeFile = (index: number) => {
 const submit = () => {
     form.post(route('materials.store'), {
         onError: () => {
-            // Handle errors
         },
     });
 };
@@ -62,7 +61,7 @@ const submit = () => {
                         </h3>
 
                         <form @submit.prevent="submit">
-                            <!-- Subject (Common for all files) -->
+
                             <div class="text-[#003366]">
                                 <Label for="subject">Subject</Label>
                                 <Input
@@ -77,7 +76,7 @@ const submit = () => {
                                 <InputError class="mt-2" :message="form.errors.subject" />
                             </div>
 
-                            <!-- Description (Common) -->
+
                             <div class="mt-4 text-[#003366]">
                                 <Label for="description">Description (Optional)</Label>
                                 <textarea

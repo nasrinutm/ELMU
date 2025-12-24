@@ -8,7 +8,6 @@ import InputError from '@/components/InputError.vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
 
-// 1. Define Props (from MaterialController@edit)
 const props = defineProps<{
     material: {
         id: number;
@@ -19,15 +18,11 @@ const props = defineProps<{
     };
 }>();
 
-// 2. Setup Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Materials', href: route('materials.index') },
     { title: 'Edit', href: route('materials.edit', props.material.id) },
 ];
 
-// 3. Setup the form
-// NOTE: We must use POST for file uploads, even for an update.
-// We add `_method: 'put'` to tell Laravel to treat it as a PUT request.
 const form = useForm({
     _method: 'put',
     name: props.material.name,
@@ -36,7 +31,6 @@ const form = useForm({
     file: null as File | null,
 });
 
-// 4. Submit handler
 const submit = () => {
     form.post(route('materials.update', props.material.id), {
         onError: () => {
