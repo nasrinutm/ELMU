@@ -11,21 +11,17 @@ return new class extends Migration
      */
     public function up(): void
 {
-    // ONLY create the posts table here
-    Schema::create('posts', function (Blueprint $table) {
+    Schema::create('activity_scores', function (Blueprint $table) {
         $table->id();
         $table->foreignId('user_id')->constrained()->onDelete('cascade');
-        $table->string('title');
-        $table->text('content');
+        $table->foreignId('activity_id')->constrained('activities')->onDelete('cascade');
+        $table->integer('score')->default(0);
         $table->timestamps();
     });
 }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('posts');
-    }
+public function down(): void
+{
+    Schema::dropIfExists('activity_scores');
+}
 };

@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type Post } from '@/types';
 import { route } from 'ziggy-js';
+import { Save, Loader2 } from 'lucide-vue-next';
 
 const props = defineProps<{
     post: Post;
@@ -49,9 +50,13 @@ const submit = () => {
                             {{ form.errors.body }}
                         </p>
                     </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="submit" :disabled="form.processing" class="bg-blue-600 ...">
-                            {{ form.processing ? 'Saving...' : 'Save Changes' }}
+                    <div class="flex justify-end p-2">
+                        <button type="submit" :disabled="form.processing" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">
+                            <Loader2 v-if="form.processing" class="w-4 h-4 animate-spin" />
+                            
+                            <Save v-else class="w-4 h-4" />
+
+                            <span>{{ form.processing ? 'Saving Changes...' : 'Save Changes' }}</span>
                         </button>
                     </div>
                 </form>

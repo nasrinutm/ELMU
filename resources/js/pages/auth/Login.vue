@@ -5,9 +5,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/auth/AuthCardLayout.vue';
-import { store } from '@/routes/login';
+import store from '@/routes/login';
 import { Form, Head } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+
+// changed: handle route module shape where the form helper may be nested under `.store`
+const loginStore = (store as any)?.store ?? (store as any);
 
 defineProps<{
     status?: string;
@@ -31,7 +34,7 @@ defineProps<{
         </div>
 
         <Form
-            v-bind="store.form()"
+            v-bind="loginStore.form()"
             :reset-on-success="['password']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"

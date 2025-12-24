@@ -7,7 +7,7 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\Post; // <-- Uncomment this when you have a Post model
+use App\Models\Post;
 use App\Models\Reply;
 
 class ForumController extends BaseController
@@ -92,7 +92,7 @@ class ForumController extends BaseController
 
         // 2. Create the reply
         Reply::create([
-            'user_id' => auth()->id(),
+            'user_id' => $request->user()->id,
             'post_id' => $request->post_id,
             'parent_id' => $request->parent_id,
             'body' => $request->body,
