@@ -9,7 +9,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue';
 // UPDATED: Removed 'Activity', Added 'Gamepad2'
-import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle } from 'lucide-vue-next';
+import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle, Bot } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 interface AuthUser {
@@ -30,7 +30,8 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Manage User', href: route('users.index'), icon: Users },
             { title: 'Forum', href: '/forum', icon: BookOpen },
             { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
-            { title: 'Quiz', href: '#', icon: CheckCircle }, 
+            { title: 'Quiz', href: '#', icon: CheckCircle },
+            { title: 'Chatbot', href: '/admin/chatbot', icon: Bot },
         ];
     } else if (user.value?.roles.includes('teacher')) {
         return [
