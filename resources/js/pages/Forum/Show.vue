@@ -11,6 +11,7 @@ const props = defineProps<{
     post: Post & {
         user: { name: string, username: string };
         replies: ReplyType[];
+        content: string;
         // Assumed properties for authorization check
         can_update: boolean; 
         can_delete: boolean;
@@ -94,7 +95,7 @@ const submitReply = () => {
                     </div>
 
                     <div class="prose max-w-none text-black leading-relaxed">
-                        <p>{{ post.body }}</p>
+                        <p>{{ post.content }}</p>
                     </div>
                 </div>
             </div>

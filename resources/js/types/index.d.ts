@@ -47,7 +47,7 @@ export type BreadcrumbItemType = BreadcrumbItem;
 export interface Post {
     id: number;
     title: string;
-    body: string;
+    content: string;
     created_at: string;
     user: User; // A post has one user
     replies: Reply[]; // A post has many replies
