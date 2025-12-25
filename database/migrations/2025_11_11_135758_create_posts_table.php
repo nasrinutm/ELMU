@@ -13,14 +13,14 @@ return new class extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->text('body');
-            
+
             // Foreign key for the user who created the post
             $table->foreignId('user_id')
                   ->constrained('users')
                   ->onDelete('cascade');
 
             // REMOVED: post_id and parent_id, as they create dependencies/confusion
-            
+
             $table->timestamps();
         });
     }
