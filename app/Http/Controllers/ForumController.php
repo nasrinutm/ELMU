@@ -18,18 +18,38 @@ class ForumController extends BaseController
      */
     public function index(Request $request)
     {
-        // 2. Replace the sample data with this query
         $posts = Post::query()
-            ->with('user:id,name')  // Eager-load the user's name
-            ->withCount('allReplies as replies_count') // Get the count from the 'allReplies' relationship
-            ->latest() // Newest first
-            ->paginate(20)
-            ->withQueryString();
+        ->with('user:id,name')
+        ->withCount('allReplies as replies_count')
+        
+        // 1. Handle Search
+        ->when($request->input('search'), function ($query, $search) {
+            $query->where('title', 'like', "%{$search}%")
+                  ->orWhere('body', 'like', "%{$search}%");
+        })
+        
+        // 2. Handle Sorting
+        ->when($request->input('sort'), function ($query, $sort) {
+            if ($sort === 'replies') {
+                $query->orderBy('replies_count', 'desc');
+            } elseif ($sort === 'oldest') {
+                $query->orderBy('created_at', 'asc');
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+        }, function ($query) {
+            // Default sort if none provided
+            $query->latest();
+        })
+        ->paginate(20)
+        ->withQueryString(); 
 
-        return Inertia::render('Forum/Index', [
-            'posts' => $posts,
-            'filters' => (object)[], 
-        ]);
+    return Inertia::render('Forum/Index', [
+        'posts' => $posts,
+        // 3. Pass current filters back to the frontend to keep inputs populated
+        'filters' => $request->only(['search', 'sort']),
+        'can_create' => $request->user()?->can('create', Post::class) ?? true,
+    ]);
     }
 
     /**
@@ -76,8 +96,14 @@ class ForumController extends BaseController
             }
         ]);
 
+        $canUpdate = \Illuminate\Support\Facades\Gate::allows('update', $post);
+        $canDelete = \Illuminate\Support\Facades\Gate::allows('delete', $post);
+
         return Inertia::render('Forum/Show', [
-            'post' => $post
+            'post' => array_merge($post->toArray(), [
+                'can_update' => $canUpdate,
+                'can_delete' => $canDelete,
+            ])
         ]);
     }
 

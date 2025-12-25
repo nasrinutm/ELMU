@@ -9,23 +9,25 @@ class GeminiFileSearch
 {
     protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     protected $apiKey;
+    protected $storeName;
 
     public function __construct()
     {
-        $this->apiKey = env('GEMINI_API_KEY');
+        $this->apiKey = config('gemini.api_key');
+        $this->storeName = config('gemini.store_id');
     }
 
     /**
      * 1. CHAT: Send a message using the File Search Store (RAG)
      */
-    public function chatWithStore($storeName, $userMessage)
+    public function chatWithStore($storeName, $userMessage, $strictInstruction)
     {
         // Use Gemini 2.5 Flash for speed and cost-efficiency
         $model = 'models/gemini-2.5-flash';
 
         $url = "{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}";
 
-        $strictInstruction = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.";
+        //$strictInstruction = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.";
         
         // Combine the strict instruction with the user's question
         $combinedPrompt = $strictInstruction . " Pertanyaan pengguna: " . $userMessage;
@@ -102,10 +104,11 @@ class GeminiFileSearch
     /**
      * 2. UPLOAD: Uploads a file AND links it to a specific Store
      */
-    public function uploadAndIndexFile($storeName, $filePath, $mimeType)
+    public function uploadAndIndexFile($storeName, $filePath, $mimeType, $customDisplayName) // ADDED $customDisplayName
     {
         $fileSize = filesize($filePath);
-        $displayName = basename($filePath);
+        // CHANGE: Use the custom display name instead of basename($filePath)
+        $displayName = $customDisplayName; 
 
         // --- A. Initial Resumable Upload Request ---
         // We ask Google for a unique upload URL
@@ -118,9 +121,10 @@ class GeminiFileSearch
         ])->post("https://generativelanguage.googleapis.com/upload/v1beta/files?key={$this->apiKey}", [
             'file' => ['displayName' => $displayName]
         ]);
+        // ... (rest of A, B, C steps are unchanged) ...
 
         if ($initResponse->failed()) {
-            Log::error('Gemini Upload Init Failed', $initResponse->json());
+            // ... (error handling) ...
             throw new \Exception("Failed to initialize upload.");
         }
 
@@ -136,98 +140,157 @@ class GeminiFileSearch
         ])->withBody($fileContent, $mimeType)->post($uploadUrl);
 
         if ($uploadResponse->failed()) {
-            Log::error('Gemini Binary Upload Failed', $uploadResponse->json());
+            // ... (error handling) ...
             throw new \Exception("Failed to upload file bytes.");
         }
 
         $uploadedFile = $uploadResponse->json()['file']; // We get back the file object
+        $geminiFileName = $uploadedFile['name']; // SAVE THIS! (e.g., files/abc123xyz)
 
         // --- C. Link the file to your Vector Store ---
-        // This step actually performs the RAG indexing
         $importUrl = "{$this->baseUrl}/{$storeName}:importFile?key={$this->apiKey}";
         
         $linkResponse = Http::post($importUrl, [
-            'file_name' => $uploadedFile['name'] // e.g. "files/abc123xyz"
+            'file_name' => $geminiFileName
         ]);
         
-        $operationName = $linkResponse->json()['name']; // e.g., "operations/importFile-12345"
+        $operationName = $linkResponse->json()['name']; 
         if (!$operationName) {
             throw new \Exception("Failed to initiate indexing operation.");
         }
 
         // --- D. Wait for Indexing to Complete (LRO Polling) ---
-        $maxAttempts = 30; // 30 attempts * 10 seconds = 5 minutes total wait
+        $maxAttempts = 30;
         $delaySeconds = 10; 
 
         for ($i = 0; $i < $maxAttempts; $i++) {
-            sleep($delaySeconds); // Pause before checking
+            sleep($delaySeconds);
             
             $statusUrl = "{$this->baseUrl}/{$operationName}?key={$this->apiKey}";
             $statusResponse = Http::get($statusUrl);
 
             if ($statusResponse->failed() || ($statusResponse->json()['error'] ?? false)) {
-                Log::error("RAG Indexing Failed: ", $statusResponse->json());
+                // ... (error handling) ...
                 throw new \Exception("RAG Indexing failed during operation check.");
             }
             
-            // Check for "done": true
             if (($statusResponse->json()['done'] ?? false) === true) {
-                Log::info("RAG Indexing complete for file: " . $uploadedFile['displayName']);
-                return $statusResponse->json(); // Success!
+                $responseBody = $statusResponse->json();
+                
+                // 1. Get the document name from the LRO response payload (as seen in the log)
+                // The structure is: response -> response -> documentName
+                $documentNameSuffix = $responseBody['response']['documentName'] ?? null;
+                
+                if (empty($documentNameSuffix)) {
+                    // Log the full response body to debug if the structure changes again
+                    Log::error("Gemini Document Name Missing After Success", ['response' => $responseBody]);
+                    throw new \Exception("RAG Indexing successful, but document name could not be found in response.");
+                }
+
+                // 2. Construct the full Document Resource Name
+                // The LRO only returns the suffix (e.g., '1c3uggtch3t5-zfunmpxcocry').
+                // We must prepend the store name path to get the full name needed for the DB and deletion.
+                $fullDocumentName = "{$storeName}/documents/{$documentNameSuffix}";
+
+                Log::info("RAG Indexing complete for file: " . $displayName);
+
+                // RETURN THE CRITICAL IDs AND METADATA
+                return [ 
+                    'gemini_document_name' => $fullDocumentName, // Use the full constructed name
+                    'gemini_file_name' => $geminiFileName,
+                    'size_bytes' => $fileSize,
+                ];
             }
         }
 
-        // If the loop finishes, it timed out
         throw new \Exception("RAG Indexing timed out after " . ($maxAttempts * $delaySeconds) . " seconds.");
-
-        return $linkResponse->json();
     }
 
-    /**
-     * 3. SETUP: Create a new Store (Run this once to get your ID)
-     */
+    //SETUP
     public function createStore($displayName = 'LMS Global Store')
     {
         $response = Http::post("{$this->baseUrl}/fileSearchStores?key={$this->apiKey}", [
             'displayName' => $displayName
         ]);
         
-        return $response->json()['name'] ?? null; // Returns "fileSearchStores/xxxxxx"
+        return $response->json()['name'] ?? null; 
     }
 
-    public function listFiles()
-    {
-        // This endpoint lists all files owned by your API key
-        $url = "{$this->baseUrl}/files?key={$this->apiKey}&pageSize=100";
-
-        $response = Http::get($url);
-
-        if ($response->failed()) {
-            Log::error('Gemini List Files Failed', $response->json());
-            return [];
+    public function listFiles(){
+        $storePath = $this->storeName;
+        if (strpos($storePath, 'fileSearchStores/') === false) {
+            $storePath = "fileSearchStores/{$storePath}";
         }
 
-        // map() to format the data nicely for the frontend
-        $files = collect($response->json()['files'] ?? [])->map(function ($file) {
+        $url = "{$this->baseUrl}/{$storePath}/documents?pageSize=20&key={$this->apiKey}";
+        $response = Http::get($url);
+
+        if ($response->failed()) return collect([]);
+
+        $apiDocuments = $response->json()['documents'] ?? [];
+        
+        // Fetch local materials to map display names
+        $localMaterials = \App\Models\ChatbotMaterial::all()->keyBy('gemini_document_name');
+
+        return collect($apiDocuments)->map(function ($doc) use ($localMaterials) {
+            $docName = $doc['name'];
+            // Match API 'name' with local 'gemini_document_name'
+            $local = $localMaterials->get($docName);
+
             return [
-                'name' => $file['name'], // e.g., "files/abc123xyz"
-                'display_name' => $file['displayName'], // e.g., "Physics_Chapter_1.pdf"
-                'mime_type' => $file['mimeType'],
-                'size_bytes' => $file['sizeBytes'],
-                'created_at' => \Carbon\Carbon::parse($file['createTime'])->diffForHumans(),
-                'state' => $file['state'] // e.g., "ACTIVE" or "PROCESSING"
+                'name' => $docName, 
+                'display_name' => $local ? $local->display_name : $doc['displayName'], // Prioritize local name
+                'gemini_internal_name' => $doc['displayName'] ?? 'N/A', // The random ID from Gemini
+                'mime_type' => $doc['mimeType'] ?? null,
+                'size_bytes' => (int)($doc['sizeBytes'] ?? 0),
+                'created_at' => isset($doc['createTime']) ? \Carbon\Carbon::parse($doc['createTime'])->diffForHumans() : null,
+                'state' => $doc['state'] ?? null,
             ];
         });
-
-        return $files;
     }
+    // Remove a file from the knowledge base
+    public function deleteFile($fileName) {
+        // $url = "{$this->baseUrl}/{$fileName}?key={$this->apiKey}";
+        
+        // $response = Http::delete($url);
+        
+        // if ($response->failed()) {
+        //     Log::error('Gemini Delete Failed', $response->json());
+        //     return false;
+        // }
 
-    /**
-     * 5. DELETE: Remove a file from the knowledge base
-     */
-    public function deleteFile($fileName)
-    {
-        $url = "{$this->baseUrl}/{$fileName}?key={$this->apiKey}";
-        return Http::delete($url)->successful();
+        // return true;
+
+        // $fileName should be in the format: "files/{file_id}"
+        // Deleting the File resource will automatically delete any associated Documents.
+
+        $url = "{$this->baseUrl}/{$fileName}?key={$this->apiKey}&force=true";
+        
+        // This is a standard DELETE request. The Gemini API does not use a "--force" 
+        // flag; that concept applies to command-line interfaces.
+        $response = Http::delete($url);
+        
+        if ($response->failed()) {
+            Log::error('Gemini Delete Failed', [
+                'endpoint' => $url,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+            
+            // Check for specific error status codes (e.g., 404 Not Found)
+            if ($response->status() === 404) {
+                 // A 404 means the file may have already been deleted or the name is wrong.
+                 // We can consider this a successful removal for an idempotent operation.
+                 Log::warning('Gemini Delete: Resource not found (404). Considering successful removal.', ['file' => $fileName]);
+                 return true;
+            }
+
+            return false;
+        }
+
+        // The DELETE response body is typically empty on success (HTTP 200/204)
+        Log::info('Gemini File successfully deleted.', ['file' => $fileName]);
+
+        return true;
     }
 }

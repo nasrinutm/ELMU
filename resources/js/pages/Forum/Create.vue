@@ -38,7 +38,7 @@ const submit = () => {
             
             <h1 class="text-xl font-semibold mb-4">Create New Discussion</h1>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
                 <form @submit.prevent="submit" class="p-6 space-y-4">
                     
                     <div>

@@ -11,6 +11,8 @@ class Post extends Model
 {
     use HasFactory;
 
+    protected $table = 'posts';
+
     protected $fillable = ['title', 'body', 'user_id'];
 
     protected $appends = ['can_update', 'can_delete'];

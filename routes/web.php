@@ -9,10 +9,26 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
+use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
-//use Gemini\Laravel\Facades\Gemini;
 use App\Http\Controllers\ActivityController;
+
+
+Route::get('/test-models', function () {
+    try {
+        $response = Gemini::models()->list();
+        return collect($response->models)->map(fn ($model) => [
+            'name' => $model->name,
+            'display_name' => $model->displayName,
+            'capabilities' => $model->supportedGenerationMethods
+        ]);
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+});
+
+Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
 // --- PUBLIC ROUTES ---
 
@@ -37,7 +53,6 @@ Route::get('/', function () {
 
 // Setup AI Store
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
-
 
 // --- AUTHENTICATED ROUTES ---
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -74,19 +89,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ]);
 })->name('dashboard');
 
-    // 2. CHATBOT ROUTES
-    Route::post('/chat', [ChatbotController::class, 'send'])->name('chat.send');
+    // 2. CHATBOT (Moved outside of dashboard closure)
+    Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES (User & Chatbot Management)
+    // 3. ADMIN ROUTES (Consolidated into one block)
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
-        // User CRUD
+        // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-
+        
         // Chatbot Knowledge Base
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
@@ -94,6 +109,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+        Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
+        Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
     });
 
     // 4. FORUM ROUTES
@@ -104,16 +121,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
     Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
-
+    
     // Forum Replies
     Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIAL ROUTES (Teacher + General)
+    // 5. MATERIALS ROUTES
+    // Shared (View/Download)
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
+    // Teacher Only (CRUD)
     Route::middleware(['role:teacher'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');

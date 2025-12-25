@@ -1,8 +1,11 @@
-//import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
     plugins: [
@@ -12,9 +15,6 @@ export default defineConfig({
             refresh: true,
         }),
         tailwindcss(),
-        //wayfinder({
-            //formVariants: true,
-        //}),
         vue({
             template: {
                 transformAssetUrls: {
@@ -24,4 +24,10 @@ export default defineConfig({
             },
         }),
     ],
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, './resources/js'),
+        },
+        extensions: ['.js', '.ts', '.vue', '.json'],
+    },
 });
