@@ -19,7 +19,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 // Set up the form, pre-filled with the post's data
 const form = useForm({
     title: props.post.title,
-    body: props.post.body,
+    content: props.post.content,
 });
 
 // Submit handler
@@ -44,10 +44,15 @@ const submit = () => {
                         </p>
                     </div>
                     <div>
-                        <label for="body" class="block mb-1 font-medium">Body</label>
-                        <textarea id="body" v-model="form.body" rows="8" class="w-full rounded border-1 border-gray-300 p-1"></textarea>
-                        <p v-if="form.errors.body" class="text-red-500 text-sm mt-1">
-                            {{ form.errors.body }}
+                        <label for="content" class="block mb-1 font-medium">Content</label>
+                        <textarea 
+                            id="content" 
+                            v-model="form.content" 
+                            rows="8" 
+                            class="w-full rounded border-1 border-gray-300 p-1"
+                        ></textarea>
+                        <p v-if="form.errors.content" class="text-red-500 text-sm mt-1">
+                            {{ form.errors.content }}
                         </p>
                     </div>
                     <div class="flex justify-end p-2">

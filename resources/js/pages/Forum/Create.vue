@@ -15,7 +15,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 // 'title' and 'body' match the columns in your 'posts' table
 const form = useForm({
     title: '',
-    body: '',
+    content: '',
 });
 
 // Submit handler
@@ -56,16 +56,16 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <label for="body" class="block mb-1 font-medium">Body</label>
+                        <label for="content" class="block mb-1 font-medium">Content</label>
                         <textarea
-                            id="body"
-                            v-model="form.body"
+                            id="content"
+                            v-model="form.content" 
                             rows="8"
                             class="w-full rounded border px-3 py-2"
                             placeholder="Write the main content of your post..."
                         ></textarea>
-                        <p v-if="form.errors.body" class="text-red-500 text-sm mt-1">
-                            {{ form.errors.body }}
+                        <p v-if="form.errors.content" class="text-red-500 text-sm mt-1">
+                            {{ form.errors.content }}
                         </p>
                     </div>
 
