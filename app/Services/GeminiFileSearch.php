@@ -216,60 +216,40 @@ class GeminiFileSearch
         return $response->json()['name'] ?? null; 
     }
 
-    public function listFiles()
-    {
-        if (empty($this->storeName)) {
-            Log::error('Gemini: Store name is empty');
-            return collect([]);
-        }
-
-        // Ensure the storeName is in the expected form: fileSearchStores/{id}
+    public function listFiles(){
         $storePath = $this->storeName;
         if (strpos($storePath, 'fileSearchStores/') === false) {
             $storePath = "fileSearchStores/{$storePath}";
         }
 
-        // documents.list endpoint (lists Documents inside the FileSearchStore)
         $url = "{$this->baseUrl}/{$storePath}/documents?pageSize=20&key={$this->apiKey}";
+        $response = Http::get($url);
 
-        // Add optional Bearer token support if you use OAuth
-        $headers = ['Accept' => 'application/json'];
-        $oauthToken = env('GEMINI_OAUTH_TOKEN');
-        if (!empty($oauthToken)) {
-            $headers['Authorization'] = 'Bearer ' . $oauthToken;
-            // when using bearer token you can omit ?key=... if desired
-        }
+        if ($response->failed()) return collect([]);
 
-        $response = Http::withHeaders($headers)->get($url);
+        $apiDocuments = $response->json()['documents'] ?? [];
+        
+        // Fetch local materials to map display names
+        $localMaterials = \App\Models\ChatbotMaterial::all()->keyBy('gemini_document_name');
 
-        if ($response->failed()) {
-            Log::error('Gemini List Files Failed', [
-                'url' => $url,
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            return collect([]);
-        }
+        return collect($apiDocuments)->map(function ($doc) use ($localMaterials) {
+            $docName = $doc['name'];
+            // Match API 'name' with local 'gemini_document_name'
+            $local = $localMaterials->get($docName);
 
-        $data = $response->json();
-
-        // Response shape: { "documents": [ { name, displayName, mimeType, sizeBytes, createTime, ... } ], "nextPageToken": "..." }
-        $documents = collect($data['documents'] ?? []);
-
-        return $documents->map(function ($doc) {
             return [
-                'name' => $doc['name'] ?? null, // e.g. fileSearchStores/{store}/documents/{doc-id}
-                'display_name' => $doc['displayName'] ?? null,
+                'name' => $docName, 
+                'display_name' => $local ? $local->display_name : $doc['displayName'], // Prioritize local name
+                'gemini_internal_name' => $doc['displayName'] ?? 'N/A', // The random ID from Gemini
                 'mime_type' => $doc['mimeType'] ?? null,
-                'size_bytes' => $doc['sizeBytes'] ?? 0,
+                'size_bytes' => (int)($doc['sizeBytes'] ?? 0),
                 'created_at' => isset($doc['createTime']) ? \Carbon\Carbon::parse($doc['createTime'])->diffForHumans() : null,
                 'state' => $doc['state'] ?? null,
             ];
         });
     }
     // Remove a file from the knowledge base
-    public function deleteFile($fileName)
-    {
+    public function deleteFile($fileName) {
         // $url = "{$this->baseUrl}/{$fileName}?key={$this->apiKey}";
         
         // $response = Http::delete($url);

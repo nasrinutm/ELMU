@@ -23,4 +23,5 @@ return [
     */
     'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/'),
     'store_id' => env('GEMINI_STORE_ID'),
+    'model'    => env('GEMINI_MODEL', 'gemini-2.5-flash'),
 ];

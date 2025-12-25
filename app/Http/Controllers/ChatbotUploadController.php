@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Services\GeminiFileSearch;
 use Illuminate\Support\Facades\Log;
 use App\Models\ChatbotMaterial;
+use App\Models\Setting;
 
 class ChatbotUploadController extends Controller
 {
@@ -15,28 +16,20 @@ class ChatbotUploadController extends Controller
     {
         $this->ragService = $ragService;
     }
-
+    
     public function store(Request $request)
     {
-        //Ensure it's a PDF/Text file and under 100MB
         $request->validate([
-            'file' => 'required|file|mimes:pdf,txt,csv,md|max:102400', // 100MB max
-            'title' => 'required|string|max:255', // This is your 'input_name'
+            'file' => 'required|file|mimes:pdf,txt,csv,md|max:102400',
+            'title' => 'required|string|max:255',
         ]);
 
         try {
             $file = $request->file('file');
             $title = $request->input('title');
-            $storeId = env('GEMINI_STORE_ID');
+            $storeId = config('gemini.store_id');
 
-            if (!$storeId) {
-                return back()->withErrors(['file' => 'AI Knowledge Base ID is missing in .env settings.']);
-            }
-
-            // --- STEP A: Read File Content for BLOB Storage ---
-            $fileContentBlob = file_get_contents($file->getRealPath());
-            
-            // 1. Call the Gemini service (unchanged, still uploads the file physically)
+            // 1. Upload to Gemini
             $geminiResponse = $this->ragService->uploadAndIndexFile(
                 $storeId,
                 $file->getRealPath(), 
@@ -44,30 +37,23 @@ class ChatbotUploadController extends Controller
                 $title 
             );
 
-            // 2. Save details to the database, including the BLOB content
+            // 2. Save to Database with ACTIVE state if indexing is finished
             \App\Models\ChatbotMaterial::create([
-                // ❌ REMOVED: 'internal_file_path' => $file->hashName(),
-                
-                // ✅ ADDED: Storing the BLOB content
-                'file_content' => $fileContentBlob, 
-                
-                'display_name' => $title,
-                //'gemini_display_name' => $title, 
+                'file_content'         => file_get_contents($file->getRealPath()), 
+                'display_name'         => $title,
                 'gemini_document_name' => $geminiResponse['gemini_document_name'],
-                'gemini_file_name' => $geminiResponse['gemini_file_name'],
-                'mime_type' => $file->getMimeType(),
-                'size_bytes' => $geminiResponse['size_bytes'],
-                'gemini_state' => 'PROCESSING',
+                'gemini_file_name'     => $geminiResponse['gemini_file_name'],
+                'mime_type'            => $file->getMimeType(),
+                'size_bytes'           => $geminiResponse['size_bytes'],
+                'gemini_state'         => 'STATE_ACTIVE', // Reflect actual API state
             ]);
 
-            return back()->with('success', 'File uploaded and indexed! The AI is learning from it now.');
-
+            return back()->with('success', 'File uploaded and indexed successfully!');
         } catch (\Exception $e) {
             Log::error("RAG Upload Error: " . $e->getMessage());
             return back()->withErrors(['file' => 'Upload failed: ' . $e->getMessage()]);
         }
     }
-    
     //
     public function create() {
         return \Inertia\Inertia::render('Admin/UploadChatbotMaterial');
@@ -75,22 +61,25 @@ class ChatbotUploadController extends Controller
 
     public function index()
     {
-        // Fetch files from Google
         $files = $this->ragService->listFiles();
+    
+        // Get the raw store ID from config
+        $rawStoreId = config('gemini.store_id', 'Not Configured'); 
 
-        // Get the store ID from the environment (or directly from the service if you add a getter)
-        $storeId = env('GEMINI_STORE_ID', 'Not Configured'); 
+        // Remove the "fileSearchStores/" prefix if it exists
+        $cleanStoreId = str_replace('fileSearchStores/', '', $rawStoreId);
 
-        // 2Get System Info
-        $systemInfo = [
-            'model' => 'gemini-2.5-flash',
-            'store_id' => $storeId,
-            'api_status' => 'Active', 
-        ];
+        $currentPrompt = Setting::where('key', 'ai_strict_instruction')
+        ->value('value') ?? "Answer in Malay. Provide a concise answer in a numbered list...";
 
         return \Inertia\Inertia::render('Admin/ChatbotDetails', [
-            'files' => $files,
-            'systemInfo' => $systemInfo
+            'files' => $files->toArray(), 
+            'systemInfo' => [
+                'model' => config('gemini.model', 'gemini-2.5-flash'),
+                'store_id' => $cleanStoreId, // Use the cleaned name here
+                'api_status' => 'Active',
+                'current_prompt' => $currentPrompt, // Pass it here 
+            ]
         ]);
     }
 

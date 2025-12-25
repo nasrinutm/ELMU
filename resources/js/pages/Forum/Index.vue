@@ -1,25 +1,39 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3'; // Added router
+import { ref, watch } from 'vue'; // Added ref and watch
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
+import debounce from 'lodash/debounce';
 
 const props = defineProps<{
-    // posts: {
-    //     data: Array<{
-    //         id: number;
-    //         title: string;
-    //         user: {
-    //             name: string;
-    //         };
-    //         created_at: string;
-    //         replies_count: number;
-    //     }>;
-    // };
-    // filters: object;
     posts: any,
-    can_create: boolean
+    can_create: boolean,
+    filters: {
+        search?: string;
+        sort?: string;
+    }
 }>();
+
+// Initialize local state with current filter values
+const search = ref(props.filters.search || '');
+const sort = ref(props.filters.sort || 'latest');
+
+// Function to handle the actual request
+const updateFilters = debounce(() => {
+    router.get(route('forum.index'), { 
+        search: search.value, 
+        sort: sort.value 
+    }, { 
+        preserveState: true, 
+        replace: true 
+    });
+}, 300);
+
+// Watch for changes in search or sort
+watch([search, sort], () => {
+    updateFilters();
+});
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/' },
@@ -43,21 +57,41 @@ const formatDate = (dateString: string) => {
             
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-xl font-semibold">Forum Discussions</h1>
-                
-                <!-- <Link
+                <Link
                     :href="route('forum.create')" 
                     class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition"
                 >
                     Create New Post
-                </Link> -->
-                <Link v-if="can_create" :href="route('forum.create')">Create New Post</Link>
+                </Link>
+                
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="flex-1">
+                    <input 
+                        v-model="search"
+                        type="text" 
+                        placeholder="Search posts..." 
+                        class="w-full h-12 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 text-lg"
+                    />
+                </div>
+                <div class="w-full md:w-56">
+                    <select 
+                        v-model="sort"
+                        class="w-full h-12 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 text-lg"
+                    >
+                        <option value="latest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="replies">Most Replies</option>
+                    </select>
+                </div>
             </div>
 
             <div class="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
                 <div class="hidden md:flex bg-gray-50 p-4 border-b border-gray-200">
-                    <div class="w-3/5 font-semibold text-gray-700">Topics</div>
-                    <div class="w-1/5 font-semibold text-gray-700 text-center">Replies</div>
-                    <div class="w-1/5 font-semibold text-gray-700 text-right">Last Activity</div>
+                    <div class="w-3/5 font-semibold text-lg text-gray-700">Topics</div>
+                    <div class="w-1/5 font-semibold text-lg text-gray-700 text-center">Replies</div>
+                    <div class="w-1/5 font-semibold text-lg text-gray-700 text-right">Last Activity</div>
                 </div>
 
                 <div v-if="!posts.data || posts.data.length === 0" class="p-8 text-center text-gray-500">
