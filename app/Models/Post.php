@@ -13,7 +13,7 @@ class Post extends Model
 
     protected $table = 'posts';
 
-    protected $fillable = ['title', 'body', 'user_id'];
+    protected $fillable = ['title', 'content', 'user_id'];
 
     protected $appends = ['can_update', 'can_delete'];
 

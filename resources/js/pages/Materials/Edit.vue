@@ -91,6 +91,10 @@ const submit = () => {
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-700 bg-[#003366] dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                     v-model="form.description"
                                     rows="4"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    data-1p-ignore
+                                    data-lpignore="true"
                                 ></textarea>
                                 <InputError class="mt-2" :message="form.errors.description" />
                             </div>
