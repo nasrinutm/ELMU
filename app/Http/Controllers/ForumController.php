@@ -19,13 +19,13 @@ class ForumController extends BaseController
         $posts = Post::query()
         ->with('user:id,name')
         ->withCount('allReplies as replies_count')
-        
+
         // Handle Search - Changed body to content
         ->when($request->input('search'), function ($query, $search) {
             $query->where('title', 'like', "%{$search}%")
                   ->orWhere('content', 'like', "%{$search}%");
         })
-        
+
         ->when($request->input('sort'), function ($query, $sort) {
             if ($sort === 'replies') {
                 $query->orderBy('replies_count', 'desc');
