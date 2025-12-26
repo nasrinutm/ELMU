@@ -87,6 +87,10 @@ const submitEdit = () => {
                 <textarea
                     v-model="editForm.body"
                     rows="3"
+                    autocomplete="off"
+                    spellcheck="false"
+                    data-1p-ignore                        
+                    data-lpignore="true"
                     class="w-full p-3 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-inner text-sm"
                     placeholder="Update your reply..."
                 ></textarea>
@@ -150,6 +154,10 @@ const submitEdit = () => {
                 <textarea
                     v-model="nestedReplyForm.body"
                     rows="3"
+                    autocomplete="off"                       
+                    spellcheck="false"
+                    data-1p-ignore
+                    data-lpignore="true"
                     class="w-full p-3 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm shadow-sm"
                     placeholder="Write a reply..."
                 ></textarea>

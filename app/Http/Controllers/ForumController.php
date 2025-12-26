@@ -19,13 +19,13 @@ class ForumController extends BaseController
         $posts = Post::query()
         ->with('user:id,name')
         ->withCount('allReplies as replies_count')
-        
+
         // Handle Search - Changed body to content
         ->when($request->input('search'), function ($query, $search) {
             $query->where('title', 'like', "%{$search}%")
                   ->orWhere('content', 'like', "%{$search}%");
         })
-        
+
         ->when($request->input('sort'), function ($query, $sort) {
             if ($sort === 'replies') {
                 $query->orderBy('replies_count', 'desc');
@@ -38,7 +38,7 @@ class ForumController extends BaseController
             $query->latest();
         })
         ->paginate(20)
-        ->withQueryString(); 
+        ->withQueryString();
 
         return Inertia::render('Forum/Index', [
             'posts' => $posts,
@@ -68,10 +68,13 @@ class ForumController extends BaseController
     public function show(Post $post)
     {
         $post->load([
-            'user:id,name,username',
+            'user:id,name,username', // Get the post's author
+
+            // Load top-level replies and...
             'replies' => function ($query) {
                 $query->with('user:id,name,username')
-                      ->with('children.user:id,name,username'); 
+                      // ...recursively load all children, also with their authors
+                      ->with('children.user:id,name,username');
             }
         ]);
 
