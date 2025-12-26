@@ -51,9 +51,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // SETTINGS ROUTES (Profile & Password)
     // ==========================================
 
-    // Password: Show form and handle update
+
     Route::get('/settings/password', [PasswordController::class, 'edit'])->name('password.edit');
-    Route::put('/settings/password', [PasswordController::class, 'update'])->name('password.update');
 
     // Profile: Show form, handle update, and delete account
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
