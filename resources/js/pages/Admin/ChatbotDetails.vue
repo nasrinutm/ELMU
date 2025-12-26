@@ -133,6 +133,7 @@ const formatBytes = (bytes) => {
                         <p class="text-sm text-gray-700 leading-relaxed italic whitespace-pre-wrap pr-8">
                             "{{ systemInfo.current_prompt }}"
                         </p><div class="mt-3 flex items-start gap-2 text-gray-400">
+                        
                     </div>
                     </div>
                     <div class="mt-3 flex items-start gap-2 text-gray-400">
