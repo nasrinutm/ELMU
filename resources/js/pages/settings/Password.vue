@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController';
 import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { edit } from '@/routes/user-password';
-import { Form, Head } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
@@ -13,15 +11,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { type BreadcrumbItem } from '@/types';
 
+declare const route: Function;
+// Define breadcrumbs (assuming /settings/password is the URL)
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'Password settings',
-        href: edit().url,
+        href: '/settings/password',
     },
 ];
 
 const passwordInput = ref<HTMLInputElement | null>(null);
 const currentPasswordInput = ref<HTMLInputElement | null>(null);
+
+// --- THE FIX: Use Inertia's useForm hook ---
+const form = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+// Function to handle form submission
+const updatePassword = () => {
+    form.put(route('password.update'), {
+        preserveScroll: true,
+        onSuccess: () => form.reset(),
+        onError: () => {
+            if (form.errors.password) {
+                form.reset('password', 'password_confirmation');
+                passwordInput.value?.focus();
+            }
+            if (form.errors.current_password) {
+                form.reset('current_password');
+                currentPasswordInput.value?.focus();
+            }
+        },
+    });
+};
 </script>
 
 <template>
@@ -35,32 +60,19 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                     description="Ensure your account is using a long, random password to stay secure"
                 />
 
-                <Form
-                    v-bind="PasswordController.update.form()"
-                    :options="{
-                        preserveScroll: true,
-                    }"
-                    reset-on-success
-                    :reset-on-error="[
-                        'password',
-                        'password_confirmation',
-                        'current_password',
-                    ]"
-                    class="space-y-6"
-                    v-slot="{ errors, processing, recentlySuccessful }"
-                >
+                <form @submit.prevent="updatePassword" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="current_password">Current password</Label>
                         <Input
                             id="current_password"
                             ref="currentPasswordInput"
-                            name="current_password"
+                            v-model="form.current_password"
                             type="password"
                             class="mt-1 block w-full"
                             autocomplete="current-password"
                             placeholder="Current password"
                         />
-                        <InputError :message="errors.current_password" />
+                        <InputError :message="form.errors.current_password" />
                     </div>
 
                     <div class="grid gap-2">
@@ -68,36 +80,30 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                         <Input
                             id="password"
                             ref="passwordInput"
-                            name="password"
+                            v-model="form.password"
                             type="password"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
                             placeholder="New password"
                         />
-                        <InputError :message="errors.password" />
+                        <InputError :message="form.errors.password" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password_confirmation"
-                            >Confirm password</Label
-                        >
+                        <Label for="password_confirmation">Confirm password</Label>
                         <Input
                             id="password_confirmation"
-                            name="password_confirmation"
+                            v-model="form.password_confirmation"
                             type="password"
                             class="mt-1 block w-full"
                             autocomplete="new-password"
                             placeholder="Confirm password"
                         />
-                        <InputError :message="errors.password_confirmation" />
+                        <InputError :message="form.errors.password_confirmation" />
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <Button
-                            :disabled="processing"
-                            data-test="update-password-button"
-                            >Save password</Button
-                        >
+                        <Button :disabled="form.processing">Save password</Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"
@@ -105,15 +111,12 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
                             leave-active-class="transition ease-in-out"
                             leave-to-class="opacity-0"
                         >
-                            <p
-                                v-show="recentlySuccessful"
-                                class="text-sm text-neutral-600"
-                            >
+                            <p v-show="form.recentlySuccessful" class="text-sm text-neutral-600">
                                 Saved.
                             </p>
                         </Transition>
                     </div>
-                </Form>
+                </form>
             </div>
         </SettingsLayout>
     </AppLayout>

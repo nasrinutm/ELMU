@@ -21,13 +21,13 @@ class ForumController extends BaseController
         $posts = Post::query()
         ->with('user:id,name')
         ->withCount('allReplies as replies_count')
-        
+
         // 1. Handle Search
         ->when($request->input('search'), function ($query, $search) {
             $query->where('title', 'like', "%{$search}%")
                   ->orWhere('body', 'like', "%{$search}%");
         })
-        
+
         // 2. Handle Sorting
         ->when($request->input('sort'), function ($query, $sort) {
             if ($sort === 'replies') {
@@ -42,7 +42,7 @@ class ForumController extends BaseController
             $query->latest();
         })
         ->paginate(20)
-        ->withQueryString(); 
+        ->withQueryString();
 
     return Inertia::render('Forum/Index', [
         'posts' => $posts,
@@ -86,13 +86,13 @@ class ForumController extends BaseController
         // Load the post's author, and all top-level replies
         $post->load([
             'user:id,name,username', // Get the post's author
-            
+
             // Load top-level replies and...
             'replies' => function ($query) {
                 // ...include their authors and...
                 $query->with('user:id,name,username')
                       // ...recursively load all children, also with their authors
-                      ->with('children.user:id,name,username'); 
+                      ->with('children.user:id,name,username');
             }
         ]);
 
@@ -133,7 +133,7 @@ class ForumController extends BaseController
         // 1. Authorize the action
         $this->authorize('update', $post);
 
-        // 2. Return the Edit page 
+        // 2. Return the Edit page
         return Inertia::render('Forum/Edit', [
             'post' => $post
         ]);
@@ -163,7 +163,7 @@ class ForumController extends BaseController
     /**
      * Remove the specified post from storage.
      */
-    public function destroy(Post $post)
+    public function destroy(Post $post): RedirectResponse
     {
         // 1. Authorize
         $this->authorize('delete', $post);
@@ -184,7 +184,7 @@ class ForumController extends BaseController
     {
         // 1. Authorize
         $this->authorize('update', $reply);
-        
+
         // 2. Validate
         $validated = $request->validate(['body' => 'required|string']);
 
