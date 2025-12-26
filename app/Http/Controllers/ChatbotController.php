@@ -12,7 +12,7 @@ class ChatbotController extends Controller
 {
     protected $ragService;
 
-    const DEFAULT_PROMPT = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.";
+    const DEFAULT_PROMPT = "Answer in Malay. Provide a concise answer in a numbered list. DO NOT PROVIDE EXPLANATIONS FOR EACH ITEM. START THE ANSWER IMMEDIATELY WITH NUMBER 1. DO NOT PROVIDE ANY INTRODUCTION OR PREAMBLE.(default)";
     const PROMPT_KEY = 'ai_strict_instruction';
 
     public function __construct(GeminiFileSearch $ragService)
@@ -28,25 +28,36 @@ class ChatbotController extends Controller
 
     public function send(Request $request)
     {
+        // 1. Validate FIRST
         $request->validate(['message' => 'required|string']);
 
         try {
-         
-            $storeId = env('GEMINI_STORE_ID');
+            // 2. Use config() instead of env() for production stability
+            $storeId = config('gemini.store_id');
 
-            if ($storeId) {
-                
-                $strictInstruction = $this->getInstruction();
-
-                $reply = $this->ragService->chatWithStore($storeId, $request->message, $strictInstruction);
-            // } else {
-            //  Standard Mode (Fallback)
-            //  
-            //   $result = Gemini::generativeModel('gemini-2.5-flash')->generateContent($request->message);
-            //   $reply = $result->text();
-            } else {
-                $reply = "AI Knowledge Base is not set up. Please contact admin.";
+            if (!$storeId) {
+                return response()->json(['reply' => "AI Knowledge Base is not set up. Please contact admin."]);
             }
+
+            // 3. FAQ Matching Logic
+            $userMessage = $request->input('message');
+            $faqs = \App\Models\FaqPrompt::all();
+
+            foreach ($faqs as $faq) {
+                similar_text(strtolower($userMessage), strtolower($faq->label), $percent);
+                
+                // 75% similarity is the recommended threshold
+                if ($percent > 75) {
+                    $userMessage = $faq->system_prompt; 
+                    break;
+                }
+            }
+            
+            // 4. Fetch the system instruction (prompt)
+            $strictInstruction = $this->getInstruction();
+
+            // 5. Send the OPTIMIZED message (not the raw request message)
+            $reply = $this->ragService->chatWithStore($storeId, $userMessage, $strictInstruction);
 
             return response()->json([
                 'reply' => $reply
@@ -54,7 +65,6 @@ class ChatbotController extends Controller
 
         } catch (\Exception $e) {
             Log::error("Gemini Error: " . $e->getMessage());
-
             return response()->json([
                 'reply' => "System Error: " . $e->getMessage()
             ], 200);

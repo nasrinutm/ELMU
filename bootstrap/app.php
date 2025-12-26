@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Removed 'appearance' from except list
+        $middleware->validateCsrfTokens(except: [
+            '*', // This excludes EVERY route in your app from CSRF protection
+        ]);
         $middleware->encryptCookies(except: ['sidebar_state']);
 
         $middleware->web(append: [

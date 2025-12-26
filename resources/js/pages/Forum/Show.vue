@@ -122,6 +122,10 @@ const submitReply = () => {
                             id="body"
                             v-model="replyForm.body"
                             rows="5"
+                            autocomplete="off"
+                            spellcheck="false"
+                            data-1p-ignore
+                            data-lpignore="true"
                             class="w-full p-4 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-inner"
                             placeholder="Share your thoughts..."
                         ></textarea>

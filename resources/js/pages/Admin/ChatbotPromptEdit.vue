@@ -64,6 +64,10 @@ const submit = () => {
                                 id="instruction"
                                 v-model="form.instruction" 
                                 rows="8"
+                                autocomplete="off"
+                                spellcheck="false"
+                                data-1p-ignore
+                                data-lpignore="true"
                                 class="mt-1 block w-full border border-gray-300 rounded-md p-3 bg-white text-gray-900 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="e.g., Answer in Malay. Provide a concise answer in a numbered list."
                             ></textarea>

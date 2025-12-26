@@ -48,7 +48,11 @@ const submit = () => {
                         <textarea 
                             id="content" 
                             v-model="form.content" 
-                            rows="8" 
+                            rows="8"
+                            autocomplete="off"
+                            spellcheck="false"
+                            data-1p-ignore
+                            data-lpignore="true" 
                             class="w-full rounded border-1 border-gray-300 p-1"
                         ></textarea>
                         <p v-if="form.errors.content" class="text-red-500 text-sm mt-1">

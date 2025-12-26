@@ -61,6 +61,10 @@ const submit = () => {
                             id="content"
                             v-model="form.content" 
                             rows="8"
+                            autocomplete="off"
+                            spellcheck="false"
+                            data-1p-ignore
+                            data-lpignore="true"
                             class="w-full rounded border px-3 py-2"
                             placeholder="Write the main content of your post..."
                         ></textarea>
