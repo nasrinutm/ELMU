@@ -5,18 +5,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/auth/AuthCardLayout.vue';
-import store from '@/routes/login';
-import { Form, Head } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-
-// changed: handle route module shape where the form helper may be nested under `.store`
-const loginStore = (store as any)?.store ?? (store as any);
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
 }>();
+
+// UPDATED LOGIC: Use standard Inertia form helper
+const form = useForm({
+    email: '',
+    password: '',
+    remember: false,
+});
+
+const submit = () => {
+    form.post('/login', {
+        onFinish: () => form.reset('password'),
+    });
+};
 </script>
 
 <template>
@@ -33,18 +42,13 @@ defineProps<{
             {{ status }}
         </div>
 
-        <Form
-            v-bind="loginStore.form()"
-            :reset-on-success="['password']"
-            v-slot="{ errors, processing }"
-            class="flex flex-col gap-6"
-        >
+        <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <!-- Label White for contrast -->
                     <Label for="email" class="text-white">Email address</Label>
                     <Input
                         id="email"
+                        v-model="form.email"
                         type="email"
                         name="email"
                         required
@@ -52,9 +56,9 @@ defineProps<{
                         :tabindex="1"
                         autocomplete="email"
                         placeholder="email@example.com"
-                        class="bg-white text-white border-transparent focus:ring-2 focus:ring-[#FFD900]"
+                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
-                    <InputError :message="errors.email" class="text-red-300" />
+                    <InputError :message="form.errors.email" class="text-red-300" />
                 </div>
 
                 <div class="grid gap-2">
@@ -63,6 +67,7 @@ defineProps<{
                     </div>
                     <Input
                         id="password"
+                        v-model="form.password"
                         type="password"
                         name="password"
                         required
@@ -71,13 +76,14 @@ defineProps<{
                         placeholder="Password"
                         class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
-                    <InputError :message="errors.password" class="text-red-300" />
+                    <InputError :message="form.errors.password" class="text-red-300" />
                 </div>
 
                 <div class="flex items-center justify-between">
                     <Label for="remember" class="flex items-center space-x-3 text-white">
                         <Checkbox
                             id="remember"
+                            v-model:checked="form.remember"
                             name="remember"
                             :tabindex="3"
                             class="border-white data-[state=checked]:bg-[#FFD900] data-[state=checked]:text-[#003366]"
@@ -86,21 +92,20 @@ defineProps<{
                     </Label>
                 </div>
 
-                <!-- Yellow Button -->
                 <Button
                     type="submit"
                     class="mt-4 w-full bg-[#FFD900] text-[#003366] hover:bg-[#e6c300] font-bold"
                     :tabindex="4"
-                    :disabled="processing"
+                    :disabled="form.processing"
                     data-test="login-button"
                 >
                     <LoaderCircle
-                        v-if="processing"
+                        v-if="form.processing"
                         class="h-4 w-4 animate-spin mr-2"
                     />
                     Log in
                 </Button>
             </div>
-        </Form>
+        </form>
     </AuthBase>
 </template>

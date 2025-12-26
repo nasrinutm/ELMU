@@ -14,6 +14,13 @@ use App\Models\User;
 use App\Models\Material;
 use App\Http\Controllers\ActivityController;
 
+// --- PUBLIC ROUTES ---
+
+Route::get('/', function () {
+    return Inertia::render('Welcome', [
+        'canRegister' => Features::enabled(Features::registration()),
+    ]);
+})->name('home');
 
 Route::get('/test-models', function () {
     try {
@@ -28,71 +35,44 @@ Route::get('/test-models', function () {
     }
 });
 
-Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
-
-// --- PUBLIC ROUTES ---
-
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
-
-//Route::get('/test-models', function () {
-   // try {
-    //    $response = Gemini::models()->list();
-   //     return collect($response->models)->map(fn ($model) => [
-//            'name' => $model->name,
-//            'display_name' => $model->displayName,
- //           'capabilities' => $model->supportedGenerationMethods
- //       ]);
- //   } catch (\Exception $e) {
- //       return "Error: " . $e->getMessage();
-//    }
-//});
-
 // Setup AI Store
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
 // --- AUTHENTICATED ROUTES ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    
-
     // 1. DASHBOARD
     Route::get('/dashboard', function () {
-    // --- ADD THIS CHECK ---
-    // If the user is an Admin, redirect them to the User Management page (or your Admin Dashboard)
-    /** @var \App\Models\User $user */
-    $user = Auth::user();
-    
-    if ($user->hasRole('admin')) {
-        return redirect()->route('users.index'); // Redirect to the Admin User List
-    }
-    // ----------------------
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        // If the user is an Admin, redirect to User Management
+        if ($user && $user->hasRole('admin')) {
+            return redirect()->route('users.index'); 
+        }
 
-    // Standard Dashboard Logic (For Teachers & Students)
-    $stats = [
-        'users' => User::count(),
-        'materials' => Material::count(),
-        'my_materials' => Material::where('user_id', Auth::id())->count(),
-    ];
+        // Standard Dashboard Logic
+        $stats = [
+            'users' => User::count(),
+            'materials' => Material::count(),
+            'my_materials' => Material::where('user_id', Auth::id())->count(),
+        ];
 
-    $recentMaterials = Material::with('user:id,name')
-        ->latest()
-        ->take(5)
-        ->get();
+        $recentMaterials = Material::with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
 
-    return Inertia::render('Dashboard', [
-        'stats' => $stats,
-        'recentMaterials' => $recentMaterials
-    ]);
-})->name('dashboard');
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentMaterials' => $recentMaterials
+        ]);
+    })->name('dashboard');
 
-    // 2. CHATBOT (Moved outside of dashboard closure)
+    // 2. CHATBOT
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES (Consolidated into one block)
+    // 3. ADMIN ROUTES
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -139,15 +119,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
         Route::put('/{material}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
-
-});
-    // 6. ACTIVITY ROUTES (Teacher + General)
-    Route::resource('activities', ActivityController::class);
-    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
-        ->name('activities.download');
-    Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
-    Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
     });
 
-// Include settings routes (Profile, etc.)
+    // 6. ACTIVITY ROUTES
+    Route::resource('activities', ActivityController::class);
+    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
+    Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
+    Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+     Route::post('/activities/{activity}/submit', [\App\Http\Controllers\ActivityController::class, 'submit'])
+        ->name('activities.submit');
+
+    Route::get('/activities/{activity}/submission/download', [\App\Http\Controllers\ActivityController::class, 'downloadSubmission'])
+    ->name('activities.submission.download');
+
+}); // End Auth Middleware
+
+// --- REQUIRED IMPORTS ---
 require __DIR__.'/settings.php';
