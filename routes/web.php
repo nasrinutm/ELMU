@@ -4,17 +4,22 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
+// --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\ProfileController;
+// --------------------------
 use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
-use App\Http\Controllers\ActivityController;
 
 
+// --- TEST & SETUP ROUTES ---
 Route::get('/test-models', function () {
     try {
         $response = Gemini::models()->list();
@@ -30,69 +35,67 @@ Route::get('/test-models', function () {
 
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
-// --- PUBLIC ROUTES ---
 
+// --- PUBLIC ROUTES ---
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
 
-//Route::get('/test-models', function () {
-   // try {
-    //    $response = Gemini::models()->list();
-   //     return collect($response->models)->map(fn ($model) => [
-//            'name' => $model->name,
-//            'display_name' => $model->displayName,
- //           'capabilities' => $model->supportedGenerationMethods
- //       ]);
- //   } catch (\Exception $e) {
- //       return "Error: " . $e->getMessage();
-//    }
-//});
 
-// Setup AI Store
-Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
-
-// --- AUTHENTICATED ROUTES ---
+// --- AUTHENTICATED ROUTES GROUP ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    
+    // ==========================================
+    // SETTINGS ROUTES (Profile & Password)
+    // ==========================================
+
+    // Password: Show form and handle update
+    Route::get('/settings/password', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/settings/password', [PasswordController::class, 'update'])->name('password.update');
+
+    // Profile: Show form, handle update, and delete account
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+
+    // ==========================================
+    // MAIN APP ROUTES
+    // ==========================================
 
     // 1. DASHBOARD
     Route::get('/dashboard', function () {
-    // --- ADD THIS CHECK ---
-    // If the user is an Admin, redirect them to the User Management page (or your Admin Dashboard)
-    /** @var \App\Models\User $user */
-    $user = Auth::user();
-    
-    if ($user->hasRole('admin')) {
-        return redirect()->route('users.index'); // Redirect to the Admin User List
-    }
-    // ----------------------
+        // If the user is an Admin, redirect them to User Management
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->hasRole('admin')) {
+            return redirect()->route('users.index');
+        }
 
-    // Standard Dashboard Logic (For Teachers & Students)
-    $stats = [
-        'users' => User::count(),
-        'materials' => Material::count(),
-        'my_materials' => Material::where('user_id', Auth::id())->count(),
-    ];
+        // Standard Dashboard Logic (For Teachers & Students)
+        $stats = [
+            'users' => User::count(),
+            'materials' => Material::count(),
+            'my_materials' => Material::where('user_id', Auth::id())->count(),
+        ];
 
-    $recentMaterials = Material::with('user:id,name')
-        ->latest()
-        ->take(5)
-        ->get();
+        $recentMaterials = Material::with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
 
-    return Inertia::render('Dashboard', [
-        'stats' => $stats,
-        'recentMaterials' => $recentMaterials
-    ]);
-})->name('dashboard');
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentMaterials' => $recentMaterials
+        ]);
+    })->name('dashboard');
 
-    // 2. CHATBOT (Moved outside of dashboard closure)
+    // 2. CHATBOT
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES (Consolidated into one block)
+    // 3. ADMIN ROUTES GROUP
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -101,7 +104,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-        
+
         // Chatbot Knowledge Base
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
@@ -121,7 +124,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
     Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
-    
+
     // Forum Replies
     Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
@@ -132,22 +135,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    // Teacher Only (CRUD)
+    // Teacher Only Group (CRUD)
     Route::middleware(['role:teacher'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');
         Route::get('/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
         Route::put('/{material}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
+    });
 
-});
-    // 6. ACTIVITY ROUTES (Teacher + General)
+    // 6. ACTIVITY ROUTES
     Route::resource('activities', ActivityController::class);
     Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
         ->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
-    });
 
-// Include settings routes (Profile, etc.)
-require __DIR__.'/settings.php';
+}); // <-- End of auth middleware group
