@@ -28,25 +28,26 @@ class ReportController extends Controller
      */
     public function showStudentPerformance(User $student)
     {
-        // 1. FETCH SUBMISSIONS JOINED WITH ACTIVITY TITLES
-        // This connects 'activity_submissions' -> 'activities' using 'activity_id'
+        // 1. Fetch activities with a JOIN to get the real Title
+        // Assuming your main definition table is 'activities' and the FK is 'activity_id'
         $completedActivities = DB::table('activity_submissions')
             ->join('activities', 'activity_submissions.activity_id', '=', 'activities.id')
             ->where('activity_submissions.user_id', $student->id)
             ->select(
-                'activities.title as title',  // Get the real title (e.g., "test1")
-                'activity_submissions.created_at as completed_at' // Get the submission date
+                'activities.title as title', // Get the real title from the activities table
+                'activity_submissions.created_at as completed_at'
             )
-            ->orderBy('activity_submissions.created_at', 'desc')
+            ->orderBy('activity_submissions.created_at', 'desc') // Sort by newest
             ->get();
 
-        // 2. FETCH QUIZZES (Unchanged)
+        // 2. Fetch from quiz_attempts table
         $completedQuizzes = DB::table('quiz_attempts')
             ->where('user_id', $student->id)
             ->select('quiz_title as title', 'score', 'total_questions', 'created_at as completed_at')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($quiz) {
+                // Convert score to percentage
                 $percentage = $quiz->total_questions > 0 
                     ? round(($quiz->score / $quiz->total_questions) * 100) 
                     : 0;
@@ -58,7 +59,7 @@ class ReportController extends Controller
                 ];
             });
 
-        // 3. GET REPORTS (Unchanged)
+        // 3. Get the latest official remark for this student
         $existingReport = Report::where('student_id', $student->id)
             ->where('subject', 'Overall Performance')
             ->first();
@@ -70,6 +71,7 @@ class ReportController extends Controller
             'existingReport' => $existingReport 
         ]);
     }
+
     /**
      * Handle saving or updating the remark.
      */
