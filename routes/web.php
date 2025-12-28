@@ -4,18 +4,40 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
+// --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\ProfileController;
+// --------------------------
+use Gemini\Laravel\Facades\Gemini;
 use App\Http\Controllers\StudentController;
 use App\Models\User;
 use App\Models\Material;
 
-// --- PUBLIC ROUTES ---
 
+// --- TEST & SETUP ROUTES ---
+Route::get('/test-models', function () {
+    try {
+        $response = Gemini::models()->list();
+        return collect($response->models)->map(fn ($model) => [
+            'name' => $model->name,
+            'display_name' => $model->displayName,
+            'capabilities' => $model->supportedGenerationMethods
+        ]);
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+});
+
+Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
+
+
+// --- PUBLIC ROUTES ---
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canRegister' => Features::enabled(Features::registration()),
@@ -56,12 +78,51 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
-    // 2. CHATBOT ROUTES
-    Route::post('/chat', [ChatbotController::class, 'send'])->name('chat.send');
+    Route::get('/settings/password', [PasswordController::class, 'edit'])->name('password.edit');
 
-    // 3. ADMIN ROUTES (User & Chatbot Management)
+    // Profile: Show form, handle update, and delete account
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+
+    // ==========================================
+    // MAIN APP ROUTES
+    // ==========================================
+
+    // 1. DASHBOARD
+    Route::get('/dashboard', function () {
+        // If the user is an Admin, redirect them to User Management
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->hasRole('admin')) {
+            return redirect()->route('users.index');
+        }
+
+        // Standard Dashboard Logic (For Teachers & Students)
+        $stats = [
+            'users' => User::count(),
+            'materials' => Material::count(),
+            'my_materials' => Material::where('user_id', Auth::id())->count(),
+        ];
+
+        $recentMaterials = Material::with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentMaterials' => $recentMaterials
+        ]);
+    })->name('dashboard');
+
+    // 2. CHATBOT
+    Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
+
+    // 3. ADMIN ROUTES GROUP
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
-        // User CRUD
+        // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -76,6 +137,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+        Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
+        Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
     });
 
     // 4. FORUM ROUTES
@@ -92,10 +155,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIAL ROUTES (Teacher + General)
+    // 5. MATERIALS ROUTES
+    // Shared (View/Download)
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
+    // Teacher Only Group (CRUD)
     Route::middleware(['role:teacher'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');
@@ -121,5 +186,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/students/{user}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
 });
 
-// Include settings routes (Profile, etc.)
-require __DIR__.'/settings.php';
+}); // <-- End of auth middleware group

@@ -189,9 +189,8 @@ const getFileBadgeVariant = (type: string) => {
                                 <div class="flex items-center justify-end gap-2">
                                     <a :href="route('materials.download', material.id)" target="_blank">
                                         <Button
-                                            variant="outline"
                                             size="icon"
-                                            class="h-8 w-8 bg-[#003366] text-[#FFD900] border-[#003366] hover:bg-[#002244] hover:text-white"
+                                            class="h-8 w-8 bg-[#003366] text-[#ffffff] border-[#003366] hover:bg-[#002244] hover:text-white"
                                         >
                                             <Download class="w-4 h-4" />
                                         </Button>

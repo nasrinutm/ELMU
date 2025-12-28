@@ -13,7 +13,7 @@ class ReplyPolicy
     public function update(User $user, Reply $reply): bool
     {
         // Rule: Admin can update any reply, anytime.
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('admin') || $user->hasRole('teacher')) {
             return true;
         }
 

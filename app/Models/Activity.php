@@ -34,9 +34,7 @@ class Activity extends Model
         'quiz_data' => 'array', // Automatically cast JSON data to an array
     ];
 
-    /**
-     * Get the user (teacher) who created the activity.
-     */
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
