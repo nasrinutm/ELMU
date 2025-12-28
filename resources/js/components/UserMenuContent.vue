@@ -6,16 +6,16 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { logout } from '@/routes';
-// REMOVE: import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut } from 'lucide-vue-next'; // REMOVE: Settings icon
+import { LogOut } from 'lucide-vue-next';
+import { route } from 'ziggy-js';
 
 interface Props {
     user: User;
 }
 
+// This cleans up Inertia state on logout
 const handleLogout = () => {
     router.flushAll();
 };
@@ -31,27 +31,13 @@ defineProps<Props>();
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
 
-    <!--
-        DELETE THIS ENTIRE GROUP (Settings Link)
-    -->
-    <!--
-    <DropdownMenuGroup>
-        <DropdownMenuItem :as-child="true">
-            <Link class="block w-full" :href="edit()" prefetch as="button">
-                <Settings class="mr-2 h-4 w-4" />
-                Settings
-            </Link>
-        </DropdownMenuItem>
-    </DropdownMenuGroup>
-    <DropdownMenuSeparator />
-    -->
-
     <DropdownMenuItem :as-child="true">
         <Link
             class="block w-full"
-            :href="logout()"
-            @click="handleLogout"
+            :href="route('logout')"
+            method="post"
             as="button"
+            @click="handleLogout"
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />

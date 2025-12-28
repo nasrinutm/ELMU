@@ -9,10 +9,10 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\ReportController;
 use App\Models\User;
 use App\Models\Material;
-//use Gemini\Laravel\Facades\Gemini;
-use App\Http\Controllers\ActivityController;
 
 // --- PUBLIC ROUTES ---
 
@@ -22,19 +22,6 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-//Route::get('/test-models', function () {
-   // try {
-    //    $response = Gemini::models()->list();
-   //     return collect($response->models)->map(fn ($model) => [
-//            'name' => $model->name,
-//            'display_name' => $model->displayName,
- //           'capabilities' => $model->supportedGenerationMethods
- //       ]);
- //   } catch (\Exception $e) {
- //       return "Error: " . $e->getMessage();
-//    }
-//});
-
 // Setup AI Store
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
@@ -42,37 +29,33 @@ Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 // --- AUTHENTICATED ROUTES ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    
-
     // 1. DASHBOARD
     Route::get('/dashboard', function () {
-    // --- ADD THIS CHECK ---
-    // If the user is an Admin, redirect them to the User Management page (or your Admin Dashboard)
-    /** @var \App\Models\User $user */
-    $user = Auth::user();
-    
-    if ($user->hasRole('admin')) {
-        return redirect()->route('users.index'); // Redirect to the Admin User List
-    }
-    // ----------------------
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        // Admin Redirect Logic
+        if ($user->hasRole('admin')) {
+            return redirect()->route('users.index');
+        }
 
-    // Standard Dashboard Logic (For Teachers & Students)
-    $stats = [
-        'users' => User::count(),
-        'materials' => Material::count(),
-        'my_materials' => Material::where('user_id', Auth::id())->count(),
-    ];
+        // Standard Dashboard Logic (For Teachers & Students)
+        $stats = [
+            'users' => User::count(),
+            'materials' => Material::count(),
+            'my_materials' => Material::where('user_id', Auth::id())->count(),
+        ];
 
-    $recentMaterials = Material::with('user:id,name')
-        ->latest()
-        ->take(5)
-        ->get();
+        $recentMaterials = Material::with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
 
-    return Inertia::render('Dashboard', [
-        'stats' => $stats,
-        'recentMaterials' => $recentMaterials
-    ]);
-})->name('dashboard');
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentMaterials' => $recentMaterials
+        ]);
+    })->name('dashboard');
 
     // 2. CHATBOT ROUTES
     Route::post('/chat', [ChatbotController::class, 'send'])->name('chat.send');
@@ -110,7 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIAL ROUTES (Teacher + General)
+    // 5. MATERIAL ROUTES
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
@@ -120,15 +103,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
         Route::put('/{material}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
+    });
 
-});
-    // 6. ACTIVITY ROUTES (Teacher + General)
+    // 6. ACTIVITY ROUTES
     Route::resource('activities', ActivityController::class);
-    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
-        ->name('activities.download');
+    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+
+    // 7. REPORT ROUTES (UC0014: Generate Reports)
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    
+    // Detailed Performance View Route (When clicking a student name)
+    Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])
+        ->name('reports.student.detail');
+    
+    // Only Teachers and Admins can create or store reports
+    Route::middleware(['role:teacher|admin'])->group(function () {
+        Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
+        Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
+        
+        // Placeholders for future View/Edit logic
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+        Route::get('/reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
+        Route::put('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
+
+        // Remark Logic (Moved Inside Teacher Middleware for Security)
+        Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
+        Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
+});
 
 // Include settings routes (Profile, etc.)
 require __DIR__.'/settings.php';
