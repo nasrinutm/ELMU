@@ -1,25 +1,24 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
+
+// Layouts and Components
+import AppLayout from '@/layouts/AppLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
-// Fix for TypeScript not knowing about the global route function
-declare const route: Function;
+const page = usePage();
+const user = page.props.auth.user;
 
-interface Props {
-    mustVerifyEmail: boolean;
-    status?: string;
-}
-
-defineProps<Props>();
-
+// --- BREADCRUMBS (from main) ---
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'Profile settings',
@@ -27,108 +26,148 @@ const breadcrumbItems: BreadcrumbItem[] = [
     },
 ];
 
-const page = usePage();
-const user = page.props.auth.user;
-
-// Initialize form with user data
-const form = useForm({
+// --- PROFILE INFORMATION FORM ---
+const profileForm = useForm({
     name: user.name,
     email: user.email,
 });
 
-// Submit form to the backend route
-const updateProfileInformation = () => {
-    form.patch(route('profile.update'), {
+const updateProfile = () => {
+    profileForm.patch(route('profile.update'), {
         preserveScroll: true,
     });
+};
+
+// --- PASSWORD UPDATE FORM ---
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+const updatePassword = () => {
+    passwordForm.put(route('password.update'), {
+        preserveScroll: true,
+        onSuccess: () => passwordForm.reset(),
+        onError: () => {
+            if (passwordForm.errors.password) {
+                passwordForm.reset('password', 'password_confirmation');
+            }
+            if (passwordForm.errors.current_password) {
+                passwordForm.reset('current_password');
+            }
+        },
+    });
+};
+
+// --- DELETE ACCOUNT FORM ---
+const deleteForm = useForm({
+    password: '',
+});
+
+const confirmDelete = () => {
+    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+        deleteForm.delete(route('profile.destroy'), {
+            preserveScroll: true,
+            onFinish: () => deleteForm.reset(),
+        });
+    }
 };
 </script>
 
 <template>
+    <Head title="Profile Settings" />
+
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Profile settings" />
+        <div class="p-6 bg-[#002B5C] min-h-screen text-white">
+            <div class="max-w-4xl mx-auto space-y-8">
+                
+                <div>
+                    <h1 class="text-3xl font-bold text-[#FFD700]">Profile Settings</h1>
+                    <p class="text-gray-300">Update your account information and security settings.</p>
+                </div>
 
-        <SettingsLayout>
-            <div class="flex flex-col space-y-6">
-                <HeadingSmall
-                    title="Profile information"
-                    description="Update your name and email address"
-                />
+                <Card class="bg-white text-[#002B5C] border-none">
+                    <CardHeader>
+                        <CardTitle>Profile Information</CardTitle>
+                        <CardDescription>Update your account's profile information and email address.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form @submit.prevent="updateProfile" class="space-y-4">
+                            <div class="grid gap-2">
+                                <Label for="name" class="text-[#002B5C] font-bold">Name</Label>
+                                <Input id="name" v-model="profileForm.name" required class="bg-white text-black border-gray-300" />
+                                <InputError :message="profileForm.errors.name" />
+                            </div>
 
-                <form @submit.prevent="updateProfileInformation" class="space-y-6">
-                    <div class="grid gap-2">
-                        <Label for="name">Name</Label>
-                        <Input
-                            id="name"
-                            class="mt-1 block w-full"
-                            v-model="form.name"
-                            required
-                            autocomplete="name"
-                            placeholder="Full name"
-                        />
-                        <InputError class="mt-2" :message="form.errors.name" />
-                    </div>
+                            <div class="grid gap-2">
+                                <Label for="email" class="text-[#002B5C] font-bold">Email</Label>
+                                <Input id="email" type="email" v-model="profileForm.email" required class="bg-white text-black border-gray-300" />
+                                <InputError :message="profileForm.errors.email" />
+                            </div>
 
-                    <div class="grid gap-2">
-                        <Label for="email">Email address</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            class="mt-1 block w-full"
-                            v-model="form.email"
-                            required
-                            autocomplete="username"
-                            placeholder="Email address"
-                        />
-                        <InputError class="mt-2" :message="form.errors.email" />
-                    </div>
+                            <div v-if="profileForm.recentlySuccessful" class="text-sm font-medium text-green-600">
+                                Saved successfully.
+                            </div>
 
-                    <div v-if="mustVerifyEmail && !user.email_verified_at">
-                        <p class="-mt-4 text-sm text-muted-foreground">
-                            Your email address is unverified.
-                            <Link
-                                :href="route('verification.send')"
-                                method="post"
-                                as="button"
-                                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                            >
-                                Click here to resend the verification email.
-                            </Link>
-                        </p>
+                            <Button :disabled="profileForm.processing" class="bg-[#FFD700] text-[#002B5C] hover:bg-[#E6C200] font-bold">
+                                Save Changes
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
 
-                        <div
-                            v-if="status === 'verification-link-sent'"
-                            class="mt-2 text-sm font-medium text-green-600"
-                        >
-                            A new verification link has been sent to your email
-                            address.
-                        </div>
-                    </div>
+                <Card class="bg-white text-[#002B5C] border-none">
+                    <CardHeader>
+                        <CardTitle>Update Password</CardTitle>
+                        <CardDescription>Ensure your account is using a long, random password to stay secure.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form @submit.prevent="updatePassword" class="space-y-4">
+                            <div class="grid gap-2">
+                                <Label for="current_password" class="text-[#002B5C] font-bold">Current Password</Label>
+                                <Input id="current_password" type="password" v-model="passwordForm.current_password" class="bg-white text-black border-gray-300" />
+                                <InputError :message="passwordForm.errors.current_password" />
+                            </div>
 
-                    <div class="flex items-center gap-4">
-                        <Button
-                            :disabled="form.processing"
-                            data-test="update-profile-button"
-                        >Save</Button>
+                            <div class="grid gap-2">
+                                <Label for="new_password" class="text-[#002B5C] font-bold">New Password</Label>
+                                <Input id="new_password" type="password" v-model="passwordForm.password" class="bg-white text-black border-gray-300" />
+                                <InputError :message="passwordForm.errors.password" />
+                            </div>
 
-                        <Transition
-                            enter-active-class="transition ease-in-out"
-                            enter-from-class="opacity-0"
-                            leave-active-class="transition ease-in-out"
-                            leave-to-class="opacity-0"
-                        >
-                            <p
-                                v-show="form.recentlySuccessful"
-                                class="text-sm text-neutral-600"
-                            >
-                                Saved.
-                            </p>
-                        </Transition>
-                    </div>
-                </form>
+                            <div class="grid gap-2">
+                                <Label for="password_confirmation" class="text-[#002B5C] font-bold">Confirm Password</Label>
+                                <Input id="password_confirmation" type="password" v-model="passwordForm.password_confirmation" class="bg-white text-black border-gray-300" />
+                                <InputError :message="passwordForm.errors.password_confirmation" />
+                            </div>
+
+                            <div v-if="passwordForm.recentlySuccessful" class="text-sm font-medium text-green-600">
+                                Password updated.
+                            </div>
+
+                            <Button :disabled="passwordForm.processing" class="bg-[#FFD700] text-[#002B5C] hover:bg-[#E6C200] font-bold">
+                                Update Password
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                <Card class="bg-red-50 text-red-900 border-red-200">
+                    <CardHeader>
+                        <CardTitle>Delete Account</CardTitle>
+                        <CardDescription class="text-red-700">
+                            Once your account is deleted, all of its resources and data will be permanently deleted.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button @click="confirmDelete" variant="destructive" class="bg-red-600 hover:bg-red-700 font-bold">
+                            Delete Account
+                        </Button>
+                    </CardContent>
+                </Card>
+
             </div>
-
-            <DeleteUser />
-        </SettingsLayout>
+        </div>
     </AppLayout>
 </template>

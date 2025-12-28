@@ -1,114 +1,98 @@
 <script setup lang="ts">
-import InputError from '@/components/InputError.vue';
-import TextLink from '@/components/TextLink.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import AuthLayout from '@/layouts/AuthLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AuthBase from '@/layouts/AuthLayout.vue';
-import { login } from '@/routes';
-import store from '@/routes/register';
-import { Form, Head } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
+import { route } from 'ziggy-js';
 
-// changed: handle route module shape where the form helper is nested under `.store`
-const registerStore = (store as any)?.store ?? (store as any);
+const form = useForm({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+});
+
+const submit = () => {
+    form.post(route('register'), {
+        onFinish: () => {
+            form.reset('password', 'password_confirmation');
+        },
+    });
+};
 </script>
 
 <template>
-    <AuthBase
-        title="Create an account"
+    <Head title="Register" />
+
+    <AuthLayout 
+        title="Create an Account" 
         description="Enter your details below to create your account"
     >
-        <Head title="Register" />
+        <form @submit.prevent="submit" class="space-y-4">
+            
+            <div class="grid gap-2">
+                <Label for="name">Name</Label>
+                <Input
+                    id="name"
+                    v-model="form.name"
+                    type="text"
+                    required
+                    autofocus
+                    autocomplete="name"
+                />
+                <InputError :message="form.errors.name" />
+            </div>
 
-        <Form
-            v-bind="registerStore.form()"
-            :reset-on-success="['password', 'password_confirmation']"
-            v-slot="{ errors, processing }"
-            class="flex flex-col gap-6"
-        >
-            <div class="grid gap-6">
-                <div class="grid gap-2">
-                    <Label for="name">Name</Label>
-                    <Input
-                        id="name"
-                        type="text"
-                        required
-                        autofocus
-                        :tabindex="1"
-                        autocomplete="name"
-                        name="name"
-                        placeholder="Full name"
-                    />
-                    <InputError :message="errors.name" />
-                </div>
+            <div class="grid gap-2">
+                <Label for="email">Email</Label>
+                <Input
+                    id="email"
+                    v-model="form.email"
+                    type="email"
+                    required
+                    autocomplete="username"
+                />
+                <InputError :message="form.errors.email" />
+            </div>
 
-                <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
-                    <Input
-                        id="email"
-                        type="email"
-                        required
-                        :tabindex="2"
-                        autocomplete="email"
-                        name="email"
-                        placeholder="email@example.com"
-                    />
-                    <InputError :message="errors.email" />
-                </div>
+            <div class="grid gap-2">
+                <Label for="password">Password</Label>
+                <Input
+                    id="password"
+                    v-model="form.password"
+                    type="password"
+                    required
+                    autocomplete="new-password"
+                />
+                <InputError :message="form.errors.password" />
+            </div>
 
-                <div class="grid gap-2">
-                    <Label for="password">Password</Label>
-                    <Input
-                        id="password"
-                        type="password"
-                        required
-                        :tabindex="3"
-                        autocomplete="new-password"
-                        name="password"
-                        placeholder="Password"
-                    />
-                    <InputError :message="errors.password" />
-                </div>
+            <div class="grid gap-2">
+                <Label for="password_confirmation">Confirm Password</Label>
+                <Input
+                    id="password_confirmation"
+                    v-model="form.password_confirmation"
+                    type="password"
+                    required
+                    autocomplete="new-password"
+                />
+                <InputError :message="form.errors.password_confirmation" />
+            </div>
 
-                <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirm password</Label>
-                    <Input
-                        id="password_confirmation"
-                        type="password"
-                        required
-                        :tabindex="4"
-                        autocomplete="new-password"
-                        name="password_confirmation"
-                        placeholder="Confirm password"
-                    />
-                    <InputError :message="errors.password_confirmation" />
-                </div>
-
-                <Button
-                    type="submit"
-                    class="mt-2 w-full"
-                    tabindex="5"
-                    :disabled="processing"
-                    data-test="register-user-button"
+            <div class="flex items-center justify-end mt-4">
+                <Link
+                    :href="route('login')"
+                    class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
                 >
-                    <LoaderCircle
-                        v-if="processing"
-                        class="h-4 w-4 animate-spin"
-                    />
-                    Create account
+                    Already registered?
+                </Link>
+
+                <Button class="ml-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                    Register
                 </Button>
             </div>
-
-            <div class="text-center text-sm text-muted-foreground">
-                Already have an account?
-                <TextLink
-                    :href="login()"
-                    class="underline underline-offset-4"
-                    :tabindex="6"
-                    >Log in</TextLink
-                >
-            </div>
-        </Form>
-    </AuthBase>
+        </form>
+    </AuthLayout>
 </template>

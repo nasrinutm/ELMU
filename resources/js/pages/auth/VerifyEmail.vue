@@ -1,49 +1,56 @@
 <script setup lang="ts">
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
+import { Head, useForm, Link } from '@inertiajs/vue3';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { logout } from '@/routes';
-import { send } from '@/routes/verification';
-import { Form, Head } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { route } from 'ziggy-js';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     status?: string;
 }>();
+
+const form = useForm({});
+
+const submit = () => {
+    form.post(route('verification.send'));
+};
+
+const verificationLinkSent = computed(() => props.status === 'verification-link-sent');
 </script>
 
 <template>
-    <AuthLayout
-        title="Verify email"
-        description="Please verify your email address by clicking on the link we just emailed to you."
-    >
-        <Head title="Email verification" />
+    <Head title="Email Verification" />
 
-        <div
-            v-if="status === 'verification-link-sent'"
-            class="mb-4 text-center text-sm font-medium text-green-600"
-        >
-            A new verification link has been sent to the email address you
-            provided during registration.
+    <AuthLayout 
+        title="Verify Your Email" 
+        description="Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we will gladly send you another."
+    >
+        <div v-if="verificationLinkSent" class="mb-4 font-medium text-sm text-green-600 dark:text-green-400 text-center">
+            A new verification link has been sent to the email address you provided during registration.
         </div>
 
-        <Form
-            v-bind="send.form()"
-            class="space-y-6 text-center"
-            v-slot="{ processing }"
-        >
-            <Button :disabled="processing" variant="secondary">
-                <LoaderCircle v-if="processing" class="h-4 w-4 animate-spin" />
-                Resend verification email
+        <form @submit.prevent="submit" class="mt-4 space-y-4">
+            <Button class="w-full" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                Resend Verification Email
             </Button>
 
-            <TextLink
-                :href="logout()"
-                as="button"
-                class="mx-auto block text-sm"
-            >
-                Log out
-            </TextLink>
-        </Form>
+            <div class="flex items-center justify-between mt-4 text-sm">
+                <Link
+                    :href="route('profile.edit')"
+                    class="underline text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+                >
+                    Edit Profile
+                </Link>
+
+                <Link
+                    :href="route('logout')"
+                    method="post"
+                    as="button"
+                    class="underline text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+                >
+                    Log Out
+                </Link>
+            </div>
+        </form>
     </AuthLayout>
 </template>
