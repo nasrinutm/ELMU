@@ -15,6 +15,7 @@ use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 // --------------------------
 use Gemini\Laravel\Facades\Gemini;
+use App\Http\Controllers\StudentController;
 use App\Models\User;
 use App\Models\Material;
 
@@ -43,14 +44,39 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Setup AI Store
+Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
-// --- AUTHENTICATED ROUTES GROUP ---
+// --- AUTHENTICATED ROUTES ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // ==========================================
-    // SETTINGS ROUTES (Profile & Password)
-    // ==========================================
+    // 1. DASHBOARD
+    Route::get('/dashboard', function () {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        // If the user is an Admin, redirect them to the User Management page
+        if ($user->hasRole('admin')) {
+            return redirect()->route('users.index');
+        }
 
+        // Standard Dashboard Logic (For Teachers & Students)
+        $stats = [
+            'users' => User::count(),
+            'materials' => Material::count(),
+            'my_materials' => Material::where('user_id', Auth::id())->count(),
+        ];
+
+        $recentMaterials = Material::with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentMaterials' => $recentMaterials
+        ]);
+    })->name('dashboard');
 
     Route::get('/settings/password', [PasswordController::class, 'edit'])->name('password.edit');
 
@@ -143,11 +169,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
     });
 
-    // 6. ACTIVITY ROUTES
+    // 6. ACTIVITY ROUTES (Teacher + General)
     Route::resource('activities', ActivityController::class);
     Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
         ->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+
+    // 7. STUDENT ROUTES (List, Progress, & Manual Activities)
+    Route::get('/students', [StudentController::class, 'index'])->name('students.index');
+    Route::get('/students/{user}', [StudentController::class, 'show'])->name('students.show');
+    
+    // NEW: Manual Activity Management for Students
+    Route::post('/students/{user}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
+    Route::put('/students/{user}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
+    Route::delete('/students/{user}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
+});
 
 }); // <-- End of auth middleware group

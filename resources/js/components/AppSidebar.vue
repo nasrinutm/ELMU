@@ -3,13 +3,12 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue';
-// UPDATED: Removed 'Activity', Added 'Gamepad2'
-import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle, Bot } from 'lucide-vue-next';
+// UPDATED: Added 'TrendingUp' for the My Progress icon
+import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle, GraduationCap, TrendingUp } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 interface AuthUser {
@@ -26,7 +25,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Menu Logic
     if (user.value?.roles.includes('admin')) {
         return [
-            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Manage User', href: route('users.index'), icon: Users },
             { title: 'Forum', href: '/forum', icon: BookOpen },
             { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
@@ -35,17 +34,25 @@ const mainNavItems = computed<NavItem[]>(() => {
         ];
     } else if (user.value?.roles.includes('teacher')) {
         return [
-            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Materials', href: route('materials.index'), icon: FileText },
+            { title: 'Students', href: route('students.index'), icon: GraduationCap },
             { title: 'Forum', href: '/forum', icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
             { title: 'Quiz', href: '#', icon: CheckCircle }, 
         ];
     } else {
+        // Student View
         return [
-            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Learning Materials', href: route('materials.index'), icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
+            // UPDATED: Added 'My Progress' link for students
+            { 
+                title: 'My Progress', 
+                href: user.value ? route('students.show', user.value.id) : '#', 
+                icon: TrendingUp 
+            },
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
             { title: 'Quiz', href: '#', icon: CheckCircle }, 
         ];
     }

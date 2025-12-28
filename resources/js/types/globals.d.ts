@@ -1,4 +1,7 @@
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { AppPageProps } from '@/types/index';
+import { createHeadManager, Page, Router } from '@inertiajs/core';
+import ziggyRoute, { Config as ZiggyConfig } from 'ziggy-js';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -17,10 +20,17 @@ declare module '@inertiajs/core' {
     interface PageProps extends InertiaPageProps, AppPageProps {}
 }
 
+// Define Global Ziggy/Route functions
+declare global {
+    var route: typeof ziggyRoute;
+    var Ziggy: ZiggyConfig;
+}
+
 declare module 'vue' {
     interface ComponentCustomProperties {
         $inertia: typeof Router;
         $page: Page;
         $headManager: ReturnType<typeof createHeadManager>;
+        route: typeof ziggyRoute; // <--- Allows route() in Vue templates
     }
 }

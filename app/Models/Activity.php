@@ -10,24 +10,28 @@ class Activity extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
-
-
+    /**
+     * The attributes that are mass assignable.
+     */
     protected $fillable = [
         'user_id',
         'title',
-        'type',
-        'description',
+        'type',        // e.g., 'Homework', 'Lab', 'Quiz', 'manual'
+        'description', // <--- We use this for manual entry details
         'due_date',
-        'file_path',
-        'file_name',
-        'file_type',
-        'time_limit',
-        'quiz_data',
+        'file_path',   // Nullable
+        'file_name',   // Nullable
+        'file_type',   // Nullable
+        'time_limit',  // Nullable, for quizzes
+        'quiz_data',   // Nullable, JSON for quiz questions
     ];
 
+    /**
+     * The attributes that should be cast.
+     */
     protected $casts = [
         'due_date' => 'date',
+        'quiz_data' => 'array', // Automatically cast JSON data to an array
     ];
 
 
