@@ -4,15 +4,19 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
+// --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\ProfileController;
+// --------------------------
 use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
-use App\Http\Controllers\ActivityController;
 
 // --- PUBLIC ROUTES ---
 
@@ -22,6 +26,7 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// --- TEST & SETUP ROUTES ---
 Route::get('/test-models', function () {
     try {
         $response = Gemini::models()->list();
@@ -38,20 +43,36 @@ Route::get('/test-models', function () {
 // Setup AI Store
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
-// --- AUTHENTICATED ROUTES ---
+// --- AUTHENTICATED ROUTES GROUP ---
 Route::middleware(['auth', 'verified'])->group(function () {
+
+    // ==========================================
+    // SETTINGS ROUTES (Profile & Password)
+    // ==========================================
+
+
+    Route::get('/settings/password', [PasswordController::class, 'edit'])->name('password.edit');
+
+    // Profile: Show form, handle update, and delete account
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+
+    // ==========================================
+    // MAIN APP ROUTES
+    // ==========================================
 
     // 1. DASHBOARD
     Route::get('/dashboard', function () {
+        // If the user is an Admin, redirect them to User Management
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
-        // If the user is an Admin, redirect to User Management
-        if ($user && $user->hasRole('admin')) {
-            return redirect()->route('users.index'); 
+        if ($user->hasRole('admin')) {
+            return redirect()->route('users.index');
         }
 
-        // Standard Dashboard Logic
+        // Standard Dashboard Logic (For Teachers & Students)
         $stats = [
             'users' => User::count(),
             'materials' => Material::count(),
@@ -72,7 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 2. CHATBOT
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES
+    // 3. ADMIN ROUTES GROUP
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -81,7 +102,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-        
+
         // Chatbot Knowledge Base
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
@@ -101,7 +122,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
     Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
-    
+
     // Forum Replies
     Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
@@ -112,7 +133,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    // Teacher Only (CRUD)
+    // Teacher Only Group (CRUD)
     Route::middleware(['role:teacher'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');

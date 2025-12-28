@@ -11,6 +11,7 @@ const props = defineProps<{
     post: Post & {
         user: { name: string, username: string };
         replies: ReplyType[];
+        content: string;
         // Assumed properties for authorization check
         can_update: boolean; 
         can_delete: boolean;
@@ -94,7 +95,7 @@ const submitReply = () => {
                     </div>
 
                     <div class="prose max-w-none text-black leading-relaxed">
-                        <p>{{ post.body }}</p>
+                        <p>{{ post.content }}</p>
                     </div>
                 </div>
             </div>
@@ -121,6 +122,10 @@ const submitReply = () => {
                             id="body"
                             v-model="replyForm.body"
                             rows="5"
+                            autocomplete="off"
+                            spellcheck="false"
+                            data-1p-ignore
+                            data-lpignore="true"
                             class="w-full p-4 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-inner"
                             placeholder="Share your thoughts..."
                         ></textarea>
