@@ -3,12 +3,10 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue';
-// UPDATED: Removed 'Activity', Added 'Gamepad2'
 import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
@@ -26,26 +24,30 @@ const mainNavItems = computed<NavItem[]>(() => {
     // Menu Logic
     if (user.value?.roles.includes('admin')) {
         return [
-            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Manage User', href: route('users.index'), icon: Users },
-            { title: 'Forum', href: '/forum', icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
-            { title: 'Quiz', href: '#', icon: CheckCircle }, 
+            { title: 'Forum', href: route('forum.index'), icon: BookOpen },
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
+            { title: 'Quiz', href: route('quiz.index'), icon: CheckCircle },
         ];
     } else if (user.value?.roles.includes('teacher')) {
         return [
-            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Materials', href: route('materials.index'), icon: FileText },
-            { title: 'Forum', href: '/forum', icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
-            { title: 'Quiz', href: '#', icon: CheckCircle }, 
+            { title: 'Forum', href: route('forum.index'), icon: BookOpen },
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
+            // --- FIX FOR TEACHER ---
+            // Changed Title to "Manage Quizzes" and Route to "teacher.quiz.index"
+            { title: 'Manage Quizzes', href: route('teacher.quiz.index'), icon: CheckCircle },
         ];
     } else {
         return [
-            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Learning Materials', href: route('materials.index'), icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
-            { title: 'Quiz', href: '#', icon: CheckCircle }, 
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
+            // --- FIX FOR STUDENT ---
+            // Changed Title to "Take Quiz" for clarity (Route stays 'quiz.index')
+            { title: 'Take Quiz', href: route('quiz.index'), icon: CheckCircle },
         ];
     }
 });
@@ -59,7 +61,7 @@ const footerNavItems: NavItem[] = [];
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="route('dashboard')">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
