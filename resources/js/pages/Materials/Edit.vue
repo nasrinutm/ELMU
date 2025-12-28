@@ -8,7 +8,6 @@ import InputError from '@/components/InputError.vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
 
-// 1. Define Props (from MaterialController@edit)
 const props = defineProps<{
     material: {
         id: number;
@@ -19,15 +18,11 @@ const props = defineProps<{
     };
 }>();
 
-// 2. Setup Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Materials', href: route('materials.index') },
     { title: 'Edit', href: route('materials.edit', props.material.id) },
 ];
 
-// 3. Setup the form
-// NOTE: We must use POST for file uploads, even for an update.
-// We add `_method: 'put'` to tell Laravel to treat it as a PUT request.
 const form = useForm({
     _method: 'put',
     name: props.material.name,
@@ -36,7 +31,6 @@ const form = useForm({
     file: null as File | null,
 });
 
-// 4. Submit handler
 const submit = () => {
     form.post(route('materials.update', props.material.id), {
         onError: () => {
@@ -54,7 +48,7 @@ const submit = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="py-12">
             <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white bg-gray-800 overflow-hidden shadow-md sm:rounded-lg">
+                <div class="bg-white  overflow-hidden shadow-md sm:rounded-lg">
                     <div class="p-6 bg-[#ffd900]   border-[#003366]">
 
                         <h3 class="text-lg font-medium text-gray-900 mb-4">
@@ -94,9 +88,13 @@ const submit = () => {
                                 <Label for="description">Description (Optional)</Label>
                                 <textarea
                                     id="description"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 bg-[#003366] dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                     v-model="form.description"
                                     rows="4"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    data-1p-ignore
+                                    data-lpignore="true"
                                 ></textarea>
                                 <InputError class="mt-2" :message="form.errors.description" />
                             </div>

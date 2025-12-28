@@ -53,8 +53,6 @@ class HandleInertiaRequests extends Middleware
                     'roles' => $request->user()->getRoleNames(), // Spatie roles
                 ] : null,
             ],
-
-            // ADDED: Flash Messages for Success/Error alerts
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

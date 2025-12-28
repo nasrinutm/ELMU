@@ -7,7 +7,8 @@ import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue';
-import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle } from 'lucide-vue-next';
+// UPDATED: Removed 'Activity', Added 'Gamepad2'
+import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle, Bot } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 interface AuthUser {
@@ -26,9 +27,10 @@ const mainNavItems = computed<NavItem[]>(() => {
         return [
             { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Manage User', href: route('users.index'), icon: Users },
-            { title: 'Forum', href: route('forum.index'), icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
-            { title: 'Quiz', href: route('quiz.index'), icon: CheckCircle },
+            { title: 'Forum', href: '/forum', icon: BookOpen },
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
+            { title: 'Quiz', href: '#', icon: CheckCircle },
+            { title: 'Chatbot', href: '/admin/chatbot', icon: Bot },
         ];
     } else if (user.value?.roles.includes('teacher')) {
         return [
@@ -61,8 +63,8 @@ const footerNavItems: NavItem[] = [];
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="route('dashboard')">
-                            <AppLogo />
+                        <Link :href="dashboard()">
+                            <AppLogo class="w-48 h-48 max-w-none"/>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

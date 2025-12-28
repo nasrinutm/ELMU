@@ -11,7 +11,7 @@ import AuthLayout from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch, nextTick } from 'vue';
 import { route } from 'ziggy-js';
-
+import { store } from '@/routes/two-factor/login/index';
 interface AuthConfigContent {
     title: string;
     description: string;

@@ -56,11 +56,11 @@
 /* --- ELMU THEME (Deep Blue & Yellow) --- */
 :root {
     /* Page Background (Dark Blue) */
-    --background: #003366;
-    --foreground: #FFD900; /* Yellow Text */
+    --background: #ffffff;
+    --foreground: #000000; /* Yellow Text */
 
     /* Cards (Yellow Background, Blue Text) */
-    --card: #FFD900;
+    --card: #ffd900;
     --card-foreground: #003366;
 
     --popover: #ffffff;
@@ -79,7 +79,7 @@
     --muted-foreground: #000000;
     --muted-foreground1: #ffd900;
     /* Accent: Light Gray Background, Blue Text */
-    --accent: #f3f4f6;
+    --accent: #f6f6f3;
     --accent-foreground: #004080;
 
     /* Destructive: White (for contrast on dark background) */
@@ -115,5 +115,20 @@
     body {
         background-color: var(--background);
         color: var(--foreground);
+    }
+
+    /* --- SIDEBAR FONT OVERRIDE --- */
+    /* Targets standard Shadcn/Laravel Sidebar components */
+    [data-sidebar="menu-button"], 
+    [data-sidebar="menu-sub-button"],
+    aside a,
+    aside button {
+        font-size: 16px !important; /* Increased from default 14px */
+        font-weight: 500; /* Slightly bolder for readability */
+    }
+
+    [data-sidebar="group-label"] {
+        font-size: 16px !important; /* Increased from default 12px */
+        font-weight: 700;
     }
 }

@@ -1,13 +1,29 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { route } from 'ziggy-js';
+
+// Layouts and Components
+import AppLayout from '@/layouts/AppLayout.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import InputError from '@/components/InputError.vue';
-import { route } from 'ziggy-js';
+import { type BreadcrumbItem } from '@/types';
 
+// Breadcrumbs for navigation
+const breadcrumbItems: BreadcrumbItem[] = [
+    {
+        title: 'Password settings',
+        href: route('password.edit'),
+    },
+];
+
+const passwordInput = ref<HTMLInputElement | null>(null);
+const currentPasswordInput = ref<HTMLInputElement | null>(null);
+
+// Inertia useForm hook
 const form = useForm({
     current_password: '',
     password: '',
@@ -21,9 +37,11 @@ const updatePassword = () => {
         onError: () => {
             if (form.errors.password) {
                 form.reset('password', 'password_confirmation');
+                passwordInput.value?.focus();
             }
             if (form.errors.current_password) {
                 form.reset('current_password');
+                currentPasswordInput.value?.focus();
             }
         },
     });
@@ -33,7 +51,7 @@ const updatePassword = () => {
 <template>
     <Head title="Update Password" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="p-6 bg-[#002B5C] min-h-screen text-white">
             <div class="max-w-4xl mx-auto space-y-8">
                 
@@ -61,6 +79,7 @@ const updatePassword = () => {
                                     ref="currentPasswordInput"
                                     class="bg-white text-black border-gray-300" 
                                     autocomplete="current-password"
+                                    placeholder="Current password"
                                 />
                                 <InputError :message="form.errors.current_password" />
                             </div>
@@ -74,6 +93,7 @@ const updatePassword = () => {
                                     ref="passwordInput"
                                     class="bg-white text-black border-gray-300" 
                                     autocomplete="new-password"
+                                    placeholder="New password"
                                 />
                                 <InputError :message="form.errors.password" />
                             </div>
@@ -86,21 +106,33 @@ const updatePassword = () => {
                                     v-model="form.password_confirmation" 
                                     class="bg-white text-black border-gray-300" 
                                     autocomplete="new-password"
+                                    placeholder="Confirm password"
                                 />
                                 <InputError :message="form.errors.password_confirmation" />
                             </div>
 
-                            <div v-if="form.recentlySuccessful" class="text-sm font-medium text-green-600">
-                                Password updated successfully.
-                            </div>
+                            <div class="flex items-center gap-4">
+                                <Button 
+                                    :disabled="form.processing" 
+                                    class="bg-[#FFD700] text-[#002B5C] hover:bg-[#E6C200] font-bold"
+                                >
+                                    Update Password
+                                </Button>
 
-                            <Button :disabled="form.processing" class="bg-[#FFD700] text-[#002B5C] hover:bg-[#E6C200] font-bold">
-                                Update Password
-                            </Button>
+                                <Transition
+                                    enter-active-class="transition ease-in-out"
+                                    enter-from-class="opacity-0"
+                                    leave-active-class="transition ease-in-out"
+                                    leave-to-class="opacity-0"
+                                >
+                                    <p v-show="form.recentlySuccessful" class="text-sm font-medium text-green-600">
+                                        Password updated successfully.
+                                    </p>
+                                </Transition>
+                            </div>
                         </form>
                     </CardContent>
                 </Card>
-
             </div>
         </div>
     </AppLayout>

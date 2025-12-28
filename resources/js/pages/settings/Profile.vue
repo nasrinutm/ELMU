@@ -1,16 +1,30 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
+
+// Layouts and Components
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
+import DeleteUser from '@/components/DeleteUser.vue';
+import HeadingSmall from '@/components/HeadingSmall.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import InputError from '@/components/InputError.vue';
-import { route } from 'ziggy-js';
-import { ref } from 'vue';
+import { type BreadcrumbItem } from '@/types';
 
 const page = usePage();
 const user = page.props.auth.user;
+
+// --- BREADCRUMBS (from main) ---
+const breadcrumbItems: BreadcrumbItem[] = [
+    {
+        title: 'Profile settings',
+        href: route('profile.edit'),
+    },
+];
 
 // --- PROFILE INFORMATION FORM ---
 const profileForm = useForm({
@@ -64,7 +78,7 @@ const confirmDelete = () => {
 <template>
     <Head title="Profile Settings" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbItems">
         <div class="p-6 bg-[#002B5C] min-h-screen text-white">
             <div class="max-w-4xl mx-auto space-y-8">
                 

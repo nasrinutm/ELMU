@@ -10,13 +10,8 @@ class Material extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     * We list all the columns from our migration (Step 1)
-     * so that Laravel allows us to fill them in our code.
-     *
-     * @var array<int, string>
-     */
+
+
     protected $fillable = [
         'name',
         'subject',
@@ -27,11 +22,6 @@ class Material extends Model
         'user_id',
     ];
 
-    /**
-     * This defines the relationship.
-     * It tells Laravel that each Material "Belongs To" one User.
-     * This lets us easily find the teacher who uploaded a material.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
