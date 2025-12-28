@@ -5,18 +5,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/auth/AuthCardLayout.vue';
-import store from '@/routes/login';
-import { Form, Head } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-
-// changed: handle route module shape where the form helper may be nested under `.store`
-const loginStore = (store as any)?.store ?? (store as any);
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
 }>();
+
+const form = useForm({
+    email: '',
+    password: '',
+    remember: false,
+});
+
+const submit = () => {
+    // USING ZIGGY ROUTE HELPER HERE:
+    form.post(route('login'), {
+        onFinish: () => form.reset('password'),
+    });
+};
 </script>
 
 <template>
@@ -26,35 +35,25 @@ defineProps<{
     >
         <Head title="Log in" />
 
-        <div
-            v-if="status"
-            class="mb-4 text-center text-sm font-medium text-green-400"
-        >
+        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-400">
             {{ status }}
         </div>
 
-        <Form
-            v-bind="loginStore.form()"
-            :reset-on-success="['password']"
-            v-slot="{ errors, processing }"
-            class="flex flex-col gap-6"
-        >
+        <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <!-- Label White for contrast -->
                     <Label for="email" class="text-white">Email address</Label>
                     <Input
                         id="email"
                         type="email"
-                        name="email"
+                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
+                        v-model="form.email"
                         required
                         autofocus
-                        :tabindex="1"
                         autocomplete="email"
                         placeholder="email@example.com"
-                        class="bg-white text-white border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
-                    <InputError :message="errors.email" class="text-red-300" />
+                    <InputError :message="form.errors.email" class="text-red-300" />
                 </div>
 
                 <div class="grid gap-2">
@@ -64,43 +63,35 @@ defineProps<{
                     <Input
                         id="password"
                         type="password"
-                        name="password"
+                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
+                        v-model="form.password"
                         required
-                        :tabindex="2"
                         autocomplete="current-password"
                         placeholder="Password"
-                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
-                    <InputError :message="errors.password" class="text-red-300" />
+                    <InputError :message="form.errors.password" class="text-red-300" />
                 </div>
 
                 <div class="flex items-center justify-between">
                     <Label for="remember" class="flex items-center space-x-3 text-white">
                         <Checkbox
                             id="remember"
-                            name="remember"
-                            :tabindex="3"
+                            v-model:checked="form.remember"
                             class="border-white data-[state=checked]:bg-[#FFD900] data-[state=checked]:text-[#003366]"
                         />
                         <span>Remember me</span>
                     </Label>
                 </div>
 
-                <!-- Yellow Button -->
                 <Button
                     type="submit"
                     class="mt-4 w-full bg-[#FFD900] text-[#003366] hover:bg-[#e6c300] font-bold"
-                    :tabindex="4"
-                    :disabled="processing"
-                    data-test="login-button"
+                    :disabled="form.processing"
                 >
-                    <LoaderCircle
-                        v-if="processing"
-                        class="h-4 w-4 animate-spin mr-2"
-                    />
+                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin mr-2" />
                     Log in
                 </Button>
             </div>
-        </Form>
+        </form>
     </AuthBase>
 </template>

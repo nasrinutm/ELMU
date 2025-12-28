@@ -8,13 +8,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany; // <--- ADDED IMPORT
 
 class User extends Authenticatable
 {
-    
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
-    use HasRoles;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -56,5 +56,16 @@ class User extends Authenticatable
     public function posts()
     {
         return $this->hasMany(Post::class);
+    }
+
+    /**
+     * The activities that the user (Student) has participated in.
+     * This links to the pivot table 'activity_user'.
+     */
+    public function activities(): BelongsToMany // <--- ADDED THIS FUNCTION
+    {
+        return $this->belongsToMany(Activity::class, 'activity_user')
+                    ->withPivot('score')
+                    ->withTimestamps();
     }
 }
