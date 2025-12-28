@@ -13,9 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-
+        
+        // 1. DISABLE CSRF FOR AUTH ROUTES (The Fix for 419 Error)
         $middleware->validateCsrfTokens(except: [
-            '*',
+            'login',
+            'logout',
+            'register',
+            'materials',      // Allow creating materials
+            'materials/*',    // Allow updating/deleting materials
+            'activities',     // Anticipating future issues
+            'activities/*',
         ]);
 
         // Removed 'appearance' from except list

@@ -18,6 +18,13 @@ use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
 
+// --- PUBLIC ROUTES ---
+
+Route::get('/', function () {
+    return Inertia::render('Welcome', [
+        'canRegister' => Features::enabled(Features::registration()),
+    ]);
+})->name('home');
 
 // --- TEST & SETUP ROUTES ---
 Route::get('/test-models', function () {
@@ -33,16 +40,8 @@ Route::get('/test-models', function () {
     }
 });
 
+// Setup AI Store
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
-
-
-// --- PUBLIC ROUTES ---
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
-
 
 // --- AUTHENTICATED ROUTES GROUP ---
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -145,9 +144,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // 6. ACTIVITY ROUTES
     Route::resource('activities', ActivityController::class);
-    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
-        ->name('activities.download');
+    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+     Route::post('/activities/{activity}/submit', [\App\Http\Controllers\ActivityController::class, 'submit'])
+        ->name('activities.submit');
 
-}); // <-- End of auth middleware group
+    Route::get('/activities/{activity}/submission/download', [\App\Http\Controllers\ActivityController::class, 'downloadSubmission'])
+    ->name('activities.submission.download');
+
+}); // End Auth Middleware
+
+// --- REQUIRED IMPORTS ---
+require __DIR__.'/settings.php';
