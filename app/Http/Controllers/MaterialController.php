@@ -12,7 +12,7 @@ class MaterialController extends Controller
 {
     public function index(Request $request)
     {
-        // ... (Keep existing index code) ...
+
         $query = Material::query()->with('user:id,name');
 
         if ($request->filled('date')) {
@@ -43,9 +43,9 @@ class MaterialController extends Controller
         $request->validate([
             'subject' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'name' => 'nullable|string|max:255', // Optional override title
+            'name' => 'nullable|string|max:255',
             'files' => 'required|array|min:1',
-            'files.*' => 'required|file|max:10240|mimes:pdf,doc,docx,ppt,pptx', // Validate each file
+            'files.*' => 'required|file|max:10240|mimes:pdf,doc,docx,ppt,pptx',
         ]);
 
         $files = $request->file('files');
@@ -54,7 +54,7 @@ class MaterialController extends Controller
         foreach ($files as $file) {
             $path = $file->store('materials', 'public');
 
-            // Use provided name if only 1 file, otherwise use filename
+
             $displayName = $request->name;
             if (count($files) > 1 || empty($displayName)) {
                 $displayName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
@@ -85,7 +85,6 @@ class MaterialController extends Controller
 
     public function update(Request $request, Material $material)
     {
-        // ... (Keep existing update code - usually editing is one by one) ...
          $request->validate([
             'name' => 'required|string|max:255',
             'subject' => 'required|string|max:255',

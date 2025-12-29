@@ -1,8 +1,11 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Server, Database, Cpu, Trash2, FileText, Plus } from 'lucide-vue-next';
+import { 
+    Server, Database, Cpu, Trash2, FileText, Plus, 
+    Search, ChevronUp, ChevronDown, X, Bot, Info 
+} from 'lucide-vue-next';
 
 // Props from Controller
 const props = defineProps({
@@ -15,16 +18,70 @@ const breadcrumbs = [
     { title: 'AI Details', href: route('chatbot.details') },
 ];
 
-// Delete Confirmation
-const deleteFile = (fileName) => {
-    if (confirm('Are you sure? The AI will forget this document immediately.')) {
-        router.delete(route('upload.delete', fileName), {
-            preserveScroll: true,
-        });
+// --- SEARCH & SORT STATE ---
+const searchQuery = ref('');
+const sortKey = ref('created_at'); // Default sort field
+const sortOrder = ref('desc');     // Default sort direction
+const isDeleteModalOpen = ref(false);
+const fileToDelete = ref(null);
+
+// --- SEARCH & SORT LOGIC ---
+const filteredFiles = computed(() => {
+    let result = [...props.files];
+
+    // 1. Search filter (Checks Display Name and Mime Type)
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(file => 
+            file.display_name?.toLowerCase().includes(query) ||
+            file.mime_type?.toLowerCase().includes(query)
+        );
+    }
+
+    // 2. Sort logic
+    result.sort((a, b) => {
+        let valA = a[sortKey.value];
+        let valB = b[sortKey.value];
+
+        // Handle nulls
+        if (valA === null) return 1;
+        if (valB === null) return -1;
+
+        let modifier = sortOrder.value === 'desc' ? -1 : 1;
+        if (valA < valB) return -1 * modifier;
+        if (valA > valB) return 1 * modifier;
+        return 0;
+    });
+
+    return result;
+});
+
+const sortBy = (key) => {
+    if (sortKey.value === key) {
+        sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortKey.value = key;
+        sortOrder.value = 'asc';
     }
 };
 
-// Helper to format bytes
+// --- ACTIONS ---
+const deleteFile = (file) => {
+    // Uses the Gemini document name for deletion
+    fileToDelete.value = file.name; 
+    isDeleteModalOpen.value = true;
+};
+
+const confirmDelete = () => {
+    isDeleteModalOpen.value = false;
+    if (fileToDelete.value) {
+        router.delete(route('upload.delete', fileToDelete.value), {
+            preserveScroll: true,
+        });
+    }
+    fileToDelete.value = null;
+};
+
 const formatBytes = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -38,117 +95,210 @@ const formatBytes = (bytes) => {
     <Head title="AI Chatbot Details" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 p-4 max-w-7xl mx-auto w-full">
+        <div class="flex h-full flex-1 flex-col gap-8 p-4 md:p-8 w-full">
             
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">AI System Status</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Monitor the model and knowledge base.</p>
-                </div>
-                <Link 
-                    :href="route('upload.create')" 
-                    class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                >
-                    <Plus class="w-4 h-4" />
-                    Add New Material
-                </Link>
+            <div class="border-b border-gray-100 pb-4">
+                <h1 class="text-2xl font-bold text-gray-900">AI Knowledge Center</h1>
+                <p class="text-sm text-gray-500">Manage your system model, behavioral prompt, and training data.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl flex items-center gap-4 shadow-sm">
-                    <div class="p-3 bg-purple-100 text-purple-600 rounded-lg">
-                        <Cpu class="w-6 h-6" />
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div v-for="(stat, index) in [
+                    { label: 'Current Model', val: systemInfo.model, icon: Cpu, color: 'text-purple-600', bg: 'bg-purple-100' },
+                    { label: 'Knowledge Store', val: systemInfo.store_id, icon: Database, color: 'text-green-600', bg: 'bg-green-100' },
+                    { label: 'Indexed Documents', val: files.length + ' Files', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' }
+                ]" :key="index" class="p-6 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md">
+                    <div :class="['p-3 rounded-lg', stat.bg, stat.color]">
+                        <component :is="stat.icon" class="w-6 h-6" />
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Model</p>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ systemInfo.model }}</h3>
-                    </div>
-                </div>
-
-                <div class="p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl flex items-center gap-4 shadow-sm">
-                    <div class="p-3 bg-green-100 text-green-600 rounded-lg">
-                        <Database class="w-6 h-6" />
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Knowledge Store</p>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate w-32" :title="systemInfo.store_id">
-                            {{ systemInfo.store_id.substring(0, 15) }}...
-                        </h3>
-                    </div>
-                </div>
-
-                <div class="p-6 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl flex items-center gap-4 shadow-sm">
-                    <div class="p-3 bg-blue-100 text-blue-600 rounded-lg">
-                        <FileText class="w-6 h-6" />
-                    </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Indexed Documents</p>
-                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ files.length }} Files</h3>
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ stat.label }}</p>
+                        <h3 class="text-lg font-bold text-gray-900 truncate break-all">{{ stat.val }}</h3>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-zinc-700">
-                    <h3 class="font-bold text-gray-900 dark:text-white">Active Knowledge Base</h3>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                        <Bot class="w-5 h-5 text-purple-600" />
+                        System Behavior Prompt
+                    </h3>
+                    <Link :href="route('chatbot.prompt.edit')" class="text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-blue-600 hover:bg-gray-50 font-bold transition shadow-sm">
+                        Edit Instruction
+                    </Link>
+                </div>
+                <div class="p-6">
+                    <div class="bg-indigo-50/30 p-5 rounded-xl border border-indigo-100 border-dashed relative">
+                        <p class="text-sm text-gray-700 leading-relaxed italic whitespace-pre-wrap pr-8">
+                            "{{ systemInfo.current_prompt }}"
+                        </p><div class="mt-3 flex items-start gap-2 text-gray-400">
+                        
+                    </div>
+                    </div>
+                    <div class="mt-3 flex items-start gap-2 text-gray-400">
+                        <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <p class="text-xs">
+                            This instruction is prepended to every user query to maintain consistency in AI responses.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+             <div class="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+                <div class="relative max-w-md w-full">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search class="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input 
+                        v-model="searchQuery"
+                        type="text" 
+                        placeholder="Search by filename or type..." 
+                        class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition shadow-sm"
+                    />
+                    <button 
+                        v-if="searchQuery" 
+                        @click="searchQuery = ''" 
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div class="flex-shrink-0">
+                    <Link 
+                        :href="route('upload.create')" 
+                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
+                    >
+                        <Plus class="w-4 h-4" />
+                        Add New Material
+                    </Link>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden w-full">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
+                    <h3 class="font-bold text-gray-900">Active Knowledge Base</h3>
                 </div>
                 
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
-                        <thead class="bg-gray-50 dark:bg-zinc-800/50 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs font-semibold">
                             <tr>
-                                <th class="px-6 py-3">File Name</th>
-                                <th class="px-6 py-3">Size</th>
+                                <th @click="sortBy('display_name')" class="px-6 py-3 cursor-pointer hover:bg-gray-200 transition group">
+                                    <div class="flex items-center gap-1">
+                                        File Name
+                                        <ChevronUp v-if="sortKey === 'display_name' && sortOrder === 'asc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronDown v-else-if="sortKey === 'display_name' && sortOrder === 'desc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronUp v-else class="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                </th>
+                                <th class="px-6 py-3 text-xs text-gray-400 font-normal italic">Gemini ID</th>
+                                <th @click="sortBy('size_bytes')" class="px-6 py-3 cursor-pointer hover:bg-gray-200 transition group">
+                                    <div class="flex items-center gap-1">
+                                        Size
+                                        <ChevronUp v-if="sortKey === 'size_bytes' && sortOrder === 'asc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronDown v-else-if="sortKey === 'size_bytes' && sortOrder === 'desc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronUp v-else class="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                </th>
                                 <th class="px-6 py-3">Type</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3">Uploaded</th>
+                                <th @click="sortBy('state')" class="px-6 py-3 cursor-pointer hover:bg-gray-200 transition group">
+                                    <div class="flex items-center gap-1">
+                                        Status
+                                        <ChevronUp v-if="sortKey === 'state' && sortOrder === 'asc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronDown v-else-if="sortKey === 'state' && sortOrder === 'desc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronUp v-else class="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                </th>
+                                <th @click="sortBy('created_at')" class="px-6 py-3 cursor-pointer hover:bg-gray-200 transition group">
+                                    <div class="flex items-center gap-1">
+                                        Uploaded
+                                        <ChevronUp v-if="sortKey === 'created_at' && sortOrder === 'asc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronDown v-else-if="sortKey === 'created_at' && sortOrder === 'desc'" class="w-3 h-3 text-blue-600" />
+                                        <ChevronUp v-else class="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                </th>
                                 <th class="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-zinc-700">
-                            <tr v-for="file in files" :key="file.name" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition">
-                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                    {{ file.display_name }}
+                        <tbody class="divide-y divide-gray-200">
+                            <tr v-for="file in filteredFiles" :key="file.name" class="hover:bg-blue-50/30 transition">
+                                <td class="px-6 py-4 font-medium text-gray-900">
+                                    {{ file.display_name }} 
                                 </td>
-                                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                                <td class="px-6 py-4">
+                                    <code class="text-xs bg-gray-50 px-2 py-1 rounded text-gray-400 font-mono">
+                                        {{ file.name.split('/').pop() }}...
+                                    </code>
+                                </td>
+                                <td class="px-6 py-4 text-gray-500">
                                     {{ formatBytes(file.size_bytes) }}
                                 </td>
-                                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
-                                    <span class="px-2 py-1 bg-gray-100 dark:bg-zinc-700 rounded text-xs">
-                                        {{ file.mime_type.split('/')[1] || 'File' }}
+                                <td class="px-6 py-4 text-gray-500">
+                                    <span class="px-2 py-1 bg-gray-100 rounded text-xs">
+                                        {{ file.mime_type?.split('/')[1] || 'File' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
                                     <span 
                                         class="px-2 py-1 rounded-full text-xs font-bold"
-                                        :class="file.state === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
+                                        :class="file.state === 'ACTIVE' || file.state === 'STATE_ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
                                     >
                                         {{ file.state }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                                <td class="px-6 py-4 text-gray-500">
                                     {{ file.created_at }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <button 
-                                        @click="deleteFile(file.name)" 
-                                        class="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
-                                        title="Delete from AI"
-                                    >
+                                        @click="deleteFile(file)" 
+                                        class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition"
+                                        title="Delete from AI">
                                         <Trash2 class="w-4 h-4" />
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-if="files.length === 0">
-                                <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                    No files found. The AI has no custom knowledge yet.
+                            <tr v-if="filteredFiles.length === 0">
+                                <td colspan="7" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <Search class="w-8 h-8 text-gray-300" />
+                                        <p class="text-gray-500 font-medium">
+                                            {{ searchQuery ? `No results found for "${searchQuery}"` : 'The AI has no custom knowledge yet.' }}
+                                        </p>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
+        </div>
 
+        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-100">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <Trash2 class="w-6 h-6 text-red-500" />
+                    Confirm Deletion
+                </h2>
+                <p class="mt-4 text-gray-600 text-sm leading-relaxed">
+                    Are you sure you want the AI to forget this document? This action cannot be undone and the record will be removed from the database.
+                </p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button 
+                        @click="isDeleteModalOpen = false" 
+                        class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        @click="confirmDelete" 
+                        class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-sm"
+                    >
+                        OK, Delete
+                    </button>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>

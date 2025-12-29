@@ -27,10 +27,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Manage User', href: route('users.index'), icon: Users },
             { title: 'Forum', href: '/forum', icon: BookOpen },
-            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
-            // UPDATED: Added real route for Report
+            { title: 'Activity', href: route('activities.index'), icon: Gamepad2 }, // <--- Updated Icon
+            { title: 'Quiz', href: '#', icon: CheckCircle },
+            { title: 'Chatbot', href: '/admin/chatbot', icon: Bot },
             { title: 'Report', href: route('reports.index'), icon: ClipboardList }, 
-            { title: 'Quiz', href: '#', icon: CheckCircle }, 
+
         ];
     } else if (user.value?.roles.includes('teacher')) {
         return [
@@ -61,8 +62,8 @@ const footerNavItems: NavItem[] = [];
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="route('dashboard')">
-                            <AppLogo />
+                        <Link :href="dashboard()">
+                            <AppLogo class="w-48 h-48 max-w-none"/>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

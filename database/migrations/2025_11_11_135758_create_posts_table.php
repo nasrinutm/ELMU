@@ -9,23 +9,18 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-{
-    // ONLY create the posts table here
-    Schema::create('posts', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
-        $table->string('title');
-        $table->text('content');
-        $table->timestamps();
-    });
-}
+    public function up(): void {
+        Schema::create('posts', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('content'); // Ensure this says 'content', not 'body'
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->timestamps();
+        });
+    }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
+
+    public function down(): void {
         Schema::dropIfExists('posts');
     }
 };
