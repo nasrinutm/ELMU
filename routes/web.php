@@ -15,6 +15,7 @@ use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 // --------------------------
 use Gemini\Laravel\Facades\Gemini;
+use App\Http\Controllers\ReportController;
 use App\Models\User;
 use App\Models\Material;
 
@@ -43,14 +44,40 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+// Setup AI Store
+Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
+
 
 // --- AUTHENTICATED ROUTES GROUP ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // ==========================================
-    // SETTINGS ROUTES (Profile & Password)
-    // ==========================================
+    // 1. DASHBOARD
+    Route::get('/dashboard', function () {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        // Admin Redirect Logic
+        if ($user->hasRole('admin')) {
+            return redirect()->route('users.index');
+        }
 
+        // Standard Dashboard Logic (For Teachers & Students)
+        $stats = [
+            'users' => User::count(),
+            'materials' => Material::count(),
+            'my_materials' => Material::where('user_id', Auth::id())->count(),
+        ];
+
+        $recentMaterials = Material::with('user:id,name')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentMaterials' => $recentMaterials
+        ]);
+    })->name('dashboard');
 
     Route::get('/settings/password', [PasswordController::class, 'edit'])->name('password.edit');
 
@@ -145,9 +172,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // 6. ACTIVITY ROUTES
     Route::resource('activities', ActivityController::class);
-    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])
-        ->name('activities.download');
+    Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+
+    // 7. REPORT ROUTES (UC0014: Generate Reports)
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    
+    // Detailed Performance View Route (When clicking a student name)
+    Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])
+        ->name('reports.student.detail');
+    
+    // Only Teachers and Admins can create or store reports
+    Route::middleware(['role:teacher|admin'])->group(function () {
+        Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
+        Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
+        
+        // Placeholders for future View/Edit logic
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+        Route::get('/reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
+        Route::put('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
+
+        // Remark Logic (Moved Inside Teacher Middleware for Security)
+        Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
+        Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
+    });
+});
 
 }); // <-- End of auth middleware group

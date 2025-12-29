@@ -15,6 +15,7 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
     use HasRoles;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -53,8 +54,43 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Relationship with Forum Posts.
+     */
     public function posts()
     {
         return $this->hasMany(Post::class);
     }
+
+    /**
+     * NEW: Relationship with Activities.
+     * This links the student to the classroom activities they have interacted with.
+     */
+    public function activities()
+{
+    return $this->belongsToMany(Activity::class)
+                ->withPivot('status', 'score', 'completed_at')
+                ->withTimestamps();
+}
+
+public function quizzes()
+{
+    return $this->belongsToMany(Quiz::class)
+                ->withPivot('score', 'status', 'completed_at')
+                ->withTimestamps();
+}
+
+// In User.php
+
+public function activitySubmissions()
+{
+    // Points to your activity_submissions table
+    return $this->hasMany(ActivitySubmission::class);
+}
+
+public function quizAttempts()
+{
+    // Points to your quiz_attempts table
+    return $this->hasMany(QuizAttempt::class);
+}
 }
