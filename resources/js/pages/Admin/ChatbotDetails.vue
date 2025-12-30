@@ -1,10 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { useForm, Head, Link, router } from '@inertiajs/vue3'; 
+import { useForm, Head, Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { 
-    Server, Database, Cpu, Trash2, FileText, Plus, 
-    Search, ChevronUp, ChevronDown, X, Bot, Info, Edit2, Save, XCircle 
+import {
+    Server, Database, Cpu, Trash2, FileText, Plus,
+    Search, ChevronUp, ChevronDown, X, Bot, Info, Edit2, Save, XCircle
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -58,7 +58,7 @@ const filteredFiles = computed(() => {
     // 1. Search filter (Checks Display Name and Mime Type)
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
-        result = result.filter(file => 
+        result = result.filter(file =>
             file.display_name?.toLowerCase().includes(query) ||
             file.mime_type?.toLowerCase().includes(query)
         );
@@ -93,7 +93,7 @@ const sortBy = (key) => {
 // --- ACTIONS ---
 const deleteFile = (file) => {
     // Uses the Gemini document name for deletion
-    fileToDelete.value = file.name; 
+    fileToDelete.value = file.name;
     isDeleteModalOpen.value = true;
 };
 
@@ -121,7 +121,7 @@ const formatBytes = (bytes) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-8 p-4 md:p-8 w-full">
-            
+
             <div class="border-b border-gray-100 pb-4">
                 <h1 class="text-2xl font-bold text-gray-900">AI Knowledge Center</h1>
                 <p class="text-sm text-gray-500">Manage your system model, behavioral prompt, and training data.</p>
@@ -149,9 +149,9 @@ const formatBytes = (bytes) => {
                         <Bot class="w-5 h-5 text-purple-600" />
                         <h3 class="font-bold text-gray-900">System Behavior Prompt</h3>
                     </div>
-                    
-                    <button 
-                        @click="openEditModal" 
+
+                    <button
+                        @click="openEditModal"
                         class="text-xs flex items-center gap-1.5 font-bold bg-white text-blue-600 border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg shadow-sm transition"
                     >
                         <Edit2 class="w-3.5 h-3.5" />
@@ -173,24 +173,24 @@ const formatBytes = (bytes) => {
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Search class="h-4 w-4 text-gray-400" />
                     </div>
-                    <input 
+                    <input
                         v-model="searchQuery"
-                        type="text" 
-                        placeholder="Search by filename or type..." 
+                        type="text"
+                        placeholder="Search by filename or type..."
                         class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition shadow-sm"
                     />
-                    <button 
-                        v-if="searchQuery" 
-                        @click="searchQuery = ''" 
+                    <button
+                        v-if="searchQuery"
+                        @click="searchQuery = ''"
                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                     >
                         <X class="h-4 w-4" />
                     </button>
                 </div>
 
-                <div class="flex-shrink-0">
-                    <Link 
-                        :href="route('upload.create')" 
+                <div class="shrink-0">
+                    <Link
+                        :href="route('upload.create')"
                         class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
                     >
                         <Plus class="w-4 h-4" />
@@ -202,7 +202,7 @@ const formatBytes = (bytes) => {
                 <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
                     <h3 class="font-bold text-gray-900">Active Knowledge Base</h3>
                 </div>
-                
+
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-gray-100 text-gray-700 uppercase text-xs font-semibold">
@@ -247,7 +247,7 @@ const formatBytes = (bytes) => {
                         <tbody class="divide-y divide-gray-200">
                             <tr v-for="file in filteredFiles" :key="file.name" class="hover:bg-blue-50/30 transition">
                                 <td class="px-6 py-4 font-medium text-gray-900">
-                                    {{ file.display_name }} 
+                                    {{ file.display_name }}
                                 </td>
                                 <td class="px-6 py-4">
                                     <code class="text-xs bg-gray-50 px-2 py-1 rounded text-gray-400 font-mono">
@@ -263,7 +263,7 @@ const formatBytes = (bytes) => {
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span 
+                                    <span
                                         class="px-2 py-1 rounded-full text-xs font-bold"
                                         :class="file.state === 'ACTIVE' || file.state === 'STATE_ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
                                     >
@@ -274,8 +274,8 @@ const formatBytes = (bytes) => {
                                     {{ file.created_at }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <button 
-                                        @click="deleteFile(file)" 
+                                    <button
+                                        @click="deleteFile(file)"
                                         class="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition"
                                         title="Delete from AI">
                                         <Trash2 class="w-4 h-4" />
@@ -308,14 +308,14 @@ const formatBytes = (bytes) => {
                     Are you sure you want the AI to forget this document? This action cannot be undone and the record will be removed from the database.
                 </p>
                 <div class="mt-6 flex justify-end gap-3">
-                    <button 
-                        @click="isDeleteModalOpen = false" 
+                    <button
+                        @click="isDeleteModalOpen = false"
                         class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                         Cancel
                     </button>
-                    <button 
-                        @click="confirmDelete" 
+                    <button
+                        @click="confirmDelete"
                         class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-sm"
                     >
                         OK, Delete
@@ -335,12 +335,12 @@ const formatBytes = (bytes) => {
                         <X class="w-5 h-5" />
                     </button>
                 </div>
-                
+
                 <div class="p-6">
                     <p class="text-xs text-gray-500 mb-4 italic">
                         The instructions below define how the AI behaves. (e.g., "Answer in Malay", "Be concise").
                     </p>
-                    
+
                     <textarea
                         v-model="promptForm.instruction"
                         rows="8"
@@ -349,13 +349,13 @@ const formatBytes = (bytes) => {
                     ></textarea>
 
                     <div class="mt-6 flex justify-end gap-3">
-                        <button 
-                            @click="closeEditModal" 
+                        <button
+                            @click="closeEditModal"
                             class="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             @click="savePrompt"
                             :disabled="promptForm.processing"
                             class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg transition disabled:opacity-50"
