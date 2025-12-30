@@ -60,7 +60,7 @@ const formatDate = (dateString: string) => {
 
                 <Link
                     :href="route('forum.create')" 
-                    class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition"
+                    class="bg-submit-button text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition"
                 >
                     Create New Post
                 </Link>

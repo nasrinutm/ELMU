@@ -143,7 +143,7 @@ const submitReply = () => {
                 </div>
                 
                 <p class="text-gray-600 leading-relaxed">
-                    Are you sure you want to permanently delete the post <span class="font-bold text-black">"{{ post.title }}"</span>? This action cannot be undone.
+                    Are you sure you want to permanently delete this post? This action cannot be undone.
                 </p>
 
                 <div class="mt-8 flex justify-end gap-3">

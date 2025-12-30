@@ -102,16 +102,16 @@ const getRoleBadgeVariant = (roleName: string) => {
             <!-- Header Section -->
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="space-y-2">
-                    <h1 class="text-3xl font-bold tracking-tight text-[#FFD900]">
+                    <h1 class="text-3xl font-bold tracking-tight text-[#212121]">
                         Manage Users
                     </h1>
-                    <p class="text-[#FFD900]">
+                    <p class="text-[#212121]">
                         View, create, and manage system users.
                     </p>
                 </div>
 
                 <Link :href="route('users.create')">
-                    <Button class="bg-[#FFD900] text-[#003366] hover:bg-[#FFD900]/90 font-bold shadow-lg">
+                    <Button class="bg-[#0060bf] text-[#ffffff] hover:bg-[#FFD900]/90 font-bold shadow-lg">
                         <UserPlus class="w-4 h-4 mr-2" />
                         Add New User
                     </Button>
@@ -121,19 +121,19 @@ const getRoleBadgeVariant = (roleName: string) => {
             <Separator class="bg-slate-600/50" />
 
             <!-- Filters Card (Yellow Background) -->
-            <div class="rounded-xl border-none bg-[#FFD900] p-6 shadow-sm">
+            <div class="rounded-xl border-none bg-gray-300 p-6 shadow-sm">
                 <div class="flex flex-col sm:flex-row gap-6">
                     <!-- Role Filter -->
                     <div class="w-full sm:w-1/3 space-y-2">
-                        <Label for="roleFilter" class="text-xs font-bold uppercase tracking-wider text-[#003366]">
+                        <Label for="roleFilter" class="text-xs font-bold uppercase tracking-wider text-[#212121]">
                             Filter by Role
                         </Label>
                         <div class="relative">
-                            <Filter class="absolute left-3 top-2.5 h-4 w-4 text-white z-10" />
+                            <Filter class="absolute left-3 top-2.5 h-4 w-4 text-[#212121] z-10" />
                             <select
                                 id="roleFilter"
                                 v-model="roleFilter"
-                                class="h-10 w-full rounded-md border-transparent bg-[#003366] pl-9 px-3 text-sm text-white shadow-none focus:outline-none focus:ring-2 focus:ring-white appearance-none"
+                                class="h-10 w-full rounded-md border-transparent bg-[#ffffff] pl-9 px-3 text-sm text-[#212121] shadow-none focus:outline-none focus:ring-2 focus:ring-white appearance-none"
                             >
                                 <option value="">All Roles</option>
                                 <option v-for="role in roles" :key="role" :value="role">
@@ -145,15 +145,15 @@ const getRoleBadgeVariant = (roleName: string) => {
 
                     <!-- Sort Filter -->
                     <div class="w-full sm:w-1/3 space-y-2">
-                        <Label for="sortOrder" class="text-xs font-bold uppercase tracking-wider text-[#003366]">
+                        <Label for="sortOrder" class="text-xs font-bold uppercase tracking-wider text-[#212121]">
                             Sort By
                         </Label>
                         <div class="relative">
-                            <Search class="absolute left-3 top-2.5 h-4 w-4 text-white z-10" />
+                            <Search class="absolute left-3 top-2.5 h-4 w-4 text-[#212121] z-10" />
                             <select
                                 id="sortOrder"
                                 v-model="sortOrder"
-                                class="h-10 w-full rounded-md border-transparent bg-[#003366] pl-9 px-3 text-sm text-white shadow-none focus:outline-none focus:ring-2 focus:ring-white appearance-none"
+                                class="h-10 w-full rounded-md border-transparent bg-[#ffffff] pl-9 px-3 text-sm text-[#212121] shadow-none focus:outline-none focus:ring-2 focus:ring-[#0060bf] appearance-none"
                             >
                                 <option value="latest">Latest Joined</option>
                                 <option value="oldest">Oldest Joined</option>
@@ -170,7 +170,7 @@ const getRoleBadgeVariant = (roleName: string) => {
                          Header: Yellow Background (#FFD900)
                          Text: Dark Blue (#003366)
                     -->
-                    <thead class="bg-[#FFD900] border-b border-[#003366]/20 text-[#003366] uppercase text-xs font-bold tracking-wider">
+                    <thead class="bg-gray-300 border-b border-[#003366]/20 text-[#003366] uppercase text-xs font-bold tracking-wider">
                         <tr>
                             <th class="p-4 pl-6">Name</th>
                             <th class="p-4">Email</th>
@@ -217,7 +217,7 @@ const getRoleBadgeVariant = (roleName: string) => {
                                     <!-- Edit Button (Solid Blue) -->
                                     <Button
                                         size="sm"
-                                        class="h-8 bg-[#003366] text-white hover:bg-[#002244] border-none shadow-sm"
+                                        class="h-8 bg-[#0060bf] text-white hover:bg-[#002244] border-none shadow-sm"
                                         as-child
                                     >
                                         <Link :href="route('users.edit', user.id)">
@@ -229,7 +229,7 @@ const getRoleBadgeVariant = (roleName: string) => {
                                     <Button
                                         size="sm"
                                         variant="destructive"
-                                        class="h-8 shadow-sm bg-red-600 hover:bg-red-700 text-white"
+                                        class="h-8 shadow-sm !bg-red-600 hover:!bg-red-700 text-white"
                                         @click="deleteUser(user.id)"
                                     >
                                         <Trash2 class="w-3 h-3 mr-1" /> Delete

@@ -33,7 +33,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             
             { title: 'Forum', href: '/forum', icon: BookOpen },
             { title: 'Activity', href: route('activities.index'), icon: Gamepad2 },
-            { title: 'Quiz', href: route('teacher.quiz.index'), icon: CheckCircle },
             { title: 'Chatbot', href: '/admin/chatbot', icon: Bot },
         ];
     } else if (user.value?.roles.includes('teacher')) {

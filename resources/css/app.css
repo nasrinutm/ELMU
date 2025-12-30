@@ -41,6 +41,8 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-search-border: var(--search-border);
+    --color-submit-button: var(--submit-button);
+
 }
 
 @layer base {
@@ -59,7 +61,7 @@
 :root {
     /* Page Background (Dark Blue) */
     --background: #ffffff;
-    --foreground: #000000; /* Yellow Text */
+    --foreground: #212121; /* Yellow Text */
 
     /* Cards (Yellow Background, Blue Text) */
     --card: #FFD900;
@@ -103,13 +105,15 @@
     --sidebar-primary-foreground: #003366;
 
     /* Sidebar Hover: Blue Background, White Text */
-    --sidebar-accent: #004080;
+    --sidebar-accent: #003366;
     --sidebar-accent-foreground: #ffffff;
 
     --sidebar-border: #1e40af;
     --sidebar-ring: #FFD900;
 
     --search-border: #e2e8f0;
+
+    --submit-button:  #0060bf;
 }
 
 @layer base {

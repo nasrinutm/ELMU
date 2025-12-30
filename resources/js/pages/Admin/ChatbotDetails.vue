@@ -191,7 +191,7 @@ const formatBytes = (bytes) => {
                 <div class="flex-shrink-0">
                     <Link 
                         :href="route('upload.create')" 
-                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
+                        class="flex items-center gap-2 bg-submit-button hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
                     >
                         <Plus class="w-4 h-4" />
                         Add New Material
