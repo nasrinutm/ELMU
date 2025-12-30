@@ -6,7 +6,7 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\Question;
 use App\Models\QuestionOption;
-use App\Models\QuizAccess; 
+use App\Models\QuizAccess;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +52,7 @@ class TeacherQuizController extends Controller
                 'description' => $data['description'],
                 'duration' => $data['duration'],
                 'difficulty' => $data['difficulty'],
+                'content' => $data['content'],
             ]);
 
             foreach ($data['questions'] as $qData) {
@@ -85,7 +86,7 @@ class TeacherQuizController extends Controller
     public function results($id)
     {
         $quiz = Quiz::findOrFail($id);
-        
+
         // 1. Fetch all attempts for this quiz
         $attempts = QuizAttempt::where('quiz_id', $id)
             ->join('users', 'quiz_attempts.user_id', '=', 'users.id')
@@ -98,13 +99,13 @@ class TeacherQuizController extends Controller
 
         // 3. Group attempts by User
         $groupedAttempts = $attempts->groupBy('user_id')->map(function ($userAttempts, $userId) use ($accesses, $quiz) {
-            
+
             // Check if teacher granted extra attempts
             $extra = isset($accesses[$userId]) ? $accesses[$userId]->extra_attempts : 0;
-            
+
             // Default is 3 + whatever extra was granted
             $maxAllowed = 3 + $extra;
-            
+
             return [
                 'user_id' => $userId,
                 'user_name' => $userAttempts->first()->user_name,
@@ -181,7 +182,7 @@ class TeacherQuizController extends Controller
             ]);
 
             // 2. Sync Questions (Simplest Strategy: Wipe and Recreate)
-            $quiz->questions()->delete(); 
+            $quiz->questions()->delete();
 
             foreach ($data['questions'] as $qData) {
                 $question = $quiz->questions()->create([
