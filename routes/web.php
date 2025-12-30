@@ -17,7 +17,13 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ActivityController;
-use App\Http\Controllers\QuizController;
+use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\ProfileController;
+// --------------------------
+use Gemini\Laravel\Facades\Gemini;
+use App\Models\User;
+use App\Models\Material;
+use App\Http\Controllers\QuizController; 
 use App\Http\Controllers\TeacherQuizController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ReportController;

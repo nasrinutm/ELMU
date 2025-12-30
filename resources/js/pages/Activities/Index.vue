@@ -77,19 +77,19 @@ const filteredActivities = computed(() => {
                     </div>
                 </transition>
 
-                <div class="bg-[#003366] overflow-hidden shadow-xl sm:rounded-lg border border-[#004080]">
+                <div class="bg-[#ffffff] overflow-hidden shadow-xl sm:rounded-lg border border-[#004080]">
                     
-                    <div class="p-6 border-b border-[#004080] flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#002244]">
-                        <h1 class="text-2xl font-bold text-[#FFD700]">Classroom Activities</h1>
+                    <div class="p-6 border-b border-[#004080] flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#ffffff]">
+                        <h1 class="text-2xl font-bold text-[#212121]">Classroom Activities</h1>
                         
                         <div class="flex items-center gap-3 w-full sm:w-auto">
                             <div class="relative w-full sm:w-64">
-                                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-300" />
+                                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#212121]" />
                                 <input 
                                     v-model="searchQuery"
                                     type="text" 
                                     placeholder="Search activities..." 
-                                    class="w-full pl-9 pr-4 py-2 bg-[#003366] border border-blue-400 text-white rounded-md text-sm placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    class="w-full pl-9 pr-4 py-2 bg-[#ffffff] border border-gray-400 text-[#212121] rounded-md text-sm placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 />
                             </div>
 
@@ -108,7 +108,7 @@ const filteredActivities = computed(() => {
                         <div v-if="filteredActivities.length > 0" class="divide-y divide-[#004080]">
                             
                             <div v-for="activity in filteredActivities" :key="activity.id" 
-                                class="p-6 hover:bg-[#003366]/50 transition duration-150 ease-in-out flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                class="p-6 transition duration-150 ease-in-out flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
                                 
                                 <div class="flex items-start gap-4">
                                     <div class="p-3 rounded-lg bg-[#002244] border border-[#004080] group-hover:border-blue-500/50 transition">
@@ -117,19 +117,19 @@ const filteredActivities = computed(() => {
 
                                     <div>
                                         <Link :href="route('activities.show', activity.id)" class="group/title">
-                                            <h3 class="font-bold text-lg text-white group-hover:text-[#FFD700] group-hover/title:underline transition mb-1 cursor-pointer">
+                                            <h3 class="font-bold text-lg text-[#212121] group-hover:text-[#808080] group-hover/title:underline transition mb-1 cursor-pointer">
                                                 {{ activity.title }}
                                             </h3>
                                         </Link>
                                         
-                                        <p class="text-sm text-gray-300 mb-2 line-clamp-2">{{ activity.description }}</p>
+                                        <p class="text-sm text-gray-700 mb-2 line-clamp-2">{{ activity.description }}</p>
                                         
                                         <div class="flex items-center gap-4 text-xs text-gray-400">
-                                            <span v-if="activity.due_date" class="flex items-center text-red-300">
+                                            <span v-if="activity.due_date" class="flex items-center text-red-300 font-semibold">
                                                 <Calendar class="w-3 h-3 mr-1" />
                                                 Due: {{ new Date(activity.due_date).toLocaleDateString() }}
                                             </span>
-                                            <span>Posted: {{ new Date(activity.created_at).toLocaleDateString() }}</span>
+                                            <span class="font-semibold">Posted: {{ new Date(activity.created_at).toLocaleDateString() }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -138,7 +138,7 @@ const filteredActivities = computed(() => {
                                     
                                     <a v-if="activity.file_path && activity.type && activities.show !== 'Submission'" 
                                        :href="route('activities.show', activity.id)" 
-                                       class="flex items-center px-4 py-2 bg-[#002244] hover:bg-[#004080] text-blue-200 border border-[#004080] rounded-md text-sm font-medium transition"
+                                       class="flex items-center px-4 py-2 bg-[#0060bf] hover:bg-[#004080] text-blue-200 border border-[#004080] rounded-md text-sm font-medium transition"
                                     >
                                         <Eye class="w-4 h-4 mr-2" />
                                         View Resource

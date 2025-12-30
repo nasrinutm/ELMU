@@ -14,19 +14,19 @@ defineProps<{
 <template>
     <Head title="Classroom Student Directory" />
     <AppLayout>
-        <div class="min-h-screen bg-[#001f3f] text-white p-6">
+        <div class="min-h-screen bg-color-background text-white p-6">
             <div class="max-w-7xl mx-auto">
-                <h1 class="text-3xl font-bold text-[#ffcc00] mb-8">Classroom Student Directory</h1>
+                <h1 class="text-3xl font-bold text-[#212121] mb-8">Classroom Student Directory</h1>
 
-                <div class="bg-[#0a192f] rounded-xl border border-white/10 overflow-hidden shadow-xl">
+                <div class="bg-transparent rounded-xl border border-white/10 overflow-hidden shadow-sm">
                     <div class="p-6 border-b border-white/10">
-                        <h2 class="text-[#ffcc00] font-bold text-lg">Enrollment List</h2>
-                        <p class="text-sm text-gray-400 mt-1">Click on a student to view their full report.</p>
+                        <h2 class="text-[#212121] font-bold text-lg">Enrollment List</h2>
+                        <p class="text-sm text-[#212121] mt-1">Click on a student to view their full report.</p>
                     </div>
 
                     <div v-if="students.length > 0">
                         <table class="w-full text-left">
-                            <thead class="bg-[#0d223f] text-[10px] uppercase font-bold text-gray-500">
+                            <thead class="bg-[#ffffff] text-[10px] uppercase font-bold text-gray-500">
                                 <tr>
                                     <th class="px-6 py-4">Student Name</th>
                                     <th class="px-6 py-4">Email Address</th>
@@ -39,13 +39,13 @@ defineProps<{
                                         <div class="bg-blue-500/20 p-2 rounded-full group-hover:bg-blue-600 transition-colors">
                                             <UserIcon class="w-4 h-4 text-blue-400 group-hover:text-white" />
                                         </div>
-                                        <Link :href="route('reports.student.detail', student.id)" class="font-medium text-gray-200 group-hover:text-[#ffcc00]">
+                                        <Link :href="route('reports.student.detail', student.id)" class="font-medium text-[#212121] group-hover:text-[#808080]">
                                             {{ student.name }}
                                         </Link>
                                     </td>
-                                    <td class="px-6 py-4 text-gray-400 text-sm">{{ student.email }}</td>
+                                    <td class="px-6 py-4 text-gray-700 text-sm">{{ student.email }}</td>
                                     <td class="px-6 py-4 text-right">
-                                        <Link :href="route('reports.student.detail', student.id)" class="text-xs font-bold text-blue-400 hover:text-[#ffcc00] hover:underline">
+                                        <Link :href="route('reports.student.detail', student.id)" class="text-xs font-bold text-blue-600 hover:text-[#808080] hover:underline">
                                             View Report &rarr;
                                         </Link>
                                     </td>

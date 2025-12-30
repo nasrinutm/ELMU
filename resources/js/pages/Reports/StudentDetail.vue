@@ -53,11 +53,11 @@ const generatePDF = () => window.print();
 <template>
     <Head :title="student.name + ' - Performance'" />
     <AppLayout>
-        <div class="min-h-screen bg-[#001f3f] text-white p-print">
+        <div class="min-h-screen bg-color-background text-white p-print">
             <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
 
                 <div class="flex justify-between items-center mb-6 no-print">
-                    <Link :href="route('reports.index')" class="flex items-center text-sm text-gray-400 hover:text-[#ffcc00]">
+                    <Link :href="route('reports.index')" class="flex items-center text-sm text-[#ffffff}] hover:text-[#ffffff]">
                         <ChevronLeft class="w-4 h-4 mr-1" /> Back to Directory
                     </Link>
                     <div class="flex gap-3">
@@ -70,64 +70,64 @@ const generatePDF = () => window.print();
                     </div>
                 </div>
 
-                <div class="bg-[#0a192f] rounded-xl border border-white/10 p-6 mb-8 border-print shadow-lg">
+                <div class="bg-[#ffffff] rounded-xl border border-white/10 p-6 mb-8 border-print shadow-xl">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div class="flex items-center gap-4">
                             <div class="bg-blue-500/20 p-4 rounded-full no-print">
                                 <UserIcon class="w-8 h-8 text-blue-400" />
                             </div>
                             <div>
-                                <h1 class="text-3xl font-bold text-[#ffcc00] print-black">{{ student.name }}</h1>
+                                <h1 class="text-3xl font-bold text-[#212121] print-black">{{ student.name }}</h1>
                                 <p class="text-gray-400">{{ student.email }}</p>
                             </div>
                         </div>
                         <div class="flex gap-4 no-print">
-                            <div class="bg-[#001f3f] border border-white/10 rounded-lg p-3 min-w-[100px] text-center">
+                            <div class="bg-[#ffffff] border border-white/10 rounded-lg p-3 min-w-[100px] text-center">
                                 <span class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Activities</span>
                                 <span class="text-2xl font-bold text-blue-400">{{ activities.length }}</span>
                             </div>
-                            <div class="bg-[#001f3f] border border-white/10 rounded-lg p-3 min-w-[100px] text-center">
+                            <div class="bg-[#ffffff] border border-white/10 rounded-lg p-3 min-w-[100px] text-center">
                                 <span class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Quizzes</span>
                                 <span class="text-2xl font-bold text-[#ffcc00]">{{ quizzes.length }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="existingReport" class="mt-6 p-5 bg-[#001f3f] rounded-lg border-l-4 border-[#ffcc00] relative">
+                    <div v-if="existingReport" class="mt-6 p-5 bg-[#ffffff] rounded-lg border-l-4 border-1 border-[#ffcc00] relative">
                         <div class="flex justify-between items-start">
-                            <h3 class="text-[#ffcc00] text-xs font-bold uppercase mb-2">Official Teacher Evaluation</h3>
+                            <h3 class="text-[#212121] text-xs font-bold uppercase mb-2">Official Teacher Evaluation</h3>
                             <button @click="deleteRemark" class="no-print text-gray-500 hover:text-red-500 transition-colors" title="Delete Evaluation">
                                 <Trash2 class="w-4 h-4" />
                             </button>
                         </div>
-                        <p class="text-gray-200 italic font-medium whitespace-pre-wrap">"{{ existingReport.comments }}"</p>
+                        <p class="text-[#212121] italic font-medium whitespace-pre-wrap">"{{ existingReport.comments }}"</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                    <div class="bg-[#0a192f] rounded-xl border border-white/10 overflow-hidden shadow-xl border-print">
-                        <div class="p-5 border-b border-white/10 bg-[#0d223f] flex items-center gap-2">
+                    <div class="bg-[#ffffff] rounded-xl border border-white/10 overflow-hidden shadow-xl border-print">
+                        <div class="p-5 border-b border-white/10 bg-gray-100 border border-gray-100 flex items-center gap-2">
                             <Gamepad2 class="w-5 h-5 text-blue-400 no-print" />
-                            <h2 class="text-lg font-bold text-[#ffcc00] print-black">Activities</h2>
+                            <h2 class="text-lg font-bold text-[#212121] print-black">Activities</h2>
                         </div>
                         <ul v-if="activities.length > 0" class="divide-y divide-white/5">
                             <li v-for="act in activities" :key="act.id" class="p-4 flex justify-between">
-                                <span class="text-gray-200 print-black font-medium">{{ act.title }}</span>
+                                <span class="text-[#212121] print-black font-medium">{{ act.title }}</span>
                                 <span class="text-xs text-gray-500">{{ formatDate(act.completed_at) }}</span>
                             </li>
                         </ul>
                         <div v-else class="p-10 text-center text-gray-500 italic">No activities recorded.</div>
                     </div>
 
-                    <div class="bg-[#0a192f] rounded-xl border border-white/10 overflow-hidden shadow-xl border-print">
-                        <div class="p-5 border-b border-white/10 bg-[#0d223f] flex items-center gap-2">
+                    <div class="bg-[#ffffff] rounded-xl border border-white/10 overflow-hidden shadow-xl border-print">
+                        <div class="p-5 border-b border-white/10 bg-gray-100 flex items-center gap-2">
                             <CheckCircle class="w-5 h-5 text-green-400 no-print" />
-                            <h2 class="text-lg font-bold text-[#ffcc00] print-black">Quizzes</h2>
+                            <h2 class="text-lg font-bold text-[#212121] print-black">Quizzes</h2>
                         </div>
                         <ul v-if="quizzes.length > 0" class="divide-y divide-white/5">
                             <li v-for="quiz in quizzes" :key="quiz.id" class="p-4 flex justify-between">
-                                <span class="text-gray-200 print-black font-medium">{{ quiz.title }}</span>
-                                <div class="text-[#ffcc00] font-bold print-black">{{ quiz.score }}%</div>
+                                <span class="text-[#212121] print-black font-medium">{{ quiz.title }}</span>
+                                <div class="text-[#212121] font-bold print-black">{{ quiz.score }}%</div>
                             </li>
                         </ul>
                         <div v-else class="p-10 text-center text-gray-500 italic">No quizzes recorded.</div>
@@ -153,16 +153,16 @@ const generatePDF = () => window.print();
         </div>
 
         <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <div class="bg-[#0a192f] w-full max-w-lg rounded-xl border border-white/20 shadow-2xl">
-                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-[#0d223f]">
-                    <h2 class="text-xl font-bold text-[#ffcc00]">Teacher Evaluation</h2>
+            <div class="bg-[#ffffff] w-full max-w-lg rounded-xl border border-white/20 shadow-2xl">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-[#ffffff]">
+                    <h2 class="text-xl font-bold text-[#212121]">Teacher Evaluation</h2>
                     <button @click="isModalOpen = false" class="text-gray-400 hover:text-white transition-colors"><X /></button>
                 </div>
                 <form @submit.prevent="submitRemark" class="p-6">
                     <textarea 
                         v-model="form.comments" 
                         rows="6" 
-                        class="w-full bg-[#001f3f] border border-white/10 rounded-lg text-white p-4 focus:ring-2 focus:ring-[#ffcc00] focus:outline-none" 
+                        class="w-full bg-[#ffffff] border border-black/30 rounded-lg text-[#212121] p-4 focus:ring-2 focus:ring-[#ffcc00] focus:outline-none" 
                         placeholder="Enter remarks..."
                         required
                     ></textarea>
@@ -170,7 +170,7 @@ const generatePDF = () => window.print();
                         <button type="button" @click="isModalOpen = false" class="text-gray-400 hover:text-white transition-colors">Cancel</button>
                         <button 
                             type="submit" 
-                            class="bg-[#ffcc00] text-[#001f3f] px-6 py-2 rounded-lg font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50"
+                            class="bg-[#0060df] text-[#ffffff] px-6 py-2 rounded-lg font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50"
                             :disabled="form.processing"
                         >
                             {{ form.processing ? 'Saving...' : 'Save' }}
