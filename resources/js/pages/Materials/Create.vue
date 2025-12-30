@@ -8,6 +8,7 @@ import InputError from '@/components/InputError.vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
 import { FileText, X } from 'lucide-vue-next';
+import { Upload } from 'lucide-vue-next';
 
 // 1. Setup Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
