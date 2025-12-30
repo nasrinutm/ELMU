@@ -1,200 +1,157 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, usePage, router } from '@inertiajs/vue3'; 
-import { route } from 'ziggy-js'; 
-import { Button } from '@/components/ui/button'; 
-import { Plus, FileText, Pencil, Trash2, X, Search, Calendar, Download, Eye, CheckCircle } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+    Search, Plus, Gamepad2, Pencil, Trash2, Calendar, Clock,
+    Shapes, FileText, CheckCircle, Eye
+} from 'lucide-vue-next';
+import debounce from 'lodash/debounce';
+import { route } from 'ziggy-js';
 
 const props = defineProps<{
-    activities: any;
-    can: {
-        manage_activities: boolean;
-    }
+    activities: { data: Array<any>; links: Array<any>; };
+    filters: { search?: string; };
+    can: { manage_activities: boolean; };
 }>();
 
-// Page & Flash Config
-const page = usePage();
-const showFlash = ref(false);
-const searchQuery = ref('');
+const breadcrumbs = [
+    { title: 'Dashboard', href: route('dashboard') },
+    { title: 'Classroom Activities', href: route('activities.index') },
+];
 
-// Confirmation Logic
-const confirmDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this activity? This action cannot be undone.')) {
-        router.delete(route('activities.destroy', id), {
-            preserveScroll: true
-        });
+const search = ref(props.filters?.search || '');
+
+// Search Logic
+const updateSearch = debounce(() => {
+    router.get(route('activities.index'), { search: search.value }, { preserveState: true, replace: true });
+}, 300);
+
+watch(search, updateSearch);
+
+const formatDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+const deleteActivity = (id: number) => {
+    if (confirm('Are you sure you want to delete this activity?')) {
+        router.delete(route('activities.destroy', id));
     }
 };
 
-// Flash Message Logic
-const successMessage = computed(() => page.props.flash?.success);
-watch(successMessage, (newMessage) => {
-    if (newMessage) {
-        showFlash.value = true;
-        setTimeout(() => showFlash.value = false, 3000); 
-    }
-}, { immediate: true });
-
-// Filter Logic (Search Only)
-const filteredActivities = computed(() => {
-    let data = props.activities.data;
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        data = data.filter((a: any) => 
-            a.title.toLowerCase().includes(query) || 
-            a.description.toLowerCase().includes(query)
-        );
-    }
-    return data;
-});
+// Icon & Color Helper
+const getActivityTypeStyle = (type: string | undefined) => {
+    const t = (type || '').toLowerCase();
+    if (t.includes('game') || t.includes('quiz')) return { icon: Gamepad2, class: 'bg-purple-100 text-purple-600 border-purple-200' };
+    if (t.includes('lab')) return { icon: Shapes, class: 'bg-blue-100 text-blue-600 border-blue-200' };
+    return { icon: FileText, class: 'bg-teal-50 text-teal-600 border-teal-100' };
+};
 </script>
 
 <template>
     <Head title="Classroom Activities" />
 
-    <AppLayout :breadcrumbs="[
-        { title: 'Dashboard', href: route('dashboard') },
-        { title: 'Classroom Activities', href: route('activities.index') }
-    ]">
-        <div class="py-12">
-            <div class="w-full sm:px-6 lg:px-8">
-                
-                <transition
-                    enter-active-class="transition ease-out duration-300"
-                    enter-from-class="transform opacity-0 -translate-y-2"
-                    enter-to-class="transform opacity-100 translate-y-0"
-                    leave-active-class="transition ease-in duration-300"
-                    leave-from-class="transform opacity-100 translate-y-0"
-                    leave-to-class="transform opacity-0 -translate-y-2"
-                >
-                    <div v-if="successMessage && showFlash" 
-                        class="mb-6 bg-green-500/10 border border-green-500/50 text-green-500 px-4 py-3 rounded-lg shadow-sm flex justify-between items-center backdrop-blur-sm">
-                        <span class="font-medium">{{ successMessage }}</span>
-                        <button @click="showFlash = false" class="hover:text-green-400 transition">
-                            <X class="w-5 h-5" />
-                        </button>
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6">
+
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                        <Gamepad2 class="w-7 h-7 text-teal-600" />
+                        Classroom Activities
+                    </h1>
+                    <p class="text-slate-500 mt-1 text-sm">Manage assignments, games, and exercises.</p>
+                </div>
+
+                <Link v-if="can.manage_activities" :href="route('activities.create')">
+                    <Button class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white gap-2">
+                        <Plus class="w-4 h-4" /> Create New
+                    </Button>
+                </Link>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="relative w-full">
+                    <Search class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input v-model="search" placeholder="Search activities..." class="pl-9 bg-slate-50 border-slate-200 focus:bg-white w-full" />
+                </div>
+            </div>
+
+            <div class="grid gap-4">
+                <div v-if="activities.data.length === 0" class="text-center p-12 bg-white rounded-xl border border-slate-200 text-slate-500">
+                    <div class="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Shapes class="w-8 h-8 text-slate-400" />
                     </div>
-                </transition>
+                    <h3 class="text-lg font-bold text-slate-900">No activities found</h3>
+                </div>
 
-                <div class="bg-[#ffffff] overflow-hidden shadow-xl sm:rounded-lg border border-[#004080]">
-                    
-                    <div class="p-6 border-b border-[#004080] flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#ffffff]">
-                        <h1 class="text-2xl font-bold text-[#212121]">Classroom Activities</h1>
-                        
-                        <div class="flex items-center gap-3 w-full sm:w-auto">
-                            <div class="relative w-full sm:w-64">
-                                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#212121]" />
-                                <input 
-                                    v-model="searchQuery"
-                                    type="text" 
-                                    placeholder="Search activities..." 
-                                    class="w-full pl-9 pr-4 py-2 bg-[#ffffff] border border-gray-400 text-[#212121] rounded-md text-sm placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                            </div>
+                <div v-for="activity in activities.data" :key="activity.id" class="group bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-teal-300 transition-all flex flex-col md:flex-row gap-5 items-start md:items-center">
 
-                            <template v-if="can.manage_activities">
-                                <Link :href="route('activities.create')">
-                                    <Button class="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md whitespace-nowrap">
-                                        <Plus class="w-4 h-4 mr-2" />
-                                        Create New
-                                    </Button>
-                                </Link>
-                            </template>
+                    <div class="shrink-0 hidden md:block">
+                         <div class="h-12 w-12 rounded-lg flex items-center justify-center border" :class="getActivityTypeStyle(activity.type).class">
+                            <component :is="getActivityTypeStyle(activity.type).icon" class="w-6 h-6" />
                         </div>
                     </div>
 
-                    <div class="p-0">
-                        <div v-if="filteredActivities.length > 0" class="divide-y divide-[#004080]">
-                            
-                            <div v-for="activity in filteredActivities" :key="activity.id" 
-                                class="p-6 transition duration-150 ease-in-out flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
-                                
-                                <div class="flex items-start gap-4">
-                                    <div class="p-3 rounded-lg bg-[#002244] border border-[#004080] group-hover:border-blue-500/50 transition">
-                                        <FileText class="w-6 h-6 text-blue-300" />
-                                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 mb-1">
+                            <h3 class="text-lg font-bold text-slate-900 truncate group-hover:text-teal-700 transition-colors">
+                                {{ activity.title }}
+                            </h3>
+                            <Badge variant="outline" class="uppercase text-[10px] tracking-wider bg-slate-50 text-slate-600 border-slate-200">
+                                {{ activity.type || 'Activity' }}
+                            </Badge>
+                        </div>
+                        <p class="text-slate-500 text-sm line-clamp-1 mb-3">{{ activity.description || 'No description provided.' }}</p>
 
-                                    <div>
-                                        <Link :href="route('activities.show', activity.id)" class="group/title">
-                                            <h3 class="font-bold text-lg text-[#212121] group-hover:text-[#808080] group-hover/title:underline transition mb-1 cursor-pointer">
-                                                {{ activity.title }}
-                                            </h3>
-                                        </Link>
-                                        
-                                        <p class="text-sm text-gray-700 mb-2 line-clamp-2">{{ activity.description }}</p>
-                                        
-                                        <div class="flex items-center gap-4 text-xs text-gray-400">
-                                            <span v-if="activity.due_date" class="flex items-center text-red-300 font-semibold">
-                                                <Calendar class="w-3 h-3 mr-1" />
-                                                Due: {{ new Date(activity.due_date).toLocaleDateString() }}
-                                            </span>
-                                            <span class="font-semibold">Posted: {{ new Date(activity.created_at).toLocaleDateString() }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center gap-3 self-end sm:self-center">
-                                    
-                                    <a v-if="activity.file_path && activity.type && activities.show !== 'Submission'" 
-                                       :href="route('activities.show', activity.id)" 
-                                       class="flex items-center px-4 py-2 bg-[#0060bf] hover:bg-[#004080] text-blue-200 border border-[#004080] rounded-md text-sm font-medium transition"
-                                    >
-                                        <Eye class="w-4 h-4 mr-2" />
-                                        View Resource
-                                    </a>
+                        <div class="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-400">
+                            <span class="flex items-center gap-1.5 text-slate-600">
+                                <Clock class="w-3.5 h-3.5 text-teal-500" /> Posted: {{ formatDate(activity.created_at) }}
+                            </span>
+                            <span v-if="activity.due_date" class="flex items-center gap-1.5 text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100">
+                                <Calendar class="w-3.5 h-3.5" /> Due: {{ formatDate(activity.due_date) }}
+                            </span>
+                        </div>
+                    </div>
 
-                                    <template v-if="activity.type === 'Submission'">
-                                        <div v-if="activity.my_submission" class="flex flex-col items-end">
-                                            <button disabled class="bg-green-900/30 text-green-400 border border-green-600/50 font-bold py-1 px-3 rounded-md text-sm shadow-sm cursor-not-allowed flex items-center">
-                                                <CheckCircle class="w-4 h-4 mr-2" />
-                                                Submitted
-                                            </button>
-                                            <Link :href="route('activities.show', activity.id)" class="text-[10px] text-blue-400 hover:text-white underline mt-1 transition">
-                                                View/Edit
-                                            </Link>
-                                        </div>
+                    <div class="flex items-center gap-2 border-l border-slate-100 pl-4 ml-2 md:self-center self-end w-full md:w-auto justify-end md:justify-start">
 
-                                        <!-- <Link v-else :href="route('activities.show', activity.id)" 
-                                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-blue-500/50" 
-                                            title="View Activity">
-                                            <Eye class="w-4 h-4 mr-2" />
-                                            View
-                                        </Link> -->
-                                    </template>
+                        <template v-if="can.manage_activities">
+                            <Link :href="route('activities.edit', activity.id)">
+                                <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil class="w-4 h-4" /></Button>
+                            </Link>
+                            <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50" @click="deleteActivity(activity.id)">
+                                <Trash2 class="w-4 h-4" />
+                            </Button>
+                        </template>
 
-                                    <!-- <Link v-if="activity.type === 'Quiz' || activity.type === 'Exercise'" 
-                                          :href="route('activities.play', activity.id)" 
-                                          class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-purple-500/50" 
-                                          title="Play Quiz">
-                                        <Gamepad2 class="w-4 h-4 mr-2" />
-                                        Play
-                                    </Link> -->
-
-                                    <div v-if="can.manage_activities" class="flex items-center gap-1 pl-3 border-l border-[#004080] ml-2">
-                                        <Link :href="route('activities.edit', activity.id)" class="p-2 text-gray-400 hover:text-[#FFD700] hover:bg-[#002244] rounded-md transition" title="Edit Activity">
-                                            <Pencil class="w-4 h-4" />
-                                        </Link>
-                                        <button @click="confirmDelete(activity.id)" class="p-2 text-gray-400 hover:text-red-400 hover:bg-[#002244] rounded-md transition" title="Delete Activity">
-                                            <Trash2 class="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
+                        <template v-else>
+                            <div v-if="activity.type === 'Submission' && activity.my_submission" class="flex flex-col items-end">
+                                <Badge class="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 gap-1 px-3 py-1">
+                                    <CheckCircle class="w-3 h-3" /> Submitted
+                                </Badge>
+                                <Link :href="route('activities.show', activity.id)" class="text-[10px] text-teal-600 hover:underline mt-1">View / Edit</Link>
                             </div>
 
-                        </div>
-
-                        <div v-else class="flex flex-col items-center justify-center py-16 text-center">
-                            <div class="bg-[#002244] p-4 rounded-full mb-4">
-                                <Search class="w-8 h-8 text-gray-500" />
-                            </div>
-                            <h3 class="text-lg font-medium text-white">No activities found</h3>
-                            <p class="text-gray-400 mt-1">Try adjusting your search terms.</p>
-                        </div>
-
+                            <Link v-else :href="route('activities.show', activity.id)">
+                                <Button size="sm" variant="outline" class="text-teal-600 border-teal-200 hover:bg-teal-50 gap-2">
+                                    <Eye class="w-4 h-4" /> View Details
+                                </Button>
+                            </Link>
+                        </template>
                     </div>
                 </div>
             </div>
-        </div>
-    </AppLayout>
+
+            <div v-if="activities.links && activities.links.length > 3" class="flex justify-center pt-4">
+                <div class="flex flex-wrap gap-1">
+                    <template v-for="(link, key) in activities.links" :key="key">
+                        <div v-if="!link.url" class="px-3 py-1 text-sm text-slate-400 border border-slate-200 rounded-md bg-white" v-html="link.label" />
+                        <Link v-else class="px-3 py-1 text-sm border rounded-md transition-all shadow-sm" :class="link.active ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" :href="link.url" v-html="link.label" />
+                    </template>
+                </div>
+            </div>
+         </div>
+    </AppSidebarLayout>
 </template>
