@@ -1,24 +1,19 @@
 <script setup lang="ts">
 import UserInfo from '@/components/UserInfo.vue';
 import {
-    DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { logout } from '@/routes';
-// REMOVE: import { edit } from '@/routes/profile';
 import type { User } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
-import { LogOut } from 'lucide-vue-next'; // REMOVE: Settings icon
+import { Link } from '@inertiajs/vue3';
+import { LogOut } from 'lucide-vue-next';
+
+// REMOVED: broken import { logout } from '@/routes';
 
 interface Props {
     user: User;
 }
-
-const handleLogout = () => {
-    router.flushAll();
-};
 
 defineProps<Props>();
 </script>
@@ -31,26 +26,11 @@ defineProps<Props>();
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
 
-    <!--
-        DELETE THIS ENTIRE GROUP (Settings Link)
-    -->
-    <!--
-    <DropdownMenuGroup>
-        <DropdownMenuItem :as-child="true">
-            <Link class="block w-full" :href="edit()" prefetch as="button">
-                <Settings class="mr-2 h-4 w-4" />
-                Settings
-            </Link>
-        </DropdownMenuItem>
-    </DropdownMenuGroup>
-    <DropdownMenuSeparator />
-    -->
-
     <DropdownMenuItem :as-child="true">
         <Link
-            class="block w-full"
-            :href="logout()"
-            @click="handleLogout"
+            class="flex w-full items-center"
+            href="/logout"
+            method="post"
             as="button"
             data-test="logout-button"
         >

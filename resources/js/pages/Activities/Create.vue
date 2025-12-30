@@ -2,12 +2,13 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
-import { ArrowLeft, Save, Upload } from 'lucide-vue-next';
+import { ArrowLeft, Save, Upload, CheckSquare } from 'lucide-vue-next';
 
 // Setup the form object using Inertia
 const form = useForm({
     title: '',
-    type: 'Assignment', // Default value
+    // Default is 'Assignment'. Checking the box changes this to 'Submission'
+    type: 'Assignment', 
     description: '',
     due_date: '',
     file: null as File | null,
@@ -15,7 +16,11 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('activities.store'), {
-        forceFormData: true, // Required for file uploads
+        forceFormData: true,
+        // Optional: Log errors to console to help debug
+        onError: (errors) => {
+            console.error('Submission Failed:', errors);
+        }
     });
 };
 
@@ -44,25 +49,6 @@ const handleFileChange = (e: Event) => {
                     <form @submit.prevent="submit" class="p-6 space-y-6">
 
                         <div>
-                            <label for="type" class="block text-white font-bold mb-2">Activity Type</label>
-                            <div class="relative">
-                                <select 
-                                    id="type" 
-                                    v-model="form.type"
-                                    class="w-full bg-[#1a3b5c] border border-blue-500/30 rounded-md px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent appearance-none"
-                                >
-                                    <option value="Assignment">Assignment</option>
-                                    <option value="Submission">Submission</option>
-                                    <option value="Exercise">Exercise</option>
-                                </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                                </div>
-                            </div>
-                            <p v-if="form.errors.type" class="text-red-400 text-sm mt-1">{{ form.errors.type }}</p>
-                        </div>
-
-                        <div>
                             <label for="title" class="block text-white font-bold mb-2">Activity Title</label>
                             <input 
                                 id="title" 
@@ -88,6 +74,30 @@ const handleFileChange = (e: Event) => {
                                 class="w-full bg-[#1a3b5c] border border-blue-500/30 rounded-md px-4 py-3 text-white placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                             ></textarea>
                             <p v-if="form.errors.description" class="text-red-400 text-sm mt-1">{{ form.errors.description }}</p>
+                        </div>
+
+                        <div>
+                            <div class="p-4 bg-[#1a3b5c] rounded-md border border-blue-500/30 flex items-start gap-3">
+                                <div class="flex items-center h-6">
+                                    <input 
+                                        id="enable_submission" 
+                                        type="checkbox" 
+                                        v-model="form.type"
+                                        true-value="Submission"
+                                        false-value="Assignment"
+                                        class="w-5 h-5 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                                    />
+                                </div>
+                                <label for="enable_submission" class="text-white cursor-pointer select-none">
+                                    <span class="block font-bold text-base">Enable Student Submission</span>
+                                    <span class="block text-sm text-blue-200 mt-1">
+                                        Check this box if you want students to upload a file or submit work for this activity.
+                                    </span>
+                                </label>
+                            </div>
+                            <p v-if="form.errors.type" class="text-red-400 text-sm mt-2 font-bold animate-pulse">
+                                Error: {{ form.errors.type }}
+                            </p>
                         </div>
 
                         <div>
