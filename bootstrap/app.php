@@ -13,11 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        
-        // --- SECURITY: CSRF PROTECTION IS NOW ENABLED FOR EVERYTHING ---
-        // We removed the 'validateCsrfTokens' except array. 
-        // Laravel will now check tokens for all POST/PUT/DELETE requests.
 
+        $middleware->validateCsrfTokens(except: [
+            '*',
+        ]);
+
+        // Removed 'appearance' from except list
+        $middleware->validateCsrfTokens(except: [
+            '*', // This excludes EVERY route in your app from CSRF protection
+        ]);
         $middleware->encryptCookies(except: ['sidebar_state']);
 
         $middleware->web(append: [

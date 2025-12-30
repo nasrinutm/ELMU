@@ -56,7 +56,7 @@ const submit = () => {
                         :tabindex="1"
                         autocomplete="email"
                         placeholder="email@example.com"
-                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
+                        class="bg-white text-black dark:text-white border-transparent focus:ring-2 focus:ring-[#FFD900]"
                     />
                     <InputError :message="form.errors.email" class="text-red-300" />
                 </div>

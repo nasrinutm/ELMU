@@ -21,7 +21,11 @@ defineProps<{
     >
         <div class="flex w-full max-w-md flex-col gap-6">
 
-            <Card class="rounded-xl border-none bg-[#003366] text-white shadow-xl">
+            <!--
+                2. Login Box -> Dark Blue (#003366)
+                We also add 'text-white' so the title reads clearly on blue.
+            -->
+            <Card class="rounded-xl border-none bg-[#003366] text-black shadow-xl">
                 <CardHeader class="px-10 pt-8 pb-0 text-center">
 
                     <Link
