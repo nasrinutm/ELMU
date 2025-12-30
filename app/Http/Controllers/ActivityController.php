@@ -15,7 +15,7 @@ class ActivityController extends Controller
     {
         $query = Activity::query()
             ->with('user:id,name')
-            ->with('mySubmission') // Load submission status
+            ->with('mySubmission')
             ->select('id', 'user_id', 'title', 'type', 'description', 'due_date', 'file_path', 'created_at');
 
         if ($request->filled('date')) {
@@ -52,7 +52,7 @@ class ActivityController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise',
+            'type' => 'required|string|in:Assignment,Exercise,Submission',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -76,26 +76,32 @@ class ActivityController extends Controller
 
         Activity::create($data);
 
-        // Auto-create submission slot
-        Activity::create([
-            'user_id' => Auth::id(),
-            'title' => 'Submission: ' . $request->title,
-            'type' => 'Submission',
-            'description' => 'Please upload your work for ' . $request->title . ' here.',
-            'due_date' => $request->due_date,
-            'file_path' => null,
-        ]);
-
         return redirect()->route('activities.index')
             ->with('success', 'Activity and Submission slot created successfully.');
     }
 
     public function show(Activity $activity)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $isTeacher = $user->hasRole(['admin', 'teacher']);
+
+        // Load specific submission for the logged-in user
         $activity->load('mySubmission');
+
+        // If teacher, load ALL submissions with student names
+        $allSubmissions = [];
+        if ($isTeacher) {
+            $allSubmissions = ActivitySubmission::where('activity_id', $activity->id)
+                ->with('user:id,name,email')
+                ->orderBy('submitted_at', 'desc')
+                ->get();
+        }
         
         return Inertia::render('Activities/Show', [
-            'activity' => $activity
+            'activity' => $activity,
+            'allSubmissions' => $allSubmissions, // Passed to Vue
+            'isTeacher' => $isTeacher
         ]);
     }
 
@@ -123,14 +129,12 @@ class ActivityController extends Controller
         return back()->with('success', 'Work submitted successfully!');
     }
 
-    /**
-     * Download the STUDENT'S submission
-     */
-    public function downloadSubmission(Activity $activity)
+    public function downloadSubmission(ActivitySubmission $submission)
     {
-        $submission = $activity->mySubmission;
-
-        if (!$submission || $submission->user_id !== Auth::id()) {
+        // Security: Only owner or Teacher/Admin can download
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($submission->user_id !== $user->id && !$user->hasRole(['admin', 'teacher'])) {
             abort(403);
         }
 
@@ -196,9 +200,6 @@ class ActivityController extends Controller
             ->with('success', 'Activity deleted successfully.');
     }
 
-    /**
-     * Download the TEACHER'S attached material
-     */
     public function download(Activity $activity)
     {
         if (!$activity->file_path || !Storage::disk('public')->exists($activity->file_path)) {
@@ -206,5 +207,45 @@ class ActivityController extends Controller
         }
         $path = storage_path('app/public/' . $activity->file_path);
         return response()->download($path, $activity->file_name);
+    }
+
+    public function unsubmit(Activity $activity)
+    {
+        $submission = ActivitySubmission::where('activity_id', $activity->id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (! $submission) {
+            return back()->with('error', 'No submission found to remove.');
+        }
+
+        if ($submission->created_at->diffInMinutes(now()) >= 2) {
+            return back()->with('error', 'Time limit exceeded. You can only remove a submission within 2 minutes.');
+        }
+
+        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
+            Storage::disk('public')->delete($submission->file_path);
+        }
+
+        $submission->delete();
+
+        return back()->with('success', 'Submission removed. You can now upload a new file.');
+    }
+
+    public function destroySubmission(ActivitySubmission $submission)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->hasRole(['teacher', 'admin'])) {
+            abort(403);
+        }
+
+        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
+            Storage::disk('public')->delete($submission->file_path);
+        }
+
+        $submission->delete();
+
+        return back()->with('success', 'Submission has been permanently deleted.');
     }
 }

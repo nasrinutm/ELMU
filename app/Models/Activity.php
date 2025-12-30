@@ -16,7 +16,8 @@ class Activity extends Model
 
     protected $fillable = [
         'user_id', 'title', 'type', 'description', 'due_date', 
-        'file_path', 'file_name', 'file_type', 'time_limit', 'quiz_data',
+        'file_path', 'file_name', 'file_type', 'time_limit', 'quiz_data','file_path',   
+        'file_name',   'file_type',   'time_limit',  'quiz_data',   
     ];
 
     protected $casts = [

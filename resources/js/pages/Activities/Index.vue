@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3'; 
 import { route } from 'ziggy-js'; 
 import { Button } from '@/components/ui/button'; 
-import { Plus, FileText, Pencil, Trash2, X, Search, Calendar, Download } from 'lucide-vue-next';
+import { Plus, FileText, Pencil, Trash2, X, Search, Calendar, Download, Eye, CheckCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -53,7 +53,10 @@ const filteredActivities = computed(() => {
 <template>
     <Head title="Classroom Activities" />
 
-    <AppLayout :breadcrumbs="[{ title: 'Activities', href: route('activities.index') }]">
+    <AppLayout :breadcrumbs="[
+        { title: 'Dashboard', href: route('dashboard') },
+        { title: 'Classroom Activities', href: route('activities.index') }
+    ]">
         <div class="py-12">
             <div class="w-full sm:px-6 lg:px-8">
                 
@@ -113,9 +116,11 @@ const filteredActivities = computed(() => {
                                     </div>
 
                                     <div>
-                                        <h3 class="font-bold text-lg text-white group-hover:text-[#FFD700] transition mb-1">
-                                            {{ activity.title }}
-                                        </h3>
+                                        <Link :href="route('activities.show', activity.id)" class="group/title">
+                                            <h3 class="font-bold text-lg text-white group-hover:text-[#FFD700] group-hover/title:underline transition mb-1 cursor-pointer">
+                                                {{ activity.title }}
+                                            </h3>
+                                        </Link>
                                         
                                         <p class="text-sm text-gray-300 mb-2 line-clamp-2">{{ activity.description }}</p>
                                         
@@ -131,19 +136,46 @@ const filteredActivities = computed(() => {
                                 
                                 <div class="flex items-center gap-3 self-end sm:self-center">
                                     
-                                    <a v-if="activity.file_path" 
-                                       :href="route('activities.download', activity.id)" 
+                                    <a v-if="activity.file_path && activity.type && activities.show !== 'Submission'" 
+                                       :href="route('activities.show', activity.id)" 
                                        class="flex items-center px-4 py-2 bg-[#002244] hover:bg-[#004080] text-blue-200 border border-[#004080] rounded-md text-sm font-medium transition"
                                     >
-                                        <Download class="w-4 h-4 mr-2" />
-                                        Download
+                                        <Eye class="w-4 h-4 mr-2" />
+                                        View Resource
                                     </a>
 
-                                    <div v-if="can.manage_activities" class="flex items-center gap-1 pl-3 border-l border-[#004080]">
-                                        <Link :href="route('activities.edit', activity.id)" class="p-2 text-gray-400 hover:text-[#FFD700] hover:bg-[#002244] rounded-md transition">
+                                    <template v-if="activity.type === 'Submission'">
+                                        <div v-if="activity.my_submission" class="flex flex-col items-end">
+                                            <button disabled class="bg-green-900/30 text-green-400 border border-green-600/50 font-bold py-1 px-3 rounded-md text-sm shadow-sm cursor-not-allowed flex items-center">
+                                                <CheckCircle class="w-4 h-4 mr-2" />
+                                                Submitted
+                                            </button>
+                                            <Link :href="route('activities.show', activity.id)" class="text-[10px] text-blue-400 hover:text-white underline mt-1 transition">
+                                                View/Edit
+                                            </Link>
+                                        </div>
+
+                                        <!-- <Link v-else :href="route('activities.show', activity.id)" 
+                                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-blue-500/50" 
+                                            title="View Activity">
+                                            <Eye class="w-4 h-4 mr-2" />
+                                            View
+                                        </Link> -->
+                                    </template>
+
+                                    <!-- <Link v-if="activity.type === 'Quiz' || activity.type === 'Exercise'" 
+                                          :href="route('activities.play', activity.id)" 
+                                          class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-purple-500/50" 
+                                          title="Play Quiz">
+                                        <Gamepad2 class="w-4 h-4 mr-2" />
+                                        Play
+                                    </Link> -->
+
+                                    <div v-if="can.manage_activities" class="flex items-center gap-1 pl-3 border-l border-[#004080] ml-2">
+                                        <Link :href="route('activities.edit', activity.id)" class="p-2 text-gray-400 hover:text-[#FFD700] hover:bg-[#002244] rounded-md transition" title="Edit Activity">
                                             <Pencil class="w-4 h-4" />
                                         </Link>
-                                        <button @click="confirmDelete(activity.id)" class="p-2 text-gray-400 hover:text-red-400 hover:bg-[#002244] rounded-md transition">
+                                        <button @click="confirmDelete(activity.id)" class="p-2 text-gray-400 hover:text-red-400 hover:bg-[#002244] rounded-md transition" title="Delete Activity">
                                             <Trash2 class="w-4 h-4" />
                                         </button>
                                     </div>

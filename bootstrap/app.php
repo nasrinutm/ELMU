@@ -14,22 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         
-        // 1. DISABLE CSRF FOR AUTH ROUTES (The Fix for 419 Error)
-        $middleware->validateCsrfTokens(except: [
-            'login',
-            'logout',
-            'register',
-            'materials',      // Allow creating materials
-            'materials/*',    // Allow updating/deleting materials
-            'activities',     // Anticipating future issues
-            'activities/*',
-        ]);
+        // --- SECURITY: CSRF PROTECTION IS NOW ENABLED FOR EVERYTHING ---
+        // We removed the 'validateCsrfTokens' except array. 
+        // Laravel will now check tokens for all POST/PUT/DELETE requests.
 
-        // Removed 'appearance' from except list
         $middleware->encryptCookies(except: ['sidebar_state']);
 
         $middleware->web(append: [
-            // Removed HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

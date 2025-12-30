@@ -13,6 +13,10 @@ use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\QuizController; 
+use App\Http\Controllers\TeacherQuizController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\ReportController;
 
 // --- PUBLIC ROUTES ---
 
@@ -128,9 +132,92 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
      Route::post('/activities/{activity}/submit', [\App\Http\Controllers\ActivityController::class, 'submit'])
         ->name('activities.submit');
+        Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
 
     Route::get('/activities/{activity}/submission/download', [\App\Http\Controllers\ActivityController::class, 'downloadSubmission'])
     ->name('activities.submission.download');
+
+// Route for teachers to delete a specific submission
+// Update this in web.php
+Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])
+    ->name('activities.downloadSubmission');
+    Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])
+    ->name('submissions.destroy')
+    ->middleware('role:teacher');
+    Route::middleware(['auth', 'verified', 'role:teacher|admin'])->group(function () {
+    // Route to delete a student's submission record and file
+    Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])
+        ->name('submissions.destroy');});
+
+    // 7. STUDENT QUIZ ROUTES (From branch-ASHYIL)
+    Route::resource('quizzes', QuizController::class);
+    Route::get('/quiz', [QuizController::class, 'index'])->name('quiz.index');
+    Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quiz.show');
+    Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
+    Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quiz.history');
+
+    Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
+    
+    Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
+
+    // Quiz Management
+    Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
+    Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
+    Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
+    Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+
+    // Performance & Unlocking
+    Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
+    Route::delete('/attempts/{id}/unlock', [TeacherQuizController::class, 'unlockAttempt'])->name('attempt.unlock');
+
+    // Edit Quiz
+    Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
+    Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
+    });
+
+    // 8. STUDENT ROUTES (List, Progress, & Manual Activities)
+    // Route::get('/students', [StudentController::class, 'index'])->name('students.index');
+    // Route::get('/students/{user}', [StudentController::class, 'show'])->name('students.show');
+
+    // // NEW: Manual Activity Management for Students
+    // Route::post('/students/{user}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
+    // Route::put('/students/{user}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
+    // Route::delete('/students/{user}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
+
+    // List Students
+    Route::get('/students', [StudentController::class, 'index'])->name('students.index');
+    
+    // View Specific Student
+    Route::get('/students/{student}', [StudentController::class, 'show'])->name('students.show');
+    
+    // Manual Activity CRUD
+    Route::post('/students/{student}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
+    Route::put('/students/{student}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
+    Route::delete('/students/{student}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
+
+    // 9. REPORT ROUTES (UC0014: Generate Reports)
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+    // Detailed Performance View Route (When clicking a student name)
+    Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])
+        ->name('reports.student.detail');
+
+    // Only Teachers and Admins can create or store reports
+    Route::middleware(['role:teacher|admin'])->group(function () {
+        Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
+        Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
+
+        // Placeholders for future View/Edit logic
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+        Route::get('/reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
+        Route::put('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
+
+        // Remark Logic (Moved Inside Teacher Middleware for Security)
+        Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
+        Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
+    });
+
+    
 
 }); // End Auth Middleware
 

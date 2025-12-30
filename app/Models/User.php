@@ -2,59 +2,34 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+// ... other imports
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
-    use HasRoles;
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'username',
-        'email',
-        'password',
-    ];
+    use HasFactory, Notifiable, HasRoles;
+
+    // ... existing fillable, hidden, casts ...
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
+     * Relationship: A User has many Submissions (for Activities).
      */
-    protected $hidden = [
-        'password',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-        'remember_token',
-    ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    public function submissions()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
-        ];
+        // Ensure you have created the Submission model previously.
+        // If not, run: php artisan make:model Submission
+        return $this->hasMany(Submission::class);
     }
 
-    public function posts()
+    /**
+     * Relationship: A User has many Manual Activities (Teacher added).
+     */
+    public function manualActivities()
     {
-        return $this->hasMany(Post::class);
+        // This links to the manual table we created earlier
+        return $this->hasMany(StudentManualActivity::class, 'user_id');
     }
 }

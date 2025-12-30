@@ -16,6 +16,7 @@ declare global {
 // --- CRITICAL AXIOS/CSRF CONFIGURATION ---
 // Set global window reference for common use
 window.axios = axios; 
+window.axios.defaults.withCredentials = true;
 
 // Set the default request header for all Axios calls
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
