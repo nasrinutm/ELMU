@@ -54,7 +54,7 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
         <div class="py-12">
             <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-gray-200 overflow-hidden shadow-md sm:rounded-lg">
-                    <div class="p-6 bg-[#ffd900] border-white border-gray-400">
+                    <div class="p-6 bg-[#ffd900] border-gray-400">
                         <h3 class="text-lg font-medium text-[#003366] mb-4">
                             Edit User: {{ user.name }}
                         </h3>

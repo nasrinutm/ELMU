@@ -3,70 +3,60 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3'; 
 import { route } from 'ziggy-js'; 
 import { Button } from '@/components/ui/button'; 
-import { Plus, FileText, CheckCircle, Pencil, Trash2, X, Settings, Check, Upload } from 'lucide-vue-next';
+import { Plus, FileText, Pencil, Trash2, X, Search, Calendar, Download, Eye, CheckCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     activities: any;
-    filters: any;
     can: {
         manage_activities: boolean;
     }
 }>();
 
-// 1. Setup Page and Flash Control
+// Page & Flash Config
 const page = usePage();
 const showFlash = ref(false);
+const searchQuery = ref('');
 
-// 2. Setup Management Mode
-const isManaging = ref(false);
-
-const toggleManageMode = () => {
-    isManaging.value = !isManaging.value;
-};
-
-// 3. CONFIRMATION LOGIC
-const confirmEdit = (id: number) => {
-    if (confirm('Are you sure you want to edit this activity?')) {
-        router.get(route('activities.edit', id));
-    }
-};
-
+// Confirmation Logic
 const confirmDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this activity? This action cannot be undone.')) {
         router.delete(route('activities.destroy', id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                // The watcher below will catch the flash message and show the green box
-            }
+            preserveScroll: true
         });
     }
 };
 
-// 4. Computed Property for Message
+// Flash Message Logic
 const successMessage = computed(() => page.props.flash?.success);
-
-// 5. Auto-Hide Flash Logic
 watch(successMessage, (newMessage) => {
     if (newMessage) {
         showFlash.value = true;
-        setTimeout(() => {
-            showFlash.value = false;
-        }, 3000); 
+        setTimeout(() => showFlash.value = false, 3000); 
     }
 }, { immediate: true });
 
-// Helper to Group Activities
-const assignments = computed(() => props.activities.data.filter((a: any) => a.type === 'Assignment'));
-const submissions = computed(() => props.activities.data.filter((a: any) => a.type === 'Submission'));
-const exercises = computed(() => props.activities.data.filter((a: any) => a.type === 'Exercise'));
-
+// Filter Logic (Search Only)
+const filteredActivities = computed(() => {
+    let data = props.activities.data;
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        data = data.filter((a: any) => 
+            a.title.toLowerCase().includes(query) || 
+            a.description.toLowerCase().includes(query)
+        );
+    }
+    return data;
+});
 </script>
 
 <template>
-    <Head title="Activity" />
+    <Head title="Classroom Activities" />
 
-    <AppLayout :breadcrumbs="[{ title: 'Activity', href: route('activities.index') }]">
+    <AppLayout :breadcrumbs="[
+        { title: 'Dashboard', href: route('dashboard') },
+        { title: 'Classroom Activities', href: route('activities.index') }
+    ]">
         <div class="py-12">
             <div class="w-full sm:px-6 lg:px-8">
                 
@@ -79,151 +69,128 @@ const exercises = computed(() => props.activities.data.filter((a: any) => a.type
                     leave-to-class="transform opacity-0 -translate-y-2"
                 >
                     <div v-if="successMessage && showFlash" 
-                        class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative shadow-md flex justify-between items-center">
-                        <div class="flex items-center">
-                            <CheckCircle class="w-5 h-5 mr-2" />
-                            <span class="font-bold mr-1">Success!</span>
-                            <span>{{ successMessage }}</span>
-                        </div>
-                        <button @click="showFlash = false" class="text-green-700 hover:text-green-900">
+                        class="mb-6 bg-green-500/10 border border-green-500/50 text-green-500 px-4 py-3 rounded-lg shadow-sm flex justify-between items-center backdrop-blur-sm">
+                        <span class="font-medium">{{ successMessage }}</span>
+                        <button @click="showFlash = false" class="hover:text-green-400 transition">
                             <X class="w-5 h-5" />
                         </button>
                     </div>
                 </transition>
 
-                <div class="bg-[#003366] overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="bg-[#ffffff] overflow-hidden shadow-xl sm:rounded-lg border border-[#004080]">
                     
-                    <div class="p-6 border-b border-[#004080] flex justify-between items-center bg-[#002244]">
-                        <h1 class="text-2xl font-bold text-[#FFD700]">Classroom Activities</h1>
+                    <div class="p-6 border-b border-[#004080] flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#ffffff]">
+                        <h1 class="text-2xl font-bold text-[#212121]">Classroom Activities</h1>
                         
-                        <div v-if="can.manage_activities" class="flex gap-3">
-                            <Button @click="toggleManageMode" 
-                                class="font-bold shadow-md transition border"
-                                :class="isManaging ? 'bg-green-600 hover:bg-green-700 text-white border-green-500' : 'bg-transparent hover:bg-[#003366] text-[#FFD700] border-[#FFD700]'">
-                                <component :is="isManaging ? Check : Settings" class="w-4 h-4 mr-2" />
-                                {{ isManaging ? 'Done' : 'Manage Activity' }}
-                            </Button>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-64">
+                                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#212121]" />
+                                <input 
+                                    v-model="searchQuery"
+                                    type="text" 
+                                    placeholder="Search activities..." 
+                                    class="w-full pl-9 pr-4 py-2 bg-[#ffffff] border border-gray-400 text-[#212121] rounded-md text-sm placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                />
+                            </div>
 
-                            <Link :href="route('activities.create')">
-                                <Button class="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md">
-                                    <Plus class="w-4 h-4 mr-2" />
-                                    Create New
-                                </Button>
-                            </Link>
+                            <template v-if="can.manage_activities">
+                                <Link :href="route('activities.create')">
+                                    <Button class="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md whitespace-nowrap">
+                                        <Plus class="w-4 h-4 mr-2" />
+                                        Create New
+                                    </Button>
+                                </Link>
+                            </template>
                         </div>
                     </div>
 
-                    <div class="p-6 space-y-10">
-
-                        <section>
-                            <div class="flex items-center gap-2 mb-4 border-b border-[#004080] pb-2">
-                                <FileText class="w-5 h-5 text-blue-400" />
-                                <h2 class="text-xl font-bold text-[#FFD700]">Assignments</h2>
-                            </div>
+                    <div class="p-0">
+                        <div v-if="filteredActivities.length > 0" class="divide-y divide-[#004080]">
                             
-                            <div v-if="assignments.length > 0" class="bg-[#1a202c] rounded-lg overflow-hidden border border-gray-700">
-                                <div v-for="activity in assignments" :key="activity.id" 
-                                    class="p-4 border-b border-gray-700 last:border-b-0 hover:bg-[#2d3748] transition flex justify-between items-center group">
+                            <div v-for="activity in filteredActivities" :key="activity.id" 
+                                class="p-6 transition duration-150 ease-in-out flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                                
+                                <div class="flex items-start gap-4">
+                                    <div class="p-3 rounded-lg bg-[#002244] border border-[#004080] group-hover:border-blue-500/50 transition">
+                                        <FileText class="w-6 h-6 text-blue-300" />
+                                    </div>
+
                                     <div>
-                                        <h3 class="font-bold text-lg text-white group-hover:text-blue-300 transition">{{ activity.title }}</h3>
-                                        <p class="text-sm text-gray-400">{{ activity.description }}</p>
-                                        <p v-if="activity.due_date" class="text-xs text-red-400 mt-1 font-medium">Due: {{ new Date(activity.due_date).toLocaleDateString() }}</p>
-                                    </div>
-                                    
-                                    <div class="flex gap-2 items-center">
-                                        <a v-if="activity.file_path" 
-                                           :href="route('activities.download', activity.id)" 
-                                           class="bg-blue-900 hover:bg-blue-800 text-blue-100 px-3 py-1 rounded text-sm font-semibold border border-blue-700" 
-                                           title="Download File">
-                                            Download
-                                        </a>
-
-                                        <div v-if="can.manage_activities && isManaging" class="flex gap-2 ml-4 border-l border-gray-600 pl-4 animate-in fade-in slide-in-from-right-2 duration-200">
-                                            <button @click="confirmEdit(activity.id)" class="text-yellow-500 hover:text-yellow-400 p-1 transition hover:scale-110" title="Edit">
-                                                <Pencil class="w-4 h-4" />
-                                            </button>
-                                            <button @click="confirmDelete(activity.id)" class="text-red-500 hover:text-red-400 p-1 transition hover:scale-110" title="Delete">
-                                                <Trash2 class="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p v-else class="text-gray-400 italic text-sm p-4 bg-[#1a202c] rounded border border-gray-700">No assignments currently active.</p>
-                        </section>
-
-                        <section>
-                            <div class="flex items-center gap-2 mb-4 border-b border-[#004080] pb-2">
-                                <Pencil class="w-5 h-5 text-purple-400" />
-                                <h2 class="text-xl font-bold text-[#FFD700]">Exercise</h2>
-                            </div>
-
-                            <div v-if="exercises.length > 0" class="bg-[#1a202c] rounded-lg overflow-hidden border border-gray-700">
-                                <div v-for="activity in exercises" :key="activity.id" 
-                                    class="p-4 border-b border-gray-700 last:border-b-0 hover:bg-[#2d3748] transition flex justify-between items-center group">
-                                    <div>
-                                        <h3 class="font-bold text-lg text-white group-hover:text-purple-300 transition">{{ activity.title }}</h3>
-                                        <p class="text-sm text-gray-400">{{ activity.description }}</p>
-                                    </div>
-                                    
-                                    <div class="flex gap-2 items-center">
-                                        <a v-if="activity.file_path" 
-                                           :href="route('activities.download', activity.id)" 
-                                           class="bg-blue-900 hover:bg-blue-800 text-blue-100 px-3 py-1 rounded text-sm font-semibold border border-blue-700" 
-                                           title="Download File">
-                                            Download
-                                        </a>
-
-                                        <div v-if="can.manage_activities && isManaging" class="flex gap-2 ml-4 border-l border-gray-600 pl-4 animate-in fade-in slide-in-from-right-2 duration-200">
-                                            <button @click="confirmEdit(activity.id)" class="text-yellow-500 hover:text-yellow-400 p-1 transition hover:scale-110" title="Edit">
-                                                <Pencil class="w-4 h-4" />
-                                            </button>
-                                            <button @click="confirmDelete(activity.id)" class="text-red-500 hover:text-red-400 p-1 transition hover:scale-110" title="Delete">
-                                                <Trash2 class="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p v-else class="text-gray-400 italic text-sm p-4 bg-[#1a202c] rounded border border-gray-700">No exercises added yet.</p>
-                        </section>
-
-                        <section>
-                            <div class="flex items-center gap-2 mb-4 border-b border-[#004080] pb-2">
-                                <Upload class="w-5 h-5 text-orange-400" />
-                                <h2 class="text-xl font-bold text-[#FFD700]">Submissions</h2>
-                            </div>
-                            
-                            <div v-if="submissions.length > 0" class="bg-[#1a202c] rounded-lg overflow-hidden border border-gray-700">
-                                <div v-for="activity in submissions" :key="activity.id" 
-                                    class="p-4 border-b border-gray-700 last:border-b-0 hover:bg-[#2d3748] transition flex justify-between items-center group">
-                                    <div>
-                                        <h3 class="font-bold text-lg text-white group-hover:text-orange-300 transition">{{ activity.title }}</h3>
-                                        <p class="text-sm text-gray-400">{{ activity.description }}</p>
-                                        <p v-if="activity.due_date" class="text-xs text-red-400 mt-1 font-medium">Due: {{ new Date(activity.due_date).toLocaleDateString() }}</p>
-                                    </div>
-                                    
-                                    <div class="flex gap-2 items-center">
-                                        <Link :href="route('activities.show', activity.id)" 
-                                           class="bg-blue-900 hover:bg-blue-800 text-blue-100 px-3 py-1 rounded text-sm font-semibold border border-blue-700 flex items-center" 
-                                           title="Submit Work">
-                                            <Upload class="w-4 h-4 mr-2" />
-                                            Submit
+                                        <Link :href="route('activities.show', activity.id)" class="group/title">
+                                            <h3 class="font-bold text-lg text-[#212121] group-hover:text-[#808080] group-hover/title:underline transition mb-1 cursor-pointer">
+                                                {{ activity.title }}
+                                            </h3>
                                         </Link>
-
-                                        <div v-if="can.manage_activities && isManaging" class="flex gap-2 ml-4 border-l border-gray-600 pl-4 animate-in fade-in slide-in-from-right-2 duration-200">
-                                            <button @click="confirmEdit(activity.id)" class="text-yellow-500 hover:text-yellow-400 p-1 transition hover:scale-110" title="Edit">
-                                                <Pencil class="w-4 h-4" />
-                                            </button>
-                                            <button @click="confirmDelete(activity.id)" class="text-red-500 hover:text-red-400 p-1 transition hover:scale-110" title="Delete">
-                                                <Trash2 class="w-4 h-4" />
-                                            </button>
+                                        
+                                        <p class="text-sm text-gray-700 mb-2 line-clamp-2">{{ activity.description }}</p>
+                                        
+                                        <div class="flex items-center gap-4 text-xs text-gray-400">
+                                            <span v-if="activity.due_date" class="flex items-center text-red-300 font-semibold">
+                                                <Calendar class="w-3 h-3 mr-1" />
+                                                Due: {{ new Date(activity.due_date).toLocaleDateString() }}
+                                            </span>
+                                            <span class="font-semibold">Posted: {{ new Date(activity.created_at).toLocaleDateString() }}</span>
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <div class="flex items-center gap-3 self-end sm:self-center">
+                                    
+                                    <a v-if="activity.file_path && activity.type && activities.show !== 'Submission'" 
+                                       :href="route('activities.show', activity.id)" 
+                                       class="flex items-center px-4 py-2 bg-[#0060bf] hover:bg-[#004080] text-blue-200 border border-[#004080] rounded-md text-sm font-medium transition"
+                                    >
+                                        <Eye class="w-4 h-4 mr-2" />
+                                        View Resource
+                                    </a>
+
+                                    <template v-if="activity.type === 'Submission'">
+                                        <div v-if="activity.my_submission" class="flex flex-col items-end">
+                                            <button disabled class="bg-green-900/30 text-green-400 border border-green-600/50 font-bold py-1 px-3 rounded-md text-sm shadow-sm cursor-not-allowed flex items-center">
+                                                <CheckCircle class="w-4 h-4 mr-2" />
+                                                Submitted
+                                            </button>
+                                            <Link :href="route('activities.show', activity.id)" class="text-[10px] text-blue-400 hover:text-white underline mt-1 transition">
+                                                View/Edit
+                                            </Link>
+                                        </div>
+
+                                        <!-- <Link v-else :href="route('activities.show', activity.id)" 
+                                            class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-blue-500/50" 
+                                            title="View Activity">
+                                            <Eye class="w-4 h-4 mr-2" />
+                                            View
+                                        </Link> -->
+                                    </template>
+
+                                    <!-- <Link v-if="activity.type === 'Quiz' || activity.type === 'Exercise'" 
+                                          :href="route('activities.play', activity.id)" 
+                                          class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-purple-500/50" 
+                                          title="Play Quiz">
+                                        <Gamepad2 class="w-4 h-4 mr-2" />
+                                        Play
+                                    </Link> -->
+
+                                    <div v-if="can.manage_activities" class="flex items-center gap-1 pl-3 border-l border-[#004080] ml-2">
+                                        <Link :href="route('activities.edit', activity.id)" class="p-2 text-gray-400 hover:text-[#FFD700] hover:bg-[#002244] rounded-md transition" title="Edit Activity">
+                                            <Pencil class="w-4 h-4" />
+                                        </Link>
+                                        <button @click="confirmDelete(activity.id)" class="p-2 text-gray-400 hover:text-red-400 hover:bg-[#002244] rounded-md transition" title="Delete Activity">
+                                            <Trash2 class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <p v-else class="text-gray-400 italic text-sm p-4 bg-[#1a202c] rounded border border-gray-700">No submission activities created.</p>
-                        </section>
+
+                        </div>
+
+                        <div v-else class="flex flex-col items-center justify-center py-16 text-center">
+                            <div class="bg-[#002244] p-4 rounded-full mb-4">
+                                <Search class="w-8 h-8 text-gray-500" />
+                            </div>
+                            <h3 class="text-lg font-medium text-white">No activities found</h3>
+                            <p class="text-gray-400 mt-1">Try adjusting your search terms.</p>
+                        </div>
 
                     </div>
                 </div>
