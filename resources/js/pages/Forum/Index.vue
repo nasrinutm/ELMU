@@ -53,10 +53,11 @@ const formatDate = (dateString: string) => {
     <Head title="Forum" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="w-full mx-auto p-4">
+        <div class="w-full mx-auto py-6 px-8">
             
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-xl font-semibold">Forum Discussions</h1>
+                <h1 class="text-2xl font-bold text-gray-900">Forum Discussions</h1>              
+
                 <Link
                     :href="route('forum.create')" 
                     class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition"
@@ -72,13 +73,13 @@ const formatDate = (dateString: string) => {
                         v-model="search"
                         type="text" 
                         placeholder="Search posts..." 
-                        class="w-full h-12 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 text-lg"
+                        class="w-full h-12 border border-search-border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 text-lg"
                     />
                 </div>
                 <div class="w-full md:w-56">
                     <select 
                         v-model="sort"
-                        class="w-full h-12 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 text-lg"
+                        class="w-full h-12 border border-search-border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 px-4 text-lg"
                     >
                         <option value="latest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -104,10 +105,10 @@ const formatDate = (dateString: string) => {
                         :key="post.id"
                         class="flex flex-col md:flex-row p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors items-start md:items-center"
                     >
-                        <div class="w-full md:w-3/5 mb-2 md:mb-0">
+                        <div class="w-full md:w-3/5 mb-2 md:mb-0 min-w-0">
                             <Link
                                 :href="route('forum.show', { post: post.id })"
-                                class="font-bold text-blue-600 hover:underline text-lg"
+                                class="font-bold text-blue-600 underline text-lg block break-words"
                             >
                                 {{ post.title }}
                             </Link>
@@ -116,13 +117,13 @@ const formatDate = (dateString: string) => {
                             </div>
                         </div>
 
-                        <div class="w-full md:w-1/5 text-left md:text-center text-sm text-gray-600">
+                        <div class="w-full md:w-1/5 text-left md:text-center text-sm text-gray-600 shrink-0">
                             <span class="md:hidden font-medium">Replies: </span>
                             {{ post.replies_count || 0 }}
                         </div>
                         
-                        <div class="w-full md:w-1/5 text-left md:text-right text-sm text-gray-600">
-                             <span class="md:hidden font-medium">Last Activity: </span>
+                        <div class="w-full md:w-1/5 text-left md:text-right text-sm text-gray-600 shrink-0">
+                            <span class="md:hidden font-medium">Last Activity: </span>
                             {{ formatDate(post.created_at) }}
                         </div>
                     </div>
