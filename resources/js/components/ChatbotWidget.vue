@@ -92,13 +92,13 @@ const sendMessage = async () => {
         >
             <div 
                 v-if="isOpen" 
-                class="w-80 md:w-96 h-[500px] bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                class="w-[384px] md:w-[320px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             >
                 <!-- Header -->
-                <div class="bg-blue-600 text-white p-4 flex justify-between items-center shadow-sm shrink-0">
-                    <div class="flex items-center space-x-2">
+                <div class="bg-card-foreground text-white p-4 flex justify-between items-center shadow-sm shrink-0">
+                    <div class="flex items-center font-mono space-x-2">
                         <Bot class="w-6 h-6" />
-                        <h3 class="font-bold">LMS Assistant</h3>
+                        <h3 class="font-bold text-xl">ELMU-Bot</h3>
                     </div>
                     <button @click="toggleChat" class="hover:bg-blue-700 p-1 rounded transition">
                         <X class="w-5 h-5" />
@@ -108,7 +108,7 @@ const sendMessage = async () => {
                 <!-- Messages Area -->
                 <div 
                     ref="messagesContainer" 
-                    class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-zinc-950"
+                    class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
                 >
                     <div 
                         v-for="(msg, index) in messages" 
@@ -130,11 +130,11 @@ const sendMessage = async () => {
 
                         <!-- Bubble -->
                         <div 
-                            class="px-4 py-2 rounded-2xl text-sm max-w-[85%] shadow-sm leading-relaxed"
+                            class="px-4 py-2 rounded-2xl text-lg max-w-[85%] shadow-sm leading-relaxed"
                             :class="[
                                 msg.from === 'user' 
                                     ? 'bg-blue-600 text-white rounded-tr-none' 
-                                    : 'bg-white dark:bg-zinc-800 dark:text-gray-100 border border-gray-100 dark:border-zinc-700 rounded-tl-none',
+                                    : 'bg-white border border-gray-100  rounded-tl-none',
                                 msg.isError ? '!bg-red-50 !text-red-600 !border-red-200' : ''
                             ]"
                         >
@@ -147,7 +147,7 @@ const sendMessage = async () => {
                         <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                             <Bot class="w-5 h-5" />
                         </div>
-                        <div class="bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm">
+                        <div class="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm">
                             <div class="flex space-x-1">
                                 <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
                                 <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
@@ -158,19 +158,19 @@ const sendMessage = async () => {
                 </div>
 
                 <!-- Input Area -->
-                <div class="p-4 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 shrink-0">
+                <div class="p-4 bg-white border-t border-gray-100 shrink-0">
                     <form @submit.prevent="sendMessage" class="relative">
                         <input
                             v-model="newMessage"
                             type="text"
                             placeholder="Ask me anything..."
-                            class="w-full pl-4 pr-12 py-3 rounded-full border border-gray-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
+                            class="w-full pl-4 pr-12 py-3 text-lg rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
                             :disabled="isLoading"
                         />
                         <button 
                             type="submit"
                             :disabled="!newMessage.trim() || isLoading"
-                            class="absolute right-2 top-1.5 p-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            class="absolute right-2 top-3.5 p-1.5 bg-white text-blue-700 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <Send class="w-4 h-4" />
                         </button>
@@ -182,10 +182,10 @@ const sendMessage = async () => {
         <!-- Floating Toggle Button -->
         <button 
             @click="toggleChat" 
-            class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-300"
+            class=" hover:bg-gray-300 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 focus:outline-none ring-2 ring-inset ring-offset-2 ring-blue-500"
         >
-            <MessageCircle v-if="!isOpen" class="w-7 h-7" />
-            <X v-else class="w-7 h-7" />
+            <MessageCircle v-if="!isOpen" class="w-7 h-7 text-blue-700" />
+            <X v-else class="w-7 h-7 text-blue-700" />
         </button>
     </div>
 </template>

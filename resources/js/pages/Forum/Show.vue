@@ -4,15 +4,14 @@ import { Head, useForm, Link, router } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type Post, type Reply as ReplyType } from '@/types';
 import { route } from 'ziggy-js';
 import Reply from '@/components/Reply.vue';
-import { ref } from 'vue'; // Import ref for modal state
-import { Trash2 } from 'lucide-vue-next'; // Import Trash2 icon
+import { ref } from 'vue';
+import { Trash2, Pencil } from 'lucide-vue-next';
 
 const props = defineProps<{
     post: Post & {
         user: { name: string, username: string };
         replies: ReplyType[];
         content: string;
-        // Assumed properties for authorization check
         can_update: boolean; 
         can_delete: boolean;
     };
@@ -32,24 +31,19 @@ const replyForm = useForm({
 // --- CUSTOM MODAL STATE ---
 const isDeleteModalOpen = ref(false);
 
-// 1. Function to open the custom confirmation modal
 const openDeleteModal = () => {
     isDeleteModalOpen.value = true;
 };
 
-// 2. Function to handle the actual deletion when confirmed
 const confirmDelete = () => {
     isDeleteModalOpen.value = false;
-    // Perform the action (deletion)
     router.delete(route('forum.destroy', props.post.id), {
         preserveScroll: true,
         onSuccess: () => {
-            // Redirect or show a success message after deletion
             router.get(route('forum.index')); 
         }
     });
 };
-// --- END CUSTOM MODAL LOGIC ---
 
 const submitReply = () => {
     replyForm.post(route('replies.store'), {
@@ -57,53 +51,77 @@ const submitReply = () => {
         onSuccess: () => replyForm.reset(),
     });
 };
-
-// REMOVED THE OLD deletePost FUNCTION, replaced by openDeleteModal and confirmDelete
 </script>
 
 <template>
     <Head :title="post.title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="w-full mx-auto p-4">
+        <div class="w-full mx-auto py-4 px-6">
 
-            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-                <div class="p-6">
-                    <h1 class="text-3xl font-bold mb-2 text-black">{{ post.title }}</h1>
+            <div class="pb-5 mx-4 border-b border-gray-300 mb-5">
+                <div class="flex justify-between items-start">
+                    <h1 class="text-4xl font-extrabold text-black tracking-tight break-words whitespace-pre-wrap min-w-0 flex-1">
+                        {{ post.title }}
+                    </h1>
                     
-                    <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4">
-                        <div class="text-sm text-gray-600">
-                            Posted by <span class="font-semibold text-black">@{{ post.user.username }}</span>
-                        </div>
-                        
-                        <div v-if="props.post.can_update || props.post.can_delete" class="flex space-x-3 text-sm">
-                            <Link
-                                v-if="props.post.can_update"
-                                :href="route('forum.edit', props.post.id)"
-                                class="font-medium text-blue-600 hover:underline"
-                            >
-                                Edit
-                            </Link>
-                            <button
-                                v-if="props.post.can_delete"
-                                @click="openDeleteModal"
-                                class="font-medium text-red-600 hover:underline"
-                            >
-                                Delete
-                            </button>
-                        </div>
+                    <div v-if="props.post.can_update || props.post.can_delete" class="flex items-center gap-2">
+                        <Link
+                            v-if="props.post.can_update"
+                            :href="route('forum.edit', props.post.id)"
+                            class="p-2 text-gray-500 hover:text-blue-600 transition-colors"
+                            title="Edit Post"
+                        >
+                            <Pencil class="w-5 h-5" />
+                        </Link>
+                        <button
+                            v-if="props.post.can_delete"
+                            @click="openDeleteModal"
+                            class="p-2 text-red-600 transition-colors"
+                            title="Delete Post"
+                        >
+                            <Trash2 class="w-5 h-5" />
+                        </button>
                     </div>
+                </div>
+                
+                <div class="flex items-center text-sm text-gray-500 mb-6 mt-2">
+                    Posted by <span class="ml-1 font-bold text-black">@{{ post.user.username }}</span>
+                </div>
 
-                    <div class="prose max-w-none text-black leading-relaxed">
-                        <p>{{ post.content }}</p>
-                    </div>
+                <div class="prose prose-lg max-w-none text-black leading-relaxed">
+                    <p class="break-words whitespace-pre-wrap">{{ post.content }}</p>
                 </div>
             </div>
 
-            <div class="mt-6">
-                <h2 class="text-xl font-bold mb-4 text-black">Replies</h2>
+            <div class="bg-white rounded-xl p-6 border-2 border-gray-300 mx-2">
+                <h2 class="text-2xl font-bold mb-4">Leave a Reply</h2>
+                <form @submit.prevent="submitReply">
+                    <textarea
+                        id="body"
+                        v-model="replyForm.body"
+                        rows="1"
+                        class="w-full p-4 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        placeholder="Share your thoughts..."
+                    ></textarea>            
+                    <p v-if="replyForm.errors.body" class="text-red-500 text-sm mt-2 font-medium">
+                        {{ replyForm.errors.body }}
+                    </p>
+                    <div class="flex justify-end mt-4">
+                        <button
+                            type="submit"
+                            :disabled="replyForm.processing"
+                            class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md"
+                        >
+                            {{ replyForm.processing ? 'Posting...' : 'Post Reply' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-                <div class="space-y-4">
+            <div class="px-6">
+                <div >
+                    <h2 class="text-2xl font-bold mt-4">Replies</h2>
                     <Reply 
                         v-for="reply in post.replies"
                         :key="reply.id"
@@ -112,67 +130,37 @@ const submitReply = () => {
                     />
                 </div>
 
-                <div class="mt-6 bg-white rounded-xl shadow-md border border-gray-200 p-6">
-                    <form @submit.prevent="submitReply">
-                        <label for="body" class="block mb-2 text-sm font-medium text-black">
-                            Write a Reply
-                        </label>
-                        
-                        <textarea
-                            id="body"
-                            v-model="replyForm.body"
-                            rows="5"
-                            autocomplete="off"
-                            spellcheck="false"
-                            data-1p-ignore
-                            data-lpignore="true"
-                            class="w-full p-4 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-inner"
-                            placeholder="Share your thoughts..."
-                        ></textarea>
-                        
-                        <p v-if="replyForm.errors.body" class="text-red-500 text-sm mt-2 font-medium">
-                            {{ replyForm.errors.body }}
-                        </p>
-
-                        <div class="flex justify-end mt-4">
-                            <button
-                                type="submit"
-                                :disabled="replyForm.processing"
-                                class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
-                            >
-                                <span v-if="replyForm.processing">Posting...</span>
-                                <span v-else>Post Reply</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
             </div>
         </div>
         
-        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div class="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full">
-                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    <Trash2 class="w-6 h-6 text-red-500" />
-                    ELMU - Confirm Deletion
-                </h2>
-                <p class="mt-4 text-gray-700">
-                    Are you sure you want to permanently delete the post titled **"{{ post.title }}"**?
+        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full border border-gray-100 mx-4">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-3 bg-red-100 rounded-full">
+                        <Trash2 class="w-6 h-6 text-red-600" />
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900">Confirm Deletion</h2>
+                </div>
+                
+                <p class="text-gray-600 leading-relaxed">
+                    Are you sure you want to permanently delete the post <span class="font-bold text-black">"{{ post.title }}"</span>? This action cannot be undone.
                 </p>
-                <div class="mt-6 flex justify-end gap-3">
+
+                <div class="mt-8 flex justify-end gap-3">
                     <button 
                         @click="isDeleteModalOpen = false" 
-                        class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50"
+                        class="px-5 py-2 text-sm font-bold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         Cancel
                     </button>
                     <button 
                         @click="confirmDelete" 
-                        class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        class="px-5 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-lg shadow-red-100"
                     >
-                        OK, Delete Post
+                        Yes, Delete Post
                     </button>
                 </div>
             </div>
         </div>
-        </AppLayout>
+    </AppLayout>
 </template>

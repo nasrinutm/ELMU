@@ -84,6 +84,10 @@ const submit = () => {
                                     class="mt-1 block w-full bg-[#003366] border-black  text-white focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm p-2"
                                     v-model="form.description"
                                     rows="3"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    data-1p-ignore
+                                    data-lpignore="true"
                                     placeholder="Brief description for these files..."
                                 ></textarea>
                                 <InputError class="mt-2" :message="form.errors.description" />

@@ -48,7 +48,7 @@ class ChatbotController extends Controller
                 
                 // 75% similarity is the recommended threshold
                 if ($percent > 75) {
-                    $userMessage = $faq->system_prompt; 
+                    $userMessage = "Berdasarkan Buku Teks Sains Komputer: " . $faq->system_prompt;
                     break;
                 }
             }

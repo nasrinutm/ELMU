@@ -80,6 +80,10 @@ const handleFileChange = (e: Event) => {
                                 id="description" 
                                 v-model="form.description"
                                 rows="5"
+                                autocomplete="off"
+                                spellcheck="false"
+                                data-1p-ignore
+                                data-lpignore="true"
                                 placeholder="Enter detailed instructions for the students..."
                                 class="w-full bg-[#1a3b5c] border border-blue-500/30 rounded-md px-4 py-3 text-white placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                             ></textarea>

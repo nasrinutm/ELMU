@@ -1,13 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { useForm, Head, Link, router } from '@inertiajs/vue3'; 
 import AppLayout from '@/layouts/AppLayout.vue';
 import { 
     Server, Database, Cpu, Trash2, FileText, Plus, 
-    Search, ChevronUp, ChevronDown, X, Bot, Info 
+    Search, ChevronUp, ChevronDown, X, Bot, Info, Edit2, Save, XCircle 
 } from 'lucide-vue-next';
 
-// Props from Controller
 const props = defineProps({
     files: Array,
     systemInfo: Object,
@@ -17,6 +16,33 @@ const breadcrumbs = [
     { title: 'Dashboard', href: route('dashboard') },
     { title: 'AI Details', href: route('chatbot.details') },
 ];
+
+// --- MODAL STATE ---
+const isPromptModalOpen = ref(false);
+
+// 2. INITIALIZE FORM
+const promptForm = useForm({
+    instruction: props.systemInfo.current_prompt,
+});
+
+const openEditModal = () => {
+    promptForm.instruction = props.systemInfo.current_prompt;
+    isPromptModalOpen.value = true;
+};
+
+const closeEditModal = () => {
+    isPromptModalOpen.value = false;
+    promptForm.reset();
+};
+
+const savePrompt = () => {
+    promptForm.put(route('chatbot.prompt.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeEditModal();
+        },
+    });
+};
 
 // --- SEARCH & SORT STATE ---
 const searchQuery = ref('');
@@ -43,7 +69,6 @@ const filteredFiles = computed(() => {
         let valA = a[sortKey.value];
         let valB = b[sortKey.value];
 
-        // Handle nulls
         if (valA === null) return 1;
         if (valB === null) return -1;
 
@@ -120,26 +145,24 @@ const formatBytes = (bytes) => {
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/50 flex justify-between items-center">
-                    <h3 class="font-bold text-gray-900 flex items-center gap-2">
+                    <div class="flex items-center gap-2">
                         <Bot class="w-5 h-5 text-purple-600" />
-                        System Behavior Prompt
-                    </h3>
-                    <Link :href="route('chatbot.prompt.edit')" class="text-xs bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-blue-600 hover:bg-gray-50 font-bold transition shadow-sm">
-                        Edit Instruction
-                    </Link>
+                        <h3 class="font-bold text-gray-900">System Behavior Prompt</h3>
+                    </div>
+                    
+                    <button 
+                        @click="openEditModal" 
+                        class="text-xs flex items-center gap-1.5 font-bold bg-white text-blue-600 border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg shadow-sm transition"
+                    >
+                        <Edit2 class="w-3.5 h-3.5" />
+                        Update Instructions
+                    </button>
                 </div>
+
                 <div class="p-6">
-                    <div class="bg-indigo-50/30 p-5 rounded-xl border border-indigo-100 border-dashed relative">
-                        <p class="text-sm text-gray-700 leading-relaxed italic whitespace-pre-wrap pr-8">
+                    <div class="bg-indigo-50/30 p-5 rounded-xl border border-indigo-100 border-dashed">
+                        <p class="text-sm text-gray-700 leading-relaxed italic whitespace-pre-wrap">
                             "{{ systemInfo.current_prompt }}"
-                        </p><div class="mt-3 flex items-start gap-2 text-gray-400">
-                        
-                    </div>
-                    </div>
-                    <div class="mt-3 flex items-start gap-2 text-gray-400">
-                        <Info class="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <p class="text-xs">
-                            This instruction is prepended to every user query to maintain consistency in AI responses.
                         </p>
                     </div>
                 </div>
@@ -297,6 +320,50 @@ const formatBytes = (bytes) => {
                     >
                         OK, Delete
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="isPromptModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200">
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <Bot class="w-5 h-5 text-blue-600" />
+                        Edit AI Instructions
+                    </h3>
+                    <button @click="closeEditModal" class="text-gray-400 hover:text-gray-600">
+                        <X class="w-5 h-5" />
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <p class="text-xs text-gray-500 mb-4 italic">
+                        The instructions below define how the AI behaves. (e.g., "Answer in Malay", "Be concise").
+                    </p>
+                    
+                    <textarea
+                        v-model="promptForm.instruction"
+                        rows="8"
+                        class="w-full p-4 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner"
+                        placeholder="Enter system instructions..."
+                    ></textarea>
+
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button 
+                            @click="closeEditModal" 
+                            class="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            @click="savePrompt"
+                            :disabled="promptForm.processing"
+                            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg transition disabled:opacity-50"
+                        >
+                            <Save class="w-4 h-4" />
+                            {{ promptForm.processing ? 'Saving...' : 'Update Instruction' }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

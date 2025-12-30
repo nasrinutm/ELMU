@@ -15,8 +15,15 @@ class FaqPromptSeeder extends Seeder
         $data = [
             [
                 'label' => '5 prinsip reka bentuk interaktif?',
-                'system_prompt' => 'Rujuk muka surat 316 hingga 318 dalam Buku Teks Sains Komputer Tingkatan 4. Senaraikan dan terangkan dengan lengkap 5 prinsip reka bentuk interaktif: Konsistensi, Kebolehan membuat pemerhatian, Boleh dipelajari, Kebolehan untuk menjangka, dan Maklum balas.',
-                'sort_order' => 1
+                'system_prompt' => 'Rujuk muka surat 316-318 (Bab 3: Interaksi Manusia dan Komputer). 
+                Sila senaraikan KESEMUA LIMA prinsip reka bentuk interaktif berikut secara lengkap:
+                1. Konsistensi (rujuk contoh "butang Close pada Microsoft Windows")
+                2. Kebolehan membuat pemerhatian (perceivability)
+                3. Boleh dipelajari (learnability - rujuk contoh aplikasi "WhatsApp")
+                4. Kebolehan untuk menjangka (predictability - rujuk "ikon emosi")
+                5. Maklum balas (feedback - rujuk contoh "loading")
+                Pastikan setiap prinsip disertakan penjelasan ringkas dari teks.',
+                 'sort_order' => 1
             ],
             [
                 'label' => 'Sebab HCI diperlukan?',
