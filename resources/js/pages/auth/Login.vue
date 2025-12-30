@@ -26,6 +26,10 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
+
+const handleCheckedChange = (val: boolean) => {
+    form.remember = val;
+};
 </script>
 
 <template>
@@ -82,7 +86,7 @@ const submit = () => {
                         <Checkbox
                             id="remember"
                             :checked="form.remember"
-                            @update:checked="(val) => form.remember = val"
+                            @update:checked="handleCheckedChange"
                             :tabindex="3"
                             class="border-white data-[state=checked]:bg-[#FFD900] data-[state=checked]:text-[#003366]"
                         />
