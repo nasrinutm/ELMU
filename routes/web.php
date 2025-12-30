@@ -198,5 +198,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
 });
-
-}); // <-- End of auth middleware group

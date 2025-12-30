@@ -7,7 +7,7 @@ import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogo from './AppLogo.vue';
 import { computed } from 'vue';
-import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle, ClipboardList } from 'lucide-vue-next';
+import { Users, BookOpen, LayoutGrid, FileText, Gamepad2, CheckCircle, ClipboardList, Bot } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 interface AuthUser {
@@ -62,13 +62,13 @@ const footerNavItems: NavItem[] = [];
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="route('dashboard')">
                             <AppLogo class="w-48 h-48 max-w-none"/>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
-        </SidebarHeader>
+        </SidebarHeader>dash
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import AppLayout from '@/Layouts/AppLayout.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { 
     Gamepad2, CheckCircle, ChevronLeft, Clock, Trophy, 
@@ -190,7 +190,7 @@ const generatePDF = () => window.print();
     </AppLayout>
 </template>
 
-<style>
+<!-- <style>
 @media print {
     .no-print, button, .backdrop-blur-sm { display: none !important; }
     body { background: white !important; }
@@ -202,5 +202,36 @@ const generatePDF = () => window.print();
     /* Show signature only in print */
     .print\:flex { display: flex !important; }
     .hidden { display: none; }
+}
+</style> -->
+
+<style scoped> /* Added scoped for better practice */
+@media print {
+    .no-print, button, .backdrop-blur-sm { display: none !important; }
+    body { background: white !important; }
+    
+    /* Use standard class names or attribute selectors to avoid escape issues */
+    .bg-\[\#001f3f\], .bg-\[\#0a192f\], .bg-\[\#0d223f\] { 
+        background: transparent !important; 
+        color: black !important; 
+        box-shadow: none !important; 
+    }
+    
+    .text-white, .text-gray-200, .text-gray-400, .text-\[\#ffcc00\] { 
+        color: black !important; 
+    }
+    
+    .print-black { color: black !important; }
+    
+    .border-print { 
+        border: 1px solid #ddd !important; 
+        border-radius: 8px !important; 
+        margin-bottom: 20px !important; 
+    }
+    
+    /* Target the element directly or use a simpler class if VS Code keeps complaining */
+    [class*="print:flex"] { 
+        display: flex !important; 
+    }
 }
 </style>
