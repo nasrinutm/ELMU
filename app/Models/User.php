@@ -8,15 +8,20 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
+use App\Models\Submission;
+use App\Models\StudentManualActivity;
 
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, TwoFactorAuthenticatable;
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasRoles;
+
     /**
      * The attributes that are mass assignable.
      *
-      * @var list<string>
+     * @var list<string>
      */
     protected $fillable = [
         'name',
@@ -56,22 +61,13 @@ class User extends Authenticatable
         return $this->hasMany(Post::class);
     }
 
-    /**
-     * Relationship: A User has many Submissions (for Activities).
-     */
     public function submissions()
     {
-        // Ensure you have created the Submission model previously.
-        // If not, run: php artisan make:model Submission
         return $this->hasMany(Submission::class);
     }
 
-    /**
-     * Relationship: A User has many Manual Activities (Teacher added).
-     */
     public function manualActivities()
     {
-        // This links to the manual table we created earlier
         return $this->hasMany(StudentManualActivity::class, 'user_id');
     }
 }
