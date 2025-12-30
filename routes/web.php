@@ -110,7 +110,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
 
-    // 7. STUDENT QUIZ ROUTES (Protected by Auth)
+    // 7. STUDENT QUIZ ROUTES (For Students)
     Route::get('/quiz', [QuizController::class, 'index'])->name('quiz.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quiz.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
@@ -120,25 +120,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
 // --- TEACHER ROUTES (PROTECTED) ---
-// I moved this OUTSIDE the main group to keep it clean, but wrapped it in auth + role middleware
 Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
     
-    // *** FIX IS HERE: Removed "teacher." from the name because the group adds it automatically ***
-    Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
-
     // Quiz Management
     Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
     Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
     Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
-    Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
-
-    // Performance & Unlocking
-    Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
-    Route::delete('/attempts/{id}/unlock', [TeacherQuizController::class, 'unlockAttempt'])->name('attempt.unlock');
-
-    // Edit Quiz
     Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
     Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
+    Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+
+    // Performance & Resetting
+    Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
+    
+    // 🔥 THIS IS THE FIX: The Route to Reset Attempts
+    Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
 });
 
 require __DIR__.'/settings.php';
