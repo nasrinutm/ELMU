@@ -68,7 +68,7 @@ const footerNavItems: NavItem[] = [];
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
-        </SidebarHeader>dash
+        </SidebarHeader>
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
