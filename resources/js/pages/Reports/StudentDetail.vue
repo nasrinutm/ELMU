@@ -1,229 +1,166 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
-import { 
-    Gamepad2, CheckCircle, ChevronLeft, Clock, Trophy, 
-    User as UserIcon, Download, PencilLine, Trash2, X 
+import {
+    FileText, CheckCircle, Trophy, User as UserIcon,
+    Download, PencilLine, Trash2, X, MessageSquare
 } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
 const props = defineProps<{
-    student: { id: number; name: string; email: string; };
+    student: { id: number; name: string; email: string; username: string };
     activities: any[];
     quizzes: any[];
     existingReport: any | null;
+    stats: { quiz_avg: number; activities_completed: number };
 }>();
+
 const page = usePage();
-const teacherName = page.props.auth.user.name;
+const teacherName = (page.props.auth.user as any).name;
 const isModalOpen = ref(false);
+
+const breadcrumbs = [
+    { title: 'Performance Reports', href: route('reports.index') },
+    { title: props.student.name, href: '#' },
+];
+
 const form = useForm({
     student_id: props.student.id,
     comments: props.existingReport ? props.existingReport.comments : '',
 });
-// Watch for changes (e.g., after a successful save) to update the local form state
+
 watch(() => props.existingReport, (newVal) => {
     form.comments = newVal ? newVal.comments : '';
 });
+
 const submitRemark = () => {
-    form.post(route('reports.remark.save'), { 
+    form.post(route('reports.remark.save'), {
         preserveScroll: true,
-        onSuccess: () => {
-            isModalOpen.value = false;
-        }
+        onSuccess: () => isModalOpen.value = false
     });
 };
+
 const deleteRemark = () => {
     if (!props.existingReport) return;
     if (confirm('Delete this evaluation?')) {
         form.delete(route('reports.remark.delete', props.existingReport.id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                form.comments = ''; // Clear local form on delete
-            }
+            preserveScroll: true
         });
     }
 };
+
 const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
-const generatePDF = () => window.print();
+
+// FIX: Define print function to avoid "window does not exist" error
+const handlePrint = () => {
+    window.print();
+};
 </script>
 
 <template>
-    <Head :title="student.name + ' - Performance'" />
-    <AppLayout>
-        <div class="min-h-screen bg-color-background text-white p-print">
-            <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
+    <Head :title="student.name + ' - Report'" />
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6">
 
-                <div class="flex justify-between items-center mb-6 no-print">
-                    <Link :href="route('reports.index')" class="flex items-center text-sm text-[#ffffff}] hover:text-[#ffffff]">
-                        <ChevronLeft class="w-4 h-4 mr-1" /> Back to Directory
-                    </Link>
-                    <div class="flex gap-3">
-                        <button @click="isModalOpen = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-500 transition-colors">
-                            <PencilLine class="w-4 h-4" /> {{ existingReport ? 'Edit Remark' : '' }}
-                        </button>
-                        <button @click="generatePDF" class="bg-[#ffcc00] text-[#001f3f] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-yellow-400 transition-colors">
-                            <Download class="w-4 h-4" /> 
-                        </button>
-                    </div>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row items-center gap-6">
+                <div class="h-20 w-20 rounded-full bg-teal-600 text-white flex items-center justify-center text-3xl font-bold border-4 border-teal-50 shrink-0 uppercase">
+                    {{ student.name.charAt(0) }}
                 </div>
-
-                <div class="bg-[#ffffff] rounded-xl border border-white/10 p-6 mb-8 border-print shadow-xl">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div class="flex items-center gap-4">
-                            <div class="bg-blue-500/20 p-4 rounded-full no-print">
-                                <UserIcon class="w-8 h-8 text-blue-400" />
-                            </div>
-                            <div>
-                                <h1 class="text-3xl font-bold text-[#212121] print-black">{{ student.name }}</h1>
-                                <p class="text-gray-400">{{ student.email }}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4 no-print">
-                            <div class="bg-[#ffffff] border border-white/10 rounded-lg p-3 min-w-[100px] text-center">
-                                <span class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Activities</span>
-                                <span class="text-2xl font-bold text-blue-400">{{ activities.length }}</span>
-                            </div>
-                            <div class="bg-[#ffffff] border border-white/10 rounded-lg p-3 min-w-[100px] text-center">
-                                <span class="block text-[10px] uppercase font-bold text-gray-500 mb-1">Quizzes</span>
-                                <span class="text-2xl font-bold text-[#ffcc00]">{{ quizzes.length }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="existingReport" class="mt-6 p-5 bg-[#ffffff] rounded-lg border-l-4 border-1 border-[#ffcc00] relative">
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-[#212121] text-xs font-bold uppercase mb-2">Official Teacher Evaluation</h3>
-                            <button @click="deleteRemark" class="no-print text-gray-500 hover:text-red-500 transition-colors" title="Delete Evaluation">
-                                <Trash2 class="w-4 h-4" />
-                            </button>
-                        </div>
-                        <p class="text-[#212121] italic font-medium whitespace-pre-wrap">"{{ existingReport.comments }}"</p>
-                    </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h1 class="text-2xl font-bold text-slate-900">{{ student.name }}</h1>
+                    <p class="text-slate-500">{{ student.email }}</p>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                    <div class="bg-[#ffffff] rounded-xl border border-white/10 overflow-hidden shadow-xl border-print">
-                        <div class="p-5 border-b border-white/10 bg-gray-100 border border-gray-100 flex items-center gap-2">
-                            <Gamepad2 class="w-5 h-5 text-blue-400 no-print" />
-                            <h2 class="text-lg font-bold text-[#212121] print-black">Activities</h2>
-                        </div>
-                        <ul v-if="activities.length > 0" class="divide-y divide-white/5">
-                            <li v-for="act in activities" :key="act.id" class="p-4 flex justify-between">
-                                <span class="text-[#212121] print-black font-medium">{{ act.title }}</span>
-                                <span class="text-xs text-gray-500">{{ formatDate(act.completed_at) }}</span>
-                            </li>
-                        </ul>
-                        <div v-else class="p-10 text-center text-gray-500 italic">No activities recorded.</div>
-                    </div>
-
-                    <div class="bg-[#ffffff] rounded-xl border border-white/10 overflow-hidden shadow-xl border-print">
-                        <div class="p-5 border-b border-white/10 bg-gray-100 flex items-center gap-2">
-                            <CheckCircle class="w-5 h-5 text-green-400 no-print" />
-                            <h2 class="text-lg font-bold text-[#212121] print-black">Quizzes</h2>
-                        </div>
-                        <ul v-if="quizzes.length > 0" class="divide-y divide-white/5">
-                            <li v-for="quiz in quizzes" :key="quiz.id" class="p-4 flex justify-between">
-                                <span class="text-[#212121] print-black font-medium">{{ quiz.title }}</span>
-                                <div class="text-[#212121] font-bold print-black">{{ quiz.score }}%</div>
-                            </li>
-                        </ul>
-                        <div v-else class="p-10 text-center text-gray-500 italic">No quizzes recorded.</div>
-                    </div>
+                <div class="flex gap-3 no-print">
+                    <Button @click="isModalOpen = true" class="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+                        <PencilLine class="w-4 h-4" /> Evaluation
+                    </Button>
+                    <Button @click="handlePrint" variant="outline" class="gap-2 text-slate-600">
+                        <Download class="w-4 h-4" /> Download
+                    </Button>
                 </div>
+            </div>
 
-                <div class="hidden print:flex justify-between mt-20 pt-10 border-t border-gray-300 text-black">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><FileText class="w-6 h-6" /></div>
                     <div>
-                        <p class="font-bold text-sm">Prepared by:</p>
-                        <div class="h-16 mt-2 border-b border-black w-48"></div>
-                        <p class="mt-2 text-sm font-semibold">{{ teacherName }}</p>
-                        <p class="text-xs text-gray-500">Teacher</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase">Activities Completed</p>
+                        <p class="text-2xl font-bold text-slate-900">{{ activities.length }}</p>
                     </div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-teal-50 text-teal-600 rounded-lg"><Trophy class="w-6 h-6" /></div>
                     <div>
-                        <p class="font-bold text-sm">Verified by:</p>
-                        <div class="h-16 mt-2 border-b border-black w-48"></div>
-                        <p class="mt-2 text-sm font-semibold">Principal / Head of Department</p>
-                        <p class="text-xs text-gray-500">Date: ________________</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase">Quizzes Taken</p>
+                        <p class="text-2xl font-bold text-slate-900">{{ quizzes.length }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2 uppercase text-[10px] tracking-wider">
+                        <MessageSquare class="w-4 h-4 text-teal-600" /> Official Teacher Evaluation
+                    </h3>
+                    <button v-if="existingReport" @click="deleteRemark" class="no-print text-slate-400 hover:text-red-600">
+                        <Trash2 class="w-4 h-4" />
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div v-if="existingReport" class="italic text-slate-700 font-medium text-lg leading-relaxed">
+                        "{{ existingReport.comments }}"
+                    </div>
+                    <div v-else class="text-center py-4 text-slate-400 italic">No evaluation recorded.</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-slate-900">
+                    <div class="px-6 py-4 border-b bg-slate-50 font-bold text-xs uppercase tracking-tight flex items-center gap-2">
+                        <CheckCircle class="w-4 h-4 text-teal-600" /> Activities
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                        <div v-for="(act, index) in activities" :key="index" class="p-4 flex justify-between items-center">
+                            <span class="font-medium">{{ act.title }}</span>
+                            <span class="text-xs text-slate-400">{{ formatDate(act.completed_at) }}</span>
+                        </div>
                     </div>
                 </div>
 
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-slate-900">
+                    <div class="px-6 py-4 border-b bg-slate-50 font-bold text-xs uppercase tracking-tight flex items-center gap-2">
+                        <Trophy class="w-4 h-4 text-teal-600" /> Quizzes
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                        <div v-for="(quiz, index) in quizzes" :key="index" class="p-4 flex justify-between items-center">
+                            <span class="font-medium">{{ quiz.title }}</span>
+                            <Badge class="bg-teal-50 text-teal-700 border-teal-200 font-bold">{{ quiz.score }}%</Badge>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-            <div class="bg-[#ffffff] w-full max-w-lg rounded-xl border border-white/20 shadow-2xl">
-                <div class="p-6 border-b border-white/10 flex justify-between items-center bg-[#ffffff]">
-                    <h2 class="text-xl font-bold text-[#212121]">Teacher Evaluation</h2>
-                    <button @click="isModalOpen = false" class="text-gray-400 hover:text-white transition-colors"><X /></button>
+        <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-slate-200 overflow-hidden text-slate-900">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 font-bold">
+                    Teacher Evaluation
+                    <button @click="isModalOpen = false" class="text-slate-400"><X /></button>
                 </div>
-                <form @submit.prevent="submitRemark" class="p-6">
-                    <textarea 
-                        v-model="form.comments" 
-                        rows="6" 
-                        class="w-full bg-[#ffffff] border border-black/30 rounded-lg text-[#212121] p-4 focus:ring-2 focus:ring-[#ffcc00] focus:outline-none" 
-                        placeholder="Enter remarks..."
-                        required
-                    ></textarea>
-                    <div class="flex justify-end gap-3 mt-6">
-                        <button type="button" @click="isModalOpen = false" class="text-gray-400 hover:text-white transition-colors">Cancel</button>
-                        <button 
-                            type="submit" 
-                            class="bg-[#0060df] text-[#ffffff] px-6 py-2 rounded-lg font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50"
-                            :disabled="form.processing"
-                        >
-                            {{ form.processing ? 'Saving...' : 'Save' }}
-                        </button>
+                <form @submit.prevent="submitRemark" class="p-6 space-y-4">
+                    <textarea v-model="form.comments" rows="5" class="w-full border rounded-lg p-4 outline-none focus:ring-2 focus:ring-teal-500 transition-all text-slate-900"></textarea>
+                    <div class="flex justify-end gap-3">
+                        <Button type="button" variant="outline" @click="isModalOpen = false">Cancel</Button>
+                        <Button type="submit" class="bg-teal-600 text-white" :disabled="form.processing">Save</Button>
                     </div>
                 </form>
             </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>
-
-<!-- <style>
-@media print {
-    .no-print, button, .backdrop-blur-sm { display: none !important; }
-    body { background: white !important; }
-    .bg-[#001f3f], .bg-[#0a192f], .bg-[#0d223f] { background: transparent !important; color: black !important; box-shadow: none !important; }
-    .text-white, .text-gray-200, .text-gray-400, .text-[#ffcc00] { color: black !important; }
-    .print-black { color: black !important; }
-    .border-print { border: 1px solid #ddd !important; border-radius: 8px !important; margin-bottom: 20px !important; }
-    
-    /* Show signature only in print */
-    .print\:flex { display: flex !important; }
-    .hidden { display: none; }
-}
-</style> -->
-
-<style scoped> /* Added scoped for better practice */
-@media print {
-    .no-print, button, .backdrop-blur-sm { display: none !important; }
-    body { background: white !important; }
-    
-    /* Use standard class names or attribute selectors to avoid escape issues */
-    .bg-\[\#001f3f\], .bg-\[\#0a192f\], .bg-\[\#0d223f\] { 
-        background: transparent !important; 
-        color: black !important; 
-        box-shadow: none !important; 
-    }
-    
-    .text-white, .text-gray-200, .text-gray-400, .text-\[\#ffcc00\] { 
-        color: black !important; 
-    }
-    
-    .print-black { color: black !important; }
-    
-    .border-print { 
-        border: 1px solid #ddd !important; 
-        border-radius: 8px !important; 
-        margin-bottom: 20px !important; 
-    }
-    
-    /* Target the element directly or use a simpler class if VS Code keeps complaining */
-    [class*="print:flex"] { 
-        display: flex !important; 
-    }
-}
-</style>

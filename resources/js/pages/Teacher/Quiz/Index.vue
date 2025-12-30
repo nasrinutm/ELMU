@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3'; 
-import { Button } from '@/components/ui/button'; 
-import { Plus, Pencil, Trash2, Eye, Search, Gamepad2, Users } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+// FIX: Use SidebarLayout to match other pages
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+    Search,
+    Plus,
+    BrainCircuit,
+    Pencil,
+    Trash2,
+    Eye,
+    Users,
+    FileQuestion
+} from 'lucide-vue-next';
 import { route } from 'ziggy-js';
-import { computed, ref } from 'vue';
 
 const props = defineProps<{
     quizzes: Array<{
@@ -19,13 +31,18 @@ const props = defineProps<{
 
 const searchQuery = ref('');
 
-// Filter Logic
+const breadcrumbs = [
+    { title: 'Dashboard', href: route('dashboard') },
+    { title: 'Quiz Management', href: route('teacher.quiz.index') },
+];
+
+// Client-side Filter Logic (Kept from your original code)
 const filteredQuizzes = computed(() => {
     let data = props.quizzes;
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
-        data = data.filter((q) => 
-            q.title.toLowerCase().includes(query) || 
+        data = data.filter((q) =>
+            q.title.toLowerCase().includes(query) ||
             q.description.toLowerCase().includes(query)
         );
     }
@@ -38,117 +55,127 @@ const deleteQuiz = (id: number) => {
     }
 };
 
-// Helper for Difficulty Color
+// Helper: Modern Difficulty Colors
 const getDifficultyColor = (difficulty: string) => {
-    switch(difficulty) {
-        case 'Easy': return 'bg-green-900/50 text-green-200 border-green-700';
-        case 'Medium': return 'bg-yellow-900/50 text-yellow-200 border-yellow-700';
-        case 'Hard': return 'bg-red-900/50 text-red-200 border-red-700';
-        default: return 'bg-gray-700 text-gray-300 border-gray-600';
-    }
+    const d = (difficulty || '').toLowerCase();
+    if (d === 'easy') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (d === 'medium') return 'bg-amber-100 text-amber-700 border-amber-200';
+    if (d === 'hard') return 'bg-rose-100 text-rose-700 border-rose-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+};
+
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 </script>
 
 <template>
-    <Head title="Teacher Dashboard" />
+    <Head title="Quiz Management" />
 
-    <AppLayout :breadcrumbs="[
-        { title: 'Dashboard', href: route('dashboard') },
-        { title: 'Teacher Dashboard', href: route('teacher.quiz.index') }
-    ]">
-        <div class="py-12">
-            <div class="w-full sm:px-6 lg:px-8">
-                
-                <div class="bg-[#003366] overflow-hidden shadow-xl sm:rounded-lg border border-[#004080]">
-                    
-                    <div class="p-6 border-b border-[#004080] flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#002244]">
-                        <h1 class="text-2xl font-bold text-[#FFD700]">Teacher Dashboard</h1>
-                        
-                        <div class="flex items-center gap-3 w-full sm:w-auto">
-                            <div class="relative w-full sm:w-64">
-                                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-300" />
-                                <input 
-                                    v-model="searchQuery"
-                                    type="text" 
-                                    placeholder="Search quizzes..." 
-                                    class="w-full pl-9 pr-4 py-2 bg-[#003366] border border-blue-400 text-white rounded-md text-sm placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                />
-                            </div>
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6">
 
-                            <Link :href="route('teacher.quiz.create')">
-                                <Button class="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md whitespace-nowrap">
-                                    <Plus class="w-4 h-4 mr-2" />
-                                    Create New Quiz
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                        <BrainCircuit class="w-7 h-7 text-teal-600" />
+                        Quiz Management
+                    </h1>
+                    <p class="text-slate-500 mt-1 text-sm">
+                        Create, edit, and manage assessments for your students.
+                    </p>
+                </div>
 
-                    <div class="p-0">
-                        <div v-if="filteredQuizzes.length > 0" class="divide-y divide-[#004080]">
-                            
-                            <div v-for="quiz in filteredQuizzes" :key="quiz.id" 
-                                class="p-6 hover:bg-[#003366]/50 transition duration-150 ease-in-out flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
-                                
-                                <div class="flex items-start gap-4">
-                                    <div class="p-3 rounded-lg bg-[#002244] border border-[#004080] group-hover:border-blue-500/50 transition">
-                                        <Gamepad2 class="w-6 h-6 text-blue-300" />
-                                    </div>
+                <Link :href="route('teacher.quiz.create')">
+                    <Button class="w-full md:w-auto bg-teal-600 hover:bg-teal-700 text-white shadow-sm gap-2 font-medium">
+                        <Plus class="w-4 h-4" /> Create New Quiz
+                    </Button>
+                </Link>
+            </div>
 
-                                    <div>
-                                        <div class="flex items-center gap-3">
-                                            <h3 class="font-bold text-lg text-white group-hover:text-[#FFD700] transition cursor-default">
-                                                {{ quiz.title }}
-                                            </h3>
-                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" :class="getDifficultyColor(quiz.difficulty)">
-                                                {{ quiz.difficulty }}
-                                            </span>
-                                        </div>
-                                        
-                                        <p class="text-sm text-gray-300 mb-2 line-clamp-2 mt-1">{{ quiz.description }}</p>
-                                        
-                                        <div class="flex items-center gap-4 text-xs text-gray-400">
-                                            <span class="flex items-center text-blue-300">
-                                                <Users class="w-3 h-3 mr-1" />
-                                                {{ quiz.attempts_count }} Student Attempts
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex items-center gap-3 self-end sm:self-center">
-                                    
-                                    <Link :href="route('teacher.quiz.results', quiz.id)" 
-                                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-semibold shadow hover:shadow-lg transition flex items-center border border-blue-500/50" 
-                                        title="View Results">
-                                        <Eye class="w-4 h-4 mr-2" />
-                                        Results
-                                    </Link>
-
-                                    <div class="flex items-center gap-1 pl-3 border-l border-[#004080] ml-2">
-                                        <Link :href="route('teacher.quiz.edit', quiz.id)" class="p-2 text-gray-400 hover:text-[#FFD700] hover:bg-[#002244] rounded-md transition" title="Edit Quiz">
-                                            <Pencil class="w-4 h-4" />
-                                        </Link>
-                                        <button @click="deleteQuiz(quiz.id)" class="p-2 text-gray-400 hover:text-red-400 hover:bg-[#002244] rounded-md transition" title="Delete Quiz">
-                                            <Trash2 class="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <div v-else class="flex flex-col items-center justify-center py-16 text-center">
-                            <div class="bg-[#002244] p-4 rounded-full mb-4">
-                                <Search class="w-8 h-8 text-gray-500" />
-                            </div>
-                            <h3 class="text-lg font-medium text-white">No quizzes found</h3>
-                            <p class="text-gray-400 mt-1">Get started by creating your first quiz.</p>
-                        </div>
-
-                    </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="relative w-full">
+                    <Search class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                        v-model="searchQuery"
+                        placeholder="Search quizzes by title..."
+                        class="pl-9 bg-slate-50 border-slate-200 focus:bg-white focus:ring-teal-500 focus:border-teal-500 transition-all w-full"
+                    />
                 </div>
             </div>
+
+            <div class="grid gap-4">
+
+                <div v-if="filteredQuizzes.length === 0" class="bg-white p-12 rounded-xl border border-slate-200 text-center shadow-sm">
+                    <div class="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FileQuestion class="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">No quizzes found</h3>
+                    <p class="text-slate-500 mt-1 text-sm">Get started by creating your first quiz.</p>
+                </div>
+
+                <div
+                    v-for="quiz in filteredQuizzes"
+                    :key="quiz.id"
+                    class="group bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-teal-300 transition-all flex flex-col md:flex-row gap-5 items-start md:items-center"
+                >
+                    <div class="shrink-0 hidden md:block">
+                        <div class="h-12 w-12 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center border border-teal-100">
+                            <BrainCircuit class="w-6 h-6" />
+                        </div>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3 mb-1 flex-wrap">
+                            <h3 class="text-lg font-bold text-slate-900 truncate group-hover:text-teal-700 transition-colors">
+                                {{ quiz.title }}
+                            </h3>
+                            <Badge variant="outline" :class="getDifficultyColor(quiz.difficulty)" class="uppercase text-[10px] tracking-wider font-bold">
+                                {{ quiz.difficulty }}
+                            </Badge>
+                        </div>
+
+                        <p class="text-slate-500 text-sm line-clamp-1 mb-3">
+                            {{ quiz.description || 'No description provided.' }}
+                        </p>
+
+                        <div class="flex items-center gap-4 text-xs font-medium text-slate-400">
+                            <span class="flex items-center gap-1.5 text-slate-600">
+                                <Users class="w-3.5 h-3.5 text-teal-500" />
+                                {{ quiz.attempts_count }} Student Attempts
+                            </span>
+                            <span class="text-slate-300">|</span>
+                            <span>Created {{ formatDate(quiz.created_at) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 self-end md:self-center w-full md:w-auto justify-end border-t md:border-t-0 border-slate-100 pt-3 md:pt-0 mt-2 md:mt-0">
+                        <Link :href="route('teacher.quiz.results', quiz.id)">
+                            <Button size="sm" class="bg-blue-600 hover:bg-blue-700 text-white border-none gap-2 shadow-sm">
+                                <Eye class="w-3.5 h-3.5" /> Results
+                            </Button>
+                        </Link>
+
+                        <div class="flex items-center gap-1 border-l border-slate-200 pl-2 ml-2">
+                            <Link :href="route('teacher.quiz.edit', quiz.id)">
+                                <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-md">
+                                    <Pencil class="w-4 h-4" />
+                                </Button>
+                            </Link>
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                                @click="deleteQuiz(quiz.id)"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>

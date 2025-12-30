@@ -11,70 +11,59 @@ use Inertia\Inertia;
 
 class ReportController extends Controller
 {
-    /**
-     * Display the main student directory for reports.
-     */
     public function index()
     {
         $students = User::role('student')->get(['id', 'name', 'email']);
-
-        return Inertia::render('Reports/Index', [
-            'students' => $students
-        ]);
+        return Inertia::render('Reports/Index', ['students' => $students]);
     }
 
-    /**
-     * Display detailed performance & Remark CRUD.
-     */
     public function showStudentPerformance(User $student)
     {
-        // 1. Fetch activities with a JOIN to get the real Title
-        // Assuming your main definition table is 'activities' and the FK is 'activity_id'
+        // 1. Fetch activities
         $completedActivities = DB::table('activity_submissions')
             ->join('activities', 'activity_submissions.activity_id', '=', 'activities.id')
             ->where('activity_submissions.user_id', $student->id)
-            ->select(
-                'activities.title as title', // Get the real title from the activities table
-                'activity_submissions.created_at as completed_at'
-            )
-            ->orderBy('activity_submissions.created_at', 'desc') // Sort by newest
+            ->select('activities.title as title', 'activity_submissions.created_at as completed_at')
+            ->orderBy('activity_submissions.created_at', 'desc')
             ->get();
 
-        // 2. Fetch from quiz_attempts table
+        // 2. Fetch quizzes with title fallback
         $completedQuizzes = DB::table('quiz_attempts')
             ->where('user_id', $student->id)
-            ->select('quiz_title as title', 'score', 'total_questions', 'created_at as completed_at')
+            ->select('quiz_title', 'score', 'total_questions', 'created_at as completed_at')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($quiz) {
-                // Convert score to percentage
-                $percentage = $quiz->total_questions > 0 
-                    ? round(($quiz->score / $quiz->total_questions) * 100) 
+                $percentage = ($quiz->total_questions > 0)
+                    ? round(($quiz->score / $quiz->total_questions) * 100)
                     : 0;
 
                 return [
-                    'title' => $quiz->title,
-                    'score' => $percentage, 
-                    'completed_at' => $quiz->completed_at
+                    'title' => $quiz->quiz_title ?: 'General Assessment', // Fallback for blank titles
+                    'score' => (int) $percentage,
+                    'completed_at' => $quiz->completed_at,
                 ];
             });
 
-        // 3. Get the latest official remark for this student
+        // 3. Stats for cards
+        $stats = [
+            'quiz_avg' => $completedQuizzes->count() > 0 ? round($completedQuizzes->avg('score')) : 0,
+            'activities_completed' => $completedActivities->count()
+        ];
+
         $existingReport = Report::where('student_id', $student->id)
             ->where('subject', 'Overall Performance')
             ->first();
 
         return Inertia::render('Reports/StudentDetail', [
-            'student' => $student->only(['id', 'name', 'email']),
+            'student' => $student->only(['id', 'name', 'email', 'username']),
             'activities' => $completedActivities,
             'quizzes' => $completedQuizzes,
-            'existingReport' => $existingReport 
+            'existingReport' => $existingReport,
+            'stats' => $stats
         ]);
     }
 
-    /**
-     * Handle saving or updating the remark.
-     */
     public function saveRemark(Request $request)
     {
         $validated = $request->validate([
@@ -83,23 +72,13 @@ class ReportController extends Controller
         ]);
 
         Report::updateOrCreate(
-            [
-                'student_id' => $validated['student_id'],
-                'subject' => 'Overall Performance'
-            ],
-            [
-                'teacher_id' => Auth::id(),
-                'comments' => $validated['comments'],
-                'score' => 0 
-            ]
+            ['student_id' => $validated['student_id'], 'subject' => 'Overall Performance'],
+            ['teacher_id' => Auth::id(), 'comments' => $validated['comments'], 'score' => 0]
         );
 
         return back()->with('success', 'Evaluation saved successfully!');
     }
 
-    /**
-     * Delete the official remark.
-     */
     public function deleteRemark(Report $report)
     {
         $report->delete();

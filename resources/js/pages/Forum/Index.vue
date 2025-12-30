@@ -14,10 +14,8 @@ import {
     ArrowUpDown
 } from 'lucide-vue-next';
 import debounce from 'lodash/debounce';
-// FIX: Import 'route' to resolve the TypeScript error
 import { route } from 'ziggy-js';
 
-// Define Props
 const props = defineProps<{
     posts: {
         data: Array<{
@@ -42,17 +40,16 @@ const breadcrumbs = [
     { title: 'Discussion Forum', href: '/forum' },
 ];
 
-// State
 const search = ref(props.filters.search || '');
 const sort = ref(props.filters.sort || 'latest');
 
-// Debounce Search & Sort
 const updateFilters = debounce(() => {
     router.get(route('forum.index'), {
         search: search.value,
         sort: sort.value
     }, {
         preserveState: true,
+        preserveScroll: true,
         replace: true
     });
 }, 300);
@@ -61,7 +58,6 @@ watch([search, sort], () => {
     updateFilters();
 });
 
-// Helpers
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -78,7 +74,7 @@ const formatDate = (dateString: string) => {
     <Head title="Discussion Forum" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 space-y-6">
+        <div class="min-h-screen space-y-6">
 
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
@@ -87,7 +83,7 @@ const formatDate = (dateString: string) => {
                 </div>
 
                 <Link :href="route('forum.create')">
-                    <Button class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2">
+                    <Button class="btn-theme w-full md:w-auto shadow-sm gap-2">
                         <PlusCircle class="w-4 h-4" /> Start New Discussion
                     </Button>
                 </Link>
@@ -107,7 +103,7 @@ const formatDate = (dateString: string) => {
                     <ArrowUpDown class="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
                     <select
                         v-model="sort"
-                        class="w-full h-10 pl-9 pr-4 rounded-md border border-slate-200 bg-slate-50 text-sm text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none cursor-pointer"
+                        class="w-full h-10 pl-9 pr-4 rounded-md border border-slate-200 bg-slate-50 text-sm text-slate-700 focus:ring-2 focus:ring-primary focus:outline-none appearance-none cursor-pointer"
                     >
                         <option value="latest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -120,19 +116,19 @@ const formatDate = (dateString: string) => {
                 <div
                     v-for="post in posts.data"
                     :key="post.id"
-                    class="group bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer relative"
+                    class="group bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer relative"
                 >
                     <Link :href="route('forum.show', post.id)" class="absolute inset-0" />
 
                     <div class="flex items-start gap-4">
                         <div class="shrink-0">
-                            <div class="h-10 w-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 uppercase">
+                            <div class="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm border border-primary/20 uppercase">
                                 {{ post.user?.name?.charAt(0) || 'U' }}
                             </div>
                         </div>
 
                         <div class="flex-1 min-w-0">
-                            <h3 class="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors wrap-break-word">
+                            <h3 class="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors wrap-break-word">
                                 {{ post.title }}
                             </h3>
 
@@ -158,9 +154,9 @@ const formatDate = (dateString: string) => {
                         </div>
 
                         <div class="hidden md:flex flex-col items-end justify-center min-w-20">
-                            <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
-                                <MessageCircle class="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
-                                <span class="font-bold text-slate-700 group-hover:text-blue-700">{{ post.replies_count }}</span>
+                            <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 group-hover:bg-primary/5 group-hover:border-primary/10 transition-colors">
+                                <MessageCircle class="w-4 h-4 text-slate-400 group-hover:text-primary" />
+                                <span class="font-bold text-slate-700 group-hover:text-primary">{{ post.replies_count }}</span>
                             </div>
                             <span class="text-[10px] text-slate-400 mt-1 uppercase tracking-wide">Replies</span>
                         </div>
@@ -176,7 +172,7 @@ const formatDate = (dateString: string) => {
                         Be the first to start a conversation in the community!
                     </p>
                     <Link :href="route('forum.create')">
-                        <Button variant="outline" class="border-blue-200 text-blue-600 hover:bg-blue-50">
+                        <Button variant="outline" class="border-primary/20 text-primary hover:bg-primary/5">
                             Start a Discussion
                         </Button>
                     </Link>
@@ -194,7 +190,7 @@ const formatDate = (dateString: string) => {
                         <Link
                             v-else
                             class="px-3 py-1 text-sm border rounded transition-colors shadow-sm"
-                            :class="link.active ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                            :class="link.active ? 'btn-theme border-transparent font-bold' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
                             :href="link.url"
                             v-html="link.label"
                         />

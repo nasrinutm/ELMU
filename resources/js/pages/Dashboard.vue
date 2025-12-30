@@ -3,7 +3,6 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import {
     FileText,
-    Upload,
     Download,
     BookOpen,
     Activity,
@@ -13,15 +12,12 @@ import {
 import { route } from 'ziggy-js';
 
 // --- TYPE FIXES ---
-
-// 1. Define a loose User interface that accepts any role structure
 interface User {
     name: string;
-    // Allow roles to be strings OR objects to prevent TS errors
     roles: any[];
 }
 
-// 2. Define Props
+// --- Props ---
 defineProps<{
     stats: {
         users: number;
@@ -39,11 +35,8 @@ defineProps<{
 }>();
 
 const page = usePage();
-
-// 3. Force Cast User (Fixes "Conversion may be a mistake" error)
 const user = page.props.auth.user as unknown as User;
 
-// 4. Safe Check for Teacher Role (Handles both string 'teacher' and object {name: 'teacher'})
 const isTeacher = user.roles.some((r: any) =>
     r === 'teacher' || r?.name === 'teacher'
 );
@@ -74,22 +67,13 @@ const formatDate = (dateString: string) => {
                         Here is an overview of the learning platform and your activities.
                     </p>
                 </div>
-
-                <div v-if="isTeacher">
-                    <Link :href="route('materials.create')">
-                        <button class="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-sm hover:bg-blue-700 transition shadow-md font-medium text-sm">
-                            <Upload class="w-4 h-4" /> Upload Material
-                        </button>
-                    </Link>
                 </div>
-            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90">Total Materials</p>
+                            <p class="text-sm font-medium opacity-90 uppercase">Total Materials</p>
                             <h3 class="mt-2 text-4xl font-bold">{{ stats.materials }}</h3>
                             <p class="mt-2 text-xs opacity-75">Available Resources</p>
                         </div>
@@ -102,7 +86,7 @@ const formatDate = (dateString: string) => {
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90">
+                            <p class="text-sm font-medium opacity-90 uppercase">
                                 {{ isTeacher ? 'My Uploads' : 'Activities Completed' }}
                             </p>
                             <h3 class="mt-2 text-4xl font-bold">{{ stats.my_materials }}</h3>
@@ -120,7 +104,7 @@ const formatDate = (dateString: string) => {
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-orange-500 to-amber-600 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90">Active Community</p>
+                            <p class="text-sm font-medium opacity-90 uppercase">Active Community</p>
                             <h3 class="mt-2 text-4xl font-bold">{{ stats.users }}</h3>
                             <p class="mt-2 text-xs opacity-75">Students & Teachers</p>
                         </div>
@@ -131,8 +115,7 @@ const formatDate = (dateString: string) => {
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
                 <div class="lg:col-span-2 bg-white border border-slate-200 shadow-sm rounded-sm">
                     <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                         <h3 class="font-bold text-slate-900 flex items-center gap-2">
@@ -161,9 +144,6 @@ const formatDate = (dateString: string) => {
                                     <h4 class="text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
                                         {{ material.title }}
                                     </h4>
-                                    <p class="text-xs text-slate-500 truncate max-w-md">
-                                        {{ material.description }}
-                                    </p>
                                     <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-400 uppercase tracking-wide">
                                         <span>By {{ material.user.name }}</span>
                                         <span>•</span>
@@ -185,7 +165,7 @@ const formatDate = (dateString: string) => {
 
                 <div class="space-y-6">
                     <div class="bg-white border border-slate-200 shadow-sm p-6 rounded-sm">
-                        <h3 class="font-bold text-slate-900 mb-4">Quick Navigation</h3>
+                        <h3 class="font-bold text-slate-900 mb-4 uppercase text-xs tracking-wider">Quick Navigation</h3>
                         <div class="space-y-2">
                             <Link :href="route('forum.index')" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 rounded-sm transition group">
                                 <span class="text-sm font-medium">Discussion Forum</span>
@@ -204,7 +184,7 @@ const formatDate = (dateString: string) => {
 
                     <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-sm shadow-md">
                         <h3 class="font-bold text-lg mb-2">Did You Know?</h3>
-                        <p class="text-sm text-slate-300 mb-4">
+                        <p class="text-sm text-slate-300 mb-4 leading-relaxed">
                             You can track student performance effectively by using the Reports section.
                         </p>
                         <Link :href="route('reports.index')" class="text-xs font-bold text-blue-300 hover:text-white transition uppercase tracking-widest">
@@ -212,7 +192,6 @@ const formatDate = (dateString: string) => {
                         </Link>
                     </div>
                 </div>
-
             </div>
         </div>
     </AppSidebarLayout>
