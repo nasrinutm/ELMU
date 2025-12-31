@@ -11,23 +11,25 @@ return new class extends Migration
      */
     public function up(): void
 {
-    Schema::create('quiz_attempts', function (Blueprint $table) {
+    Schema::create('student_manual_activities', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-        $table->integer('quiz_id'); // Storing ID directly since we are using mock Quizzes
-        $table->string('quiz_title');
+        // Links the activity to a specific user (student)
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        
+        // The name of the manual activity (e.g., "Midterm Exam")
+        $table->string('title');
+        
+        // The score received (0-100)
         $table->integer('score');
-        $table->integer('total_questions');
+        
         $table->timestamps();
     });
-
-    }
-
+}
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('quiz_attempts');
+        Schema::dropIfExists('student_manual_activities');
     }
 };

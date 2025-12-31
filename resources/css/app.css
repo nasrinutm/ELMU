@@ -4,33 +4,26 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/* --- TAILWIND CONFIGURATION --- */
 @theme inline {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    --radius-lg: var(--radius);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-sm: calc(var(--radius) - 4px);
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 
-    /* Map all colors to CSS variables */
+    /* Map Tailwind Utilities to CSS Variables */
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
-    --color-popover: var(--popover);
-    --color-popover-foreground: var(--popover-foreground);
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
-    --color-accent: var(--accent);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-destructive: var(--destructive);
-    --color-destructive-foreground: var(--destructive-foreground);
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
 
+    /* Sidebar Variables */
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -39,96 +32,127 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Dynamic Button Colors */
+    --color-action: var(--action-color);
+    --color-action-hover: var(--action-hover);
 }
 
 @layer base {
-    *, ::after, ::before, ::backdrop, ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+    * { border-color: var(--border); }
+    body { background-color: var(--background); color: var(--foreground); }
+
+    /* Font readability adjustments */
+    aside a, aside button { font-size: 15px !important; font-weight: 500; }
+
+    /* Standardized Action Button Utility */
+    .btn-theme {
+        background-color: var(--action-color);
+        color: white;
+        transition: all 0.2s ease-in-out;
+    }
+    .btn-theme:hover {
+        background-color: var(--action-hover);
     }
 }
 
-@layer utilities {
-    body, html {
-        --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-    }
-}
-
-/* --- ELMU THEME (Deep Blue & Yellow) --- */
+/* =========================================
+   DEFAULT THEME (Fallback)
+========================================= */
 :root {
-    /* Page Background (Dark Blue) */
-    --background: #ffffff;
-    --foreground: #000000; /* Yellow Text */
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --primary: #2563eb;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
+    --muted: #f8fafc;
+    --muted-foreground: #64748b;
+    --border: #e2e8f0;
+    --input: #ffffff;
+    --ring: #2563eb;
+    --radius: 0rem;
 
-    /* Cards (Yellow Background, Blue Text) */
-    --card: #ffd900;
-    --card-foreground: #003366;
+    /* Sidebar Default */
+    --sidebar-background: #ffffff;
+    --sidebar-foreground: #334155;
+    --sidebar-primary: #2563eb;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #eff6ff;
+    --sidebar-accent-foreground: #1d4ed8;
+    --sidebar-border: #e2e8f0;
+    --sidebar-ring: #2563eb;
 
-    --popover: #ffffff;
-    --popover-foreground: #003366;
-
-    /* Primary: Yellow Background, Blue Text */
-    --primary: #FFD900;
-    --primary-foreground: #003366;
-
-    /* Secondary: Yellow Background, Blue Text */
-    --secondary: #FFD900;
-    --secondary-foreground: #003366;
-
-    /* Muted: Dark Blue Background, Black Text (for subdued elements) */
-    --muted: #003366;
-    --muted-foreground: #000000;
-    --muted-foreground1: #ffd900;
-    /* Accent: Light Gray Background, Blue Text */
-    --accent: #f6f6f3;
-    --accent-foreground: #004080;
-
-    /* Destructive: White (for contrast on dark background) */
-    --destructive: #000000;
-    --destructive-foreground: #003366; /* Changed to blue for readability on white */
-
-    --border: #000000;
-    --input: #ffffff; /* Changed to white for visibility on dark bg */
-    --ring: #000000;
-
-    --radius: 0.5rem;
-
-    /* Sidebar: Yellow Background, Blue Text */
-    --sidebar-background: #FFD900;
-    --sidebar-foreground: #003366;
-
-    /* Sidebar Active: Yellow (Same as BG, might want to adjust for contrast) */
-    --sidebar-primary: #FFD900;
-    --sidebar-primary-foreground: #003366;
-
-    /* Sidebar Hover: Blue Background, White Text */
-    --sidebar-accent: #004080;
-    --sidebar-accent-foreground: #ffffff;
-
-    --sidebar-border: #1e40af;
-    --sidebar-ring: #FFD900;
+    /* Action Default */
+    --action-color: #2563eb;
+    --action-hover: #1d4ed8;
 }
 
-@layer base {
-    * {
-        border-color: var(--border);
-    }
-    body {
-        background-color: var(--background);
-        color: var(--foreground);
-    }
+/* =========================================
+   ROLE-BASED THEMES
+========================================= */
 
-    /* --- SIDEBAR FONT OVERRIDE --- */
-    /* Targets standard Shadcn/Laravel Sidebar components */
-    [data-sidebar="menu-button"], 
-    [data-sidebar="menu-sub-button"],
-    aside a,
-    aside button {
-        font-size: 16px !important; /* Increased from default 14px */
-        font-weight: 500; /* Slightly bolder for readability */
-    }
+/* --- ADMIN THEME (Navy) --- */
+.theme-admin {
+    --background: #f3f4f6;
+    --foreground: #1e293b;
+    --primary: #2563eb;
+    --primary-foreground: #ffffff;
 
-    [data-sidebar="group-label"] {
-        font-size: 16px !important; /* Increased from default 12px */
-        font-weight: 700;
-    }
+    /* Navy Sidebar */
+    --sidebar-background: #1e293b;
+    --sidebar-foreground: #f1f5f9;
+    --sidebar-primary: #3b82f6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #334155;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #1e293b;
+
+    /* Action Colors: Professional Navy */
+    --action-color: #1e293b;
+    --action-hover: #0f172a;
+}
+
+/* --- TEACHER THEME (Professional Teal) --- */
+.theme-teacher {
+    --background: #f0fdfa;
+    --foreground: #134e4a;
+    --primary: #0d9488;
+    --primary-foreground: #ffffff;
+
+    /* Deep Teal Sidebar */
+    --sidebar-background: #0f766e;
+    --sidebar-foreground: #f0fdfa;
+    --sidebar-primary: #2dd4bf;
+    --sidebar-primary-foreground: #0f766e;
+    --sidebar-accent: #115e59;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #0f766e;
+
+    /* Action Colors: Emerald/Teal Green */
+    --action-color: #10b981;
+    --action-hover: #059669;
+}
+
+/* --- STUDENT THEME (Modern Blue/Indigo) --- */
+.theme-student {
+    --background: #f0f9ff;
+    --foreground: #0f172a;
+    --primary: #0284c7;
+    --primary-foreground: #ffffff;
+
+    /* Royal Blue Sidebar */
+    --sidebar-background: #1e40af;
+    --sidebar-foreground: #eff6ff;
+    --sidebar-primary: #38bdf8;
+    --sidebar-primary-foreground: #0c4a6e;
+    --sidebar-accent: #1e3a8a;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #1e40af;
+
+    /* Action Colors: Bright Blue */
+    --action-color: #2563eb;
+    --action-hover: #1d4ed8;
 }

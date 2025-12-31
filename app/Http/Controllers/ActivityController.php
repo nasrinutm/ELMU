@@ -3,38 +3,33 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Models\ActivitySubmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ActivityController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $query = Activity::query()
             ->with('user:id,name')
+            ->with('mySubmission')
             ->select('id', 'user_id', 'title', 'type', 'description', 'due_date', 'file_path', 'created_at');
 
-        // Filter by Date
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
         }
 
-        // Sorting
         $sortField = $request->input('sort_by', 'created_at'); 
         $sortDirection = $request->input('sort', 'desc') === 'oldest' ? 'asc' : 'desc';
         $query->orderBy($sortField, $sortDirection);
 
-        // Permissions
         $permissions = ['manage_activities' => false];
         if (Auth::check()) {
+            /** @var \App\Models\User $user */
             $user = Auth::user(); 
-            // Ensures Admins and Teachers can manage
             $permissions['manage_activities'] = $user->hasRole(['admin', 'teacher']) || $user->can('manage activities');
         }
 
@@ -48,22 +43,16 @@ class ActivityController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return Inertia::render('Activities/Create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise', // Only these two allowed via form
+            'type' => 'required|string|in:Assignment,Exercise,Submission',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -72,13 +61,12 @@ class ActivityController extends Controller
         $data = [
             'user_id' => Auth::id(),
             'title' => $request->title,
-            'type' => $request->type, // 'Assignment' or 'Exercise'
+            'type' => $request->type,
             'description' => $request->description,
             'due_date' => $request->due_date,
             'quiz_data' => null, 
         ];
 
-        // Handle Main File Upload
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $data['file_path'] = $file->store('activities', 'public');
@@ -86,27 +74,79 @@ class ActivityController extends Controller
             $data['file_type'] = $file->getClientOriginalExtension();
         }
 
-        // 1. Create Main Activity
         Activity::create($data);
-
-        // 2. AUTOMATICALLY CREATE SUBMISSION SLOT
-        // Since we restricted type to Assignment/Exercise, we always create this slot.
-        Activity::create([
-            'user_id' => Auth::id(),
-            'title' => 'Submission: ' . $request->title,
-            'type' => 'Submission', // This puts it in the Orange section
-            'description' => 'Please upload your work for ' . $request->title . ' here.',
-            'due_date' => $request->due_date,
-            'file_path' => null,
-        ]);
 
         return redirect()->route('activities.index')
             ->with('success', 'Activity and Submission slot created successfully.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    public function show(Activity $activity)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $isTeacher = $user->hasRole(['admin', 'teacher']);
+
+        // Load specific submission for the logged-in user
+        $activity->load('mySubmission');
+
+        // If teacher, load ALL submissions with student names
+        $allSubmissions = [];
+        if ($isTeacher) {
+            $allSubmissions = ActivitySubmission::where('activity_id', $activity->id)
+                ->with('user:id,name,email')
+                ->orderBy('submitted_at', 'desc')
+                ->get();
+        }
+        
+        return Inertia::render('Activities/Show', [
+            'activity' => $activity,
+            'allSubmissions' => $allSubmissions, // Passed to Vue
+            'isTeacher' => $isTeacher
+        ]);
+    }
+
+    public function submit(Request $request, Activity $activity)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->store('submissions', 'public');
+
+        ActivitySubmission::updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'activity_id' => $activity->id
+            ],
+            [
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+                'submitted_at' => now(),
+            ]
+        );
+        
+        return back()->with('success', 'Work submitted successfully!');
+    }
+
+    public function downloadSubmission(ActivitySubmission $submission)
+    {
+        // Security: Only owner or Teacher/Admin can download
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($submission->user_id !== $user->id && !$user->hasRole(['admin', 'teacher'])) {
+            abort(403);
+        }
+
+        $path = storage_path('app/public/' . $submission->file_path);
+        
+        if (!file_exists($path)) {
+            return back()->with('error', 'File not found.');
+        }
+
+        return response()->download($path, $submission->file_name);
+    }
+
     public function edit(Activity $activity)
     {
         return Inertia::render('Activities/Edit', [
@@ -114,14 +154,11 @@ class ActivityController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Activity $activity)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise,Submission', // Allow Submission edits too
+            'type' => 'required|string|in:Assignment,Exercise,Submission',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -134,9 +171,7 @@ class ActivityController extends Controller
             'due_date' => $request->due_date,
         ];
 
-        // Handle File Replacement
         if ($request->hasFile('file')) {
-            // Delete old file
             if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
                 Storage::disk('public')->delete($activity->file_path);
             }
@@ -153,12 +188,8 @@ class ActivityController extends Controller
             ->with('success', 'Activity updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Activity $activity)
     {
-        // Delete attached file if exists
         if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
             Storage::disk('public')->delete($activity->file_path);
         }
@@ -169,9 +200,6 @@ class ActivityController extends Controller
             ->with('success', 'Activity deleted successfully.');
     }
 
-    /**
-     * Download the attached file.
-     */
     public function download(Activity $activity)
     {
         if (!$activity->file_path || !Storage::disk('public')->exists($activity->file_path)) {
@@ -179,5 +207,45 @@ class ActivityController extends Controller
         }
         $path = storage_path('app/public/' . $activity->file_path);
         return response()->download($path, $activity->file_name);
+    }
+
+    public function unsubmit(Activity $activity)
+    {
+        $submission = ActivitySubmission::where('activity_id', $activity->id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (! $submission) {
+            return back()->with('error', 'No submission found to remove.');
+        }
+
+        if ($submission->created_at->diffInMinutes(now()) >= 2) {
+            return back()->with('error', 'Time limit exceeded. You can only remove a submission within 2 minutes.');
+        }
+
+        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
+            Storage::disk('public')->delete($submission->file_path);
+        }
+
+        $submission->delete();
+
+        return back()->with('success', 'Submission removed. You can now upload a new file.');
+    }
+
+    public function destroySubmission(ActivitySubmission $submission)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->hasRole(['teacher', 'admin'])) {
+            abort(403);
+        }
+
+        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
+            Storage::disk('public')->delete($submission->file_path);
+        }
+
+        $submission->delete();
+
+        return back()->with('success', 'Submission has been permanently deleted.');
     }
 }

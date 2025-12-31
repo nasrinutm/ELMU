@@ -8,7 +8,8 @@ import {
 import type { User } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { LogOut } from 'lucide-vue-next';
-import { route } from 'ziggy-js';
+
+// REMOVED: broken import { logout } from '@/routes';
 
 interface Props {
     user: User;
@@ -27,8 +28,8 @@ defineProps<Props>();
 
     <DropdownMenuItem :as-child="true">
         <Link
-            class="block w-full"
-            :href="route('logout')"
+            class="flex w-full items-center"
+            href="/logout"
             method="post"
             as="button"
             data-test="logout-button"
