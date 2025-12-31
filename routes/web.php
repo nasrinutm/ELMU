@@ -137,6 +137,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+
+    // 7. STUDENT QUIZ ROUTES (For Students)
     Route::post('/activities/{activity}/submit', [ActivityController::class, 'submit'])->name('activities.submit');
     Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
 
@@ -150,6 +152,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
     Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quiz.history');
 
+}); // <--- End of Main Auth Group
+
+
+// --- TEACHER ROUTES (PROTECTED) ---
+Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
+    
+    // Quiz Management
+    Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
+    Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
+    Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
+    Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
+    Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
+    Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+
+    // Performance & Resetting
+    Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
+    
+    // 🔥 THIS IS THE FIX: The Route to Reset Attempts
+    Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
+});
+
+require __DIR__.'/settings.php';
     Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
         Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
         Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
@@ -183,6 +207,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
 
-});
+
 
 require __DIR__.'/settings.php';

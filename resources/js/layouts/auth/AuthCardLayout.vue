@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Link } from "@inertiajs/vue3";
+import { route } from "ziggy-js"; // <--- Import the route helper
 import {
     Card,
     CardContent,
@@ -7,13 +9,15 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 
-import { Link } from '@inertiajs/vue3';
-
 defineProps<{
     title?: string;
     description?: string;
 }>();
+
 </script>
+
+// No need to import 'home' from "@/routes"
+
 
 <template>
     <div

@@ -50,9 +50,15 @@ const hasRole = (roleName: string) => {
 
 // --- DYNAMIC SIDEBAR THEME ---
 const sidebarTheme = computed(() => {
+    const baseSettings = {
+        '--sidebar-width': '16rem',      
+        '--sidebar-width-icon': '3rem',
+    };
+
     // 1. TEACHER: Dark Teal/Green Theme
     if (hasRole('teacher')) {
         return {
+            ...baseSettings,
             '--sidebar-background': '166 50% 10%',    // Deep Teal Background
             '--sidebar-foreground': '160 30% 98%',    // White Text
             '--sidebar-primary': '160 84% 39%',       // Bright Emerald Active Item
@@ -64,6 +70,7 @@ const sidebarTheme = computed(() => {
     // 2. STUDENT: Dark Indigo Theme
     if (hasRole('student')) { // Check student explicitly
         return {
+            ...baseSettings,
             '--sidebar-background': '224 50% 10%',    // Deep Indigo Background
             '--sidebar-foreground': '210 40% 98%',    // White Text
             '--sidebar-primary': '221.2 83.2% 53.3%', // Bright Blue Active Item
