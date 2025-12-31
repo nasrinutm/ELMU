@@ -1,160 +1,142 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { useForm, Head, Link } from '@inertiajs/vue3';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/InputError.vue';
-import { type BreadcrumbItem } from '@/types';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Upload, FileUp, X, Loader2 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
-import { FileText, X } from 'lucide-vue-next';
 
-// 1. Setup Breadcrumbs
-const breadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs = [
+    { title: 'Dashboard', href: route('dashboard') },
     { title: 'Materials', href: route('materials.index') },
     { title: 'Upload', href: route('materials.create') },
 ];
 
-// 2. Setup the form (Changed file to files array)
 const form = useForm({
-    name: '', // Used as a prefix or fallback title
+    name: '',
     subject: '',
     description: '',
-    files: [] as File[], // Array of files
+    file: null as File | null,
 });
 
-// 3. Handle File Input
-const handleFileChange = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    if (input.files) {
-        // Convert FileList to Array
-        const newFiles = Array.from(input.files);
-        form.files = [...form.files, ...newFiles];
+const handleFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        form.file = target.files[0];
     }
 };
 
-// 4. Remove File
-const removeFile = (index: number) => {
-    form.files.splice(index, 1);
-};
-
-// 5. Submit handler
 const submit = () => {
-    form.post(route('materials.store'), {
-        onError: () => {
-            // Handle errors
-        },
-    });
+    form.post(route('materials.store'));
 };
 </script>
 
 <template>
     <Head title="Upload Material" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="py-12">
-            <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-md sm:rounded-lg">
-                    <div class="p-6 bg-[#ffd900] border-b border-gray-200">
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-slate-50 p-4 sm:p-6 flex justify-center">
 
-                        <h3 class="text-lg font-medium text-[#003366] mb-4">
-                            Upload New Materials
-                        </h3>
+            <div class="w-full max-w-2xl">
+                <div class="mb-6">
+                    <Link :href="route('materials.index')" class="text-sm text-slate-500 hover:text-teal-600 flex items-center gap-1 mb-2 transition-colors">
+                        <ArrowLeft class="w-4 h-4" /> Back to Materials
+                    </Link>
+                    <h1 class="text-2xl font-bold text-slate-900">Upload New Material</h1>
+                    <p class="text-slate-500 mt-1">Share documents, assignments, or notes with your students.</p>
+                </div>
 
-                        <form @submit.prevent="submit">
-                            <!-- Subject (Common for all files) -->
-                            <div class="text-[#003366]">
-                                <Label for="subject">Subject</Label>
-                                <Input
-                                    id="subject"
-                                    type="text"
-                                    class="mt-1 block w-full "
-                                    v-model="form.subject"
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <form @submit.prevent="submit" class="p-6 sm:p-8 space-y-6">
+
+                        <div class="space-y-2">
+                            <Label class="text-slate-700 font-medium">Document File</Label>
+                            <div
+                                class="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-teal-400 transition-colors cursor-pointer relative"
+                            >
+                                <input
+                                    type="file"
+                                    @change="handleFileChange"
+                                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     required
-                                    autofocus
-                                    placeholder="e.g. Mathematics 101"
                                 />
-                                <InputError class="mt-2" :message="form.errors.subject" />
-                            </div>
 
-                            <!-- Description (Common) -->
-                            <div class="mt-4 text-[#003366]">
-                                <Label for="description">Description (Optional)</Label>
-                                <textarea
-                                    id="description"
-                                    class="mt-1 block w-full bg-[#003366] border-black  text-white focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm p-2"
-                                    v-model="form.description"
-                                    rows="3"
-                                    placeholder="Brief description for these files..."
-                                ></textarea>
-                                <InputError class="mt-2" :message="form.errors.description" />
-                            </div>
+                                <div v-if="!form.file" class="flex flex-col items-center pointer-events-none">
+                                    <div class="h-12 w-12 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center mb-3">
+                                        <FileUp class="w-6 h-6" />
+                                    </div>
+                                    <p class="text-sm font-medium text-slate-900">Click to upload or drag and drop</p>
+                                    <p class="text-xs text-slate-500 mt-1">PDF, DOCX, PPTX (Max 10MB)</p>
+                                </div>
 
-                            <!-- Optional Name Prefix -->
-                            <div class="mt-4 text-[#003366]">
-                                <Label for="name">Document Title (Optional)</Label>
+                                <div v-else class="flex flex-col items-center pointer-events-none">
+                                    <div class="h-12 w-12 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center mb-3">
+                                        <FileUp class="w-6 h-6" />
+                                    </div>
+                                    <p class="text-sm font-medium text-teal-700">{{ form.file.name }}</p>
+                                    <p class="text-xs text-teal-600 mt-1">Click to change file</p>
+                                </div>
+                            </div>
+                            <div v-if="form.errors.file" class="text-sm text-red-600">{{ form.errors.file }}</div>
+                        </div>
+
+                        <div class="grid gap-6 sm:grid-cols-2">
+                            <div class="space-y-2">
+                                <Label for="name" class="text-slate-700">Document Name</Label>
                                 <Input
                                     id="name"
-                                    type="text"
-                                    class="mt-1 block w-full"
                                     v-model="form.name"
-                                    placeholder="Leave blank to use filenames"
+                                    placeholder="e.g. Chapter 1 Notes"
+                                    class="border-slate-200 focus:border-teal-500 focus:ring-teal-500"
+                                    required
                                 />
-                                <p class="text-xs text-gray-500 mt-1">If blank, the original filename will be used as the title.</p>
-                                <InputError class="mt-2" :message="form.errors.name" />
+                                <div v-if="form.errors.name" class="text-sm text-red-600">{{ form.errors.name }}</div>
                             </div>
 
-                            <!-- Multi-File Upload -->
-                            <div class="mt-6 text-[#003366]">
-                                <Label for="files">Select Files (PDF, DOCX, PPT)</Label>
-                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-indigo-400 transition-colors cursor-pointer relative">
-                                    <div class="space-y-1 text-center">
-                                        <Upload class="mx-auto h-12 w-12 text-gray-400" />
-                                        <div class="flex text-sm text-gray-600">
-                                            <label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                                                <span>Upload files</span>
-                                                <input id="file-upload" name="file-upload" type="file" class="sr-only" multiple @change="handleFileChange" accept=".pdf,.doc,.docx,.ppt,.pptx">
-                                            </label>
-                                            <p class="pl-1">or drag and drop</p>
-                                        </div>
-                                        <p class="text-xs text-gray-500">
-                                            PDF, DOC, PPT up to 10MB each
-                                        </p>
-                                    </div>
-                                    <!-- Cover the whole area for drag/drop feel -->
-                                    <input type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" multiple @change="handleFileChange" accept=".pdf,.doc,.docx,.ppt,.pptx" />
-                                </div>
-                                <InputError class="mt-2" :message="form.errors.files" />
+                            <div class="space-y-2">
+                                <Label for="subject" class="text-slate-700">Subject / Topic</Label>
+                                <Input
+                                    id="subject"
+                                    v-model="form.subject"
+                                    placeholder="e.g. Mathematics"
+                                    class="border-slate-200 focus:border-teal-500 focus:ring-teal-500"
+                                    required
+                                />
+                                <div v-if="form.errors.subject" class="text-sm text-red-600">{{ form.errors.subject }}</div>
                             </div>
+                        </div>
 
-                            <!-- Selected Files List -->
-                            <div v-if="form.files.length > 0" class="mt-4 space-y-2">
-                                <h4 class="text-sm font-medium text-gray-700">Selected Files:</h4>
-                                <div v-for="(file, index) in form.files" :key="index" class="flex items-center justify-between bg-gray-50 p-2 rounded-md border">
-                                    <div class="flex items-center overflow-hidden">
-                                        <FileText class="h-4 w-4 text-blue-500 mr-2 shrink-0" />
-                                        <span class="text-sm truncate">{{ file.name }}</span>
-                                        <span class="text-xs text-gray-400 ml-2">({{ (file.size / 1024 / 1024).toFixed(2) }} MB)</span>
-                                    </div>
-                                    <button type="button" @click="removeFile(index)" class="text-gray-400 hover:text-red-500">
-                                        <X class="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="space-y-2">
+                            <Label for="description" class="text-slate-700">Description (Optional)</Label>
+                            <Textarea
+                                id="description"
+                                v-model="form.description"
+                                placeholder="Briefly describe what this material covers..."
+                                class="border-slate-200 focus:border-teal-500 focus:ring-teal-500 min-h-[100px]"
+                            />
+                        </div>
 
-                            <!-- Submit Button -->
-                            <div class="flex items-center justify-end mt-6">
-                                <Link :href="route('materials.index')" class="mr-4">
-                                    <Button variant="default" class="text-[#003366]" type="button">Cancel</Button>
-                                </Link>
-                                <Button type="submit" variant="secondary" :class="{ 'opacity-25': form.processing }" :disabled="form.processing || form.files.length === 0">
-                                    Upload {{ form.files.length > 0 ? `(${form.files.length})` : '' }}
+                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                            <Link :href="route('materials.index')">
+                                <Button type="button" variant="outline" class="border-slate-200 text-slate-700 hover:bg-slate-50">
+                                    Cancel
                                 </Button>
-                            </div>
-                        </form>
-                    </div>
+                            </Link>
+
+                            <Button
+                                type="submit"
+                                :disabled="form.processing"
+                                class="bg-teal-600 hover:bg-teal-700 text-white min-w-[120px]"
+                            >
+                                <Loader2 v-if="form.processing" class="w-4 h-4 mr-2 animate-spin" />
+                                {{ form.processing ? 'Uploading...' : 'Upload File' }}
+                            </Button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>

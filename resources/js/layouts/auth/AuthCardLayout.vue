@@ -2,45 +2,63 @@
 import { Link } from "@inertiajs/vue3";
 import { route } from "ziggy-js"; // <--- Import the route helper
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 
-// No need to import 'home' from "@/routes"
+defineProps<{
+    title?: string;
+    description?: string;
+}>();
+
 </script>
 
-<template>
-  <div class="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-    <div class="w-full max-w-sm space-y-4">
-      <div class="flex justify-center">
-        <Link :href="route('home')" class="flex items-center gap-2 font-bold text-xl">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="h-8 w-8 text-primary"
-          >
-            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
-          </svg>
-          <span class="text-foreground">ELMU</span>
-        </Link>
-      </div>
+// No need to import 'home' from "@/routes"
 
-      <Card>
-        <CardHeader class="space-y-1">
-          <slot name="header" /> 
-        </CardHeader>
-        <CardContent>
-          <slot />
-        </CardContent>
-      </Card>
+
+<template>
+    <div
+        class="flex min-h-svh flex-col items-center justify-center gap-6 bg-[#FFD900] p-6 md:p-10"
+    >
+        <div class="flex w-full max-w-md flex-col gap-6">
+
+            <!--
+                2. Login Box -> Dark Blue (#003366)
+                We also add 'text-white' so the title reads clearly on blue.
+            -->
+            <Card class="rounded-xl border-none bg-[#003366] text-black shadow-xl">
+                <CardHeader class="px-10 pt-8 pb-0 text-center">
+
+                    <Link
+                        href="/"
+                        class="flex items-center justify-center gap-2 self-center font-medium mb-6"
+                    >
+                        <div class="flex h-30 w-60 items-center justify-center rounded-full bg-[#ffd900] p-0
+                        ">
+                            <img
+                                src="/logo.png"
+                                alt="ELMU"
+                                class="h-full w-full object-contain"
+                            />
+                        </div>
+                    </Link>
+
+                    <CardTitle class="text-xl font-bold text-white">
+                        {{ title }}
+                    </CardTitle>
+                    <CardDescription class="text-gray-300">
+                        {{ description }}
+                    </CardDescription>
+                </CardHeader>
+
+                <CardContent class="px-10 py-8">
+                    <slot />
+                </CardContent>
+            </Card>
+
+        </div>
     </div>
-  </div>
 </template>

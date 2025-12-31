@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/pin-input';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed, ref, watch, nextTick } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { route } from 'ziggy-js';
 
 interface AuthConfigContent {
@@ -20,7 +20,7 @@ interface AuthConfigContent {
 
 // -- STATE --
 const showRecoveryInput = ref<boolean>(false);
-// FIX: Changed from string[] to number[] to match PinInput requirements
+// Kept as number[] to match your original code
 const code = ref<number[]>([]); 
 const recoveryInputRef = ref<HTMLInputElement | null>(null);
 
@@ -49,8 +49,7 @@ const authConfigContent = computed<AuthConfigContent>(() => {
 
 // Sync PinInput (number array) to Form (string)
 watch(code, (newVal) => {
-    // .join('') works for number[] too, converting [1, 2, 3] to "123"
-    form.code = newVal.join(''); 
+    form.code = newVal.join('');
 });
 
 const toggleRecoveryMode = async () => {

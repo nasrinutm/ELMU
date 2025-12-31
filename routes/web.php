@@ -4,41 +4,70 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
+use Gemini\Laravel\Facades\Gemini;
+
+// --- MODEL IMPORTS ---
+use App\Models\User;
+use App\Models\Material;
+
+// --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\Settings\PasswordController;
+use App\Http\Controllers\Settings\ProfileController;
+// --------------------------
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\TeacherQuizController;
-use App\Models\User;
-use App\Models\Material;
-use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\ReportController;
 
-// --- PUBLIC ROUTES ---
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
 
-// Setup AI Store
+Route::get('/test-models', function () {
+    try {
+        $response = Gemini::models()->list();
+        return collect($response->models)->map(fn ($model) => [
+            'name' => $model->name,
+            'display_name' => $model->displayName,
+            'capabilities' => $model->supportedGenerationMethods
+        ]);
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
+});
+
 Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
-// --- AUTHENTICATED ROUTES ---
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // 1. DASHBOARD
     Route::get('/dashboard', function () {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
-        // Admin Redirect
+
+        // --- ADMIN DASHBOARD ---
         if ($user->hasRole('admin')) {
-            return redirect()->route('users.index');
+            return Inertia::render('Dashboard/AdminDashboard', [
+                'stats' => [
+                    // --- THIS IS THE MISSING PART THAT FIXES YOUR CARD ---
+                    'admins' => User::role('admin')->count(),
+                    'teachers' => User::role('teacher')->count(),
+                    'students' => User::role('student')->count(),
+                    'total_users' => User::count(),
+                ],
+                'recentUsers' => User::latest()->take(5)->get()
+            ]);
         }
 
-        // Dashboard Stats
+        // --- TEACHER & STUDENT DASHBOARD ---
         $stats = [
             'users' => User::count(),
             'materials' => Material::count(),
@@ -56,12 +85,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
-    // 2. CHATBOT ROUTES
-    Route::post('/chat', [ChatbotController::class, 'send'])->name('chat.send');
+    // 2. CHATBOT
+    Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
     // 3. ADMIN ROUTES
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
-        // User CRUD
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -69,16 +97,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // Chatbot Knowledge Base
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
         Route::post('/chatbot/upload', [ChatbotUploadController::class, 'store'])->name('upload.store');
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+        Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
+        Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
     });
 
-    // 4. FORUM ROUTES
+    // 4. FORUM
     Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
     Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');
     Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
@@ -87,12 +116,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
 
-    // Forum Replies
     Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIAL ROUTES
+    // 5. MATERIALS
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
@@ -104,13 +132,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
     });
 
-    // 6. ACTIVITY ROUTES
+    // 6. ACTIVITIES
     Route::resource('activities', ActivityController::class);
     Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
 
     // 7. STUDENT QUIZ ROUTES (For Students)
+    Route::post('/activities/{activity}/submit', [ActivityController::class, 'submit'])->name('activities.submit');
+    Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
+
+    Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])->name('activities.downloadSubmission');
+    Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
+
+    // 7. QUIZZES
+    Route::resource('quizzes', QuizController::class);
     Route::get('/quiz', [QuizController::class, 'index'])->name('quiz.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quiz.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
@@ -136,5 +172,41 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')
     // 🔥 THIS IS THE FIX: The Route to Reset Attempts
     Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
 });
+
+require __DIR__.'/settings.php';
+    Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
+        Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
+        Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
+        Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
+        Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
+        Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+        Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
+        Route::delete('/attempts/{id}/unlock', [TeacherQuizController::class, 'unlockAttempt'])->name('attempt.unlock');
+        Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
+        Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
+    });
+
+    // 8. STUDENTS
+    Route::get('/students', [StudentController::class, 'index'])->name('students.index');
+    Route::get('/students/{student}', [StudentController::class, 'show'])->name('students.show');
+    Route::post('/students/{student}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
+    Route::put('/students/{student}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
+    Route::delete('/students/{student}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
+
+    // 9. REPORTS
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])->name('reports.student.detail');
+
+    Route::middleware(['role:teacher|admin'])->group(function () {
+        Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
+        Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
+        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+        Route::get('/reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
+        Route::put('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
+        Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
+        Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
+    });
+
+
 
 require __DIR__.'/settings.php';
