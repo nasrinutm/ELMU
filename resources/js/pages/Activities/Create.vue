@@ -7,8 +7,7 @@ import { ArrowLeft, Save, Upload, CheckSquare } from 'lucide-vue-next';
 // Setup the form object using Inertia
 const form = useForm({
     title: '',
-    // Default is 'Assignment'. Checking the box changes this to 'Submission'
-    type: 'Assignment', 
+    type: 'Submission', // Default to Submission
     description: '',
     due_date: '',
     file: null as File | null,
@@ -77,24 +76,6 @@ const handleFileChange = (e: Event) => {
                         </div>
 
                         <div>
-                            <div class="p-4 bg-[#ffffff] rounded-md border border-gray-500/30 flex items-start gap-3">
-                                <div class="flex items-center h-6">
-                                    <input 
-                                        id="enable_submission" 
-                                        type="checkbox" 
-                                        v-model="form.type"
-                                        true-value="Submission"
-                                        false-value="Assignment"
-                                        class="w-5 h-5 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                                    />
-                                </div>
-                                <label for="enable_submission" class="text-[#212121] cursor-pointer select-none">
-                                    <span class="block font-bold text-base">Enable Student Submission</span>
-                                    <span class="block text-sm text-gray-400 mt-1">
-                                        Check this box if you want students to upload a file or submit work for this activity.
-                                    </span>
-                                </label>
-                            </div>
                             <p v-if="form.errors.type" class="text-red-400 text-sm mt-2 font-bold animate-pulse">
                                 Error: {{ form.errors.type }}
                             </p>
