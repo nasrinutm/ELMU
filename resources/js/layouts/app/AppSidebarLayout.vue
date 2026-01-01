@@ -45,8 +45,8 @@ const themeClass = computed(() => {
                 <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             </div>
 
-            <div class="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8">
-                <main class="w-full max-w-7xl mx-auto">
+            <div class="flex-1 overflow-y-auto overflow-x-hidden px-6 md:px-8">
+                <main class="w-full mx-auto">
                     <slot />
                 </main>
             </div>

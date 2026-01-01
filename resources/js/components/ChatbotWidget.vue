@@ -79,7 +79,7 @@ const sendMessage = async () => {
 </script>
 
 <template>
-    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-4 font-sans">
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-4 font-sans bg-white">
         
         <!-- Chat Window -->
         <transition
