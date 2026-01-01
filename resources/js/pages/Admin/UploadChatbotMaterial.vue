@@ -5,14 +5,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 
 // 1. Define Breadcrumbs (matches Dashboard style)
 const breadcrumbs = [
-    {
-        title: 'Home',
-        href: route('dashboard'),
-    },
-    {
-        title: 'Upload Material',
-        href: route('upload.create'), // Ensure this route exists in web.php
-    },
+    { title: 'Dashboard', href: route('dashboard') },
+    { title: 'AI Details', href: route('chatbot.details') },
+    { title: 'Upload Material', href: route('upload.create'),},
 ];
 
 const form = useForm({

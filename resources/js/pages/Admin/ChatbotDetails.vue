@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useForm, Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import {
     Server, Database, Cpu, Trash2, FileText, Plus,
     Search, ChevronUp, ChevronDown, X, Bot, Info, Edit2, Save, XCircle
 } from 'lucide-vue-next';
+import { route } from 'ziggy-js';
 
 const props = defineProps({
     files: Array,
@@ -119,7 +120,7 @@ const formatBytes = (bytes) => {
 <template>
     <Head title="AI Chatbot Details" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-8 p-4 md:p-8 w-full">
 
             <div class="border-b border-gray-100 pb-4">
@@ -191,7 +192,7 @@ const formatBytes = (bytes) => {
                 <div class="shrink-0">
                     <Link
                         :href="route('upload.create')"
-                        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
+                        class="flex items-center gap-2 bg-[#0f172a] hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
                     >
                         <Plus class="w-4 h-4" />
                         Add New Material
@@ -367,5 +368,5 @@ const formatBytes = (bytes) => {
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>
