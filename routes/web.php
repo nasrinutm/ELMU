@@ -4,11 +4,13 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Gemini\Laravel\Facades\Gemini;
 
 // --- MODEL IMPORTS ---
 use App\Models\User;
 use App\Models\Material;
+use App\Models\Quiz;
 
 // --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
@@ -25,10 +27,15 @@ use App\Http\Controllers\TeacherQuizController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ReportController;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+| Root URL redirects directly to Login
+*/
+
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
+    return redirect()->route('login');
 })->name('home');
 
 Route::get('/test-models', function () {
@@ -57,7 +64,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         if ($user->hasRole('admin')) {
             return Inertia::render('Dashboard/AdminDashboard', [
                 'stats' => [
-                    // --- THIS IS THE MISSING PART THAT FIXES YOUR CARD ---
                     'admins' => User::role('admin')->count(),
                     'teachers' => User::role('teacher')->count(),
                     'students' => User::role('student')->count(),
@@ -71,7 +77,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $stats = [
             'users' => User::count(),
             'materials' => Material::count(),
-            'my_materials' => Material::where('user_id', Auth::id())->count(),
+            'my_materials' => $user->hasRole('teacher')
+                ? Material::where('user_id', $user->id)->count()
+                : DB::table('activity_submissions')->where('user_id', $user->id)->count(),
+            'available_quizzes' => Quiz::count(),
         ];
 
         $recentMaterials = Material::with('user:id,name')
@@ -138,75 +147,49 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
 
-    // 7. STUDENT QUIZ ROUTES (For Students)
+    // 7. STUDENT SUBMISSIONS
     Route::post('/activities/{activity}/submit', [ActivityController::class, 'submit'])->name('activities.submit');
     Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
 
     Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])->name('activities.downloadSubmission');
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
-    // 7. QUIZZES
-    Route::resource('quizzes', QuizController::class);
-    Route::get('/quiz', [QuizController::class, 'index'])->name('quiz.index');
-    Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quiz.show');
-    Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
-    Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quiz.history');
+    // 8. QUIZZES (Student Facing)
+    // Synchronized to plural naming "quizzes.*" to prevent frontend route list errors
+    Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
+    Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quizzes.show');
+    Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quizzes.submit');
+    Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quizzes.history');
 
-}); // <--- End of Main Auth Group
-
-
-// --- TEACHER ROUTES (PROTECTED) ---
-Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
-    
-    // Quiz Management
-    Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
-    Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
-    Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
-    Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
-    Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
-    Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
-
-    // Performance & Resetting
-    Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
-    
-    // 🔥 THIS IS THE FIX: The Route to Reset Attempts
-    Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
-});
-
-require __DIR__.'/settings.php';
-    Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
-        Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
+    // 9. TEACHER QUIZ MANAGEMENT
+    Route::middleware(['role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
         Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
         Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
         Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
-        Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
-        Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
-        Route::delete('/attempts/{id}/unlock', [TeacherQuizController::class, 'unlockAttempt'])->name('attempt.unlock');
         Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
         Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
+        Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+        Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
+        Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
+        Route::delete('/attempts/{id}/unlock', [TeacherQuizController::class, 'unlockAttempt'])->name('attempt.unlock');
     });
 
-    // 8. STUDENTS
+    // 10. STUDENTS ROSTER
     Route::get('/students', [StudentController::class, 'index'])->name('students.index');
     Route::get('/students/{student}', [StudentController::class, 'show'])->name('students.show');
     Route::post('/students/{student}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
     Route::put('/students/{student}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
     Route::delete('/students/{student}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
 
-    // 9. REPORTS
+    // 11. REPORTS
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])->name('reports.student.detail');
 
     Route::middleware(['role:teacher|admin'])->group(function () {
-        Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
-        Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
-        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
-        Route::get('/reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
-        Route::put('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
         Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
 
-
+});
 
 require __DIR__.'/settings.php';

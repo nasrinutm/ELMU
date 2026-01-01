@@ -22,21 +22,21 @@ class ActivityController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
-        $sortField = $request->input('sort_by', 'created_at'); 
+        $sortField = $request->input('sort_by', 'created_at');
         $sortDirection = $request->input('sort', 'desc') === 'oldest' ? 'asc' : 'desc';
         $query->orderBy($sortField, $sortDirection);
 
         $permissions = ['manage_activities' => false];
         if (Auth::check()) {
             /** @var \App\Models\User $user */
-            $user = Auth::user(); 
+            $user = Auth::user();
             $permissions['manage_activities'] = $user->hasRole(['admin', 'teacher']) || $user->can('manage activities');
         }
 
         $activities = $query->paginate(50);
 
         return Inertia::render('Activities/Index', [
-            'activities' => $activities, 
+            'activities' => $activities,
             'filters' => $request->all(['date', 'sort_by', 'sort']),
             'can' => $permissions,
             'name' => config('app.name'),
@@ -64,7 +64,7 @@ class ActivityController extends Controller
             'type' => $request->type,
             'description' => $request->description,
             'due_date' => $request->due_date,
-            'quiz_data' => null, 
+            'quiz_data' => null,
         ];
 
         if ($request->hasFile('file')) {
@@ -97,14 +97,17 @@ class ActivityController extends Controller
                 ->orderBy('submitted_at', 'desc')
                 ->get();
         }
-        
+
         return Inertia::render('Activities/Show', [
             'activity' => $activity,
-            'allSubmissions' => $allSubmissions, // Passed to Vue
+            'allSubmissions' => $allSubmissions,
             'isTeacher' => $isTeacher
         ]);
     }
 
+    /**
+     * FIX: Handles user submissions correctly to update status from Pending to Completed.
+     */
     public function submit(Request $request, Activity $activity)
     {
         $request->validate([
@@ -114,6 +117,7 @@ class ActivityController extends Controller
         $file = $request->file('file');
         $path = $file->store('submissions', 'public');
 
+        // This triggers the change from "Pending" to "Completed" in your views
         ActivitySubmission::updateOrCreate(
             [
                 'user_id' => Auth::id(),
@@ -125,13 +129,12 @@ class ActivityController extends Controller
                 'submitted_at' => now(),
             ]
         );
-        
+
         return back()->with('success', 'Work submitted successfully!');
     }
 
     public function downloadSubmission(ActivitySubmission $submission)
     {
-        // Security: Only owner or Teacher/Admin can download
         /** @var \App\Models\User $user */
         $user = Auth::user();
         if ($submission->user_id !== $user->id && !$user->hasRole(['admin', 'teacher'])) {
@@ -139,7 +142,7 @@ class ActivityController extends Controller
         }
 
         $path = storage_path('app/public/' . $submission->file_path);
-        
+
         if (!file_exists($path)) {
             return back()->with('error', 'File not found.');
         }
@@ -175,7 +178,7 @@ class ActivityController extends Controller
             if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
                 Storage::disk('public')->delete($activity->file_path);
             }
-            
+
             $file = $request->file('file');
             $data['file_path'] = $file->store('activities', 'public');
             $data['file_name'] = $file->getClientOriginalName();
@@ -193,9 +196,9 @@ class ActivityController extends Controller
         if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
             Storage::disk('public')->delete($activity->file_path);
         }
-        
+
         $activity->delete();
-        
+
         return redirect()->route('activities.index')
             ->with('success', 'Activity deleted successfully.');
     }
@@ -219,6 +222,7 @@ class ActivityController extends Controller
             return back()->with('error', 'No submission found to remove.');
         }
 
+        // Standard 2-minute window for unsubmitting
         if ($submission->created_at->diffInMinutes(now()) >= 2) {
             return back()->with('error', 'Time limit exceeded. You can only remove a submission within 2 minutes.');
         }

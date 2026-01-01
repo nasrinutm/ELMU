@@ -51,37 +51,36 @@ const hasRole = (roleName: string) => {
 // --- DYNAMIC SIDEBAR THEME ---
 const sidebarTheme = computed(() => {
     const baseSettings = {
-        '--sidebar-width': '16rem',      
+        '--sidebar-width': '16rem',
         '--sidebar-width-icon': '3rem',
     };
 
-    // 1. TEACHER: Dark Teal/Green Theme
+    // 1. TEACHER: Professional Teal Theme
     if (hasRole('teacher')) {
         return {
             ...baseSettings,
-            '--sidebar-background': '166 50% 10%',    // Deep Teal Background
-            '--sidebar-foreground': '160 30% 98%',    // White Text
-            '--sidebar-primary': '160 84% 39%',       // Bright Emerald Active Item
-            '--sidebar-accent': '166 40% 16%',        // Lighter Teal Hover
-            '--sidebar-border': '166 40% 16%',        // Matching Border
+            '--sidebar-background': '174 75% 26%',   // Matches theme-teacher sidebar (Deep Teal)
+            '--sidebar-foreground': '160 30% 98%',   // White Text
+            '--sidebar-primary': '170 75% 50%',      // Bright Teal Active
+            '--sidebar-accent': '174 75% 22%',       // Darker Teal Hover
+            '--sidebar-border': '174 75% 26%',
         };
     }
 
-    // 2. STUDENT: Dark Indigo Theme
-    if (hasRole('student')) { // Check student explicitly
+    // 2. STUDENT: Vibrant Royal Indigo Theme
+    if (hasRole('student')) {
         return {
             ...baseSettings,
-            '--sidebar-background': '224 50% 10%',    // Deep Indigo Background
-            '--sidebar-foreground': '210 40% 98%',    // White Text
-            '--sidebar-primary': '221.2 83.2% 53.3%', // Bright Blue Active Item
-            '--sidebar-accent': '224 40% 16%',        // Lighter Indigo Hover
-            '--sidebar-border': '224 40% 16%',        // Matching Border
+            '--sidebar-background': '243 45% 35%',   // Matches theme-student sidebar (Deep Indigo)
+            '--sidebar-foreground': '226 100% 94%',  // Light Indigo Text
+            '--sidebar-primary': '239 84% 67%',      // Bright Indigo Active
+            '--sidebar-accent': '244 55% 41%',       // Hover Indigo
+            '--sidebar-border': '243 45% 35%',
         };
     }
 
-    // 3. ADMIN (Default): Returns empty object
-    // This allows it to use the "Slate" colors from your app.css automatically.
-    return {};
+    // 3. ADMIN (Default Slate Colors)
+    return baseSettings;
 });
 
 const mainNavItems = computed<NavItem[]>(() => {
@@ -100,17 +99,20 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Student Roster', href: route('students.index'), icon: GraduationCap },
             { title: 'Performance Reports', href: route('reports.index'), icon: BarChart3 },
             { title: 'Discussion Forum', href: route('forum.index'), icon: BookOpen },
-            { title: 'Activities & Games', href: route('activities.index'), icon: Gamepad2 },
+            { title: 'Activities', href: route('activities.index'), icon: Gamepad2 },
+            // FIX: Ensure this matches the pluralized naming in web.php
             { title: 'Quiz Management', href: route('teacher.quiz.index'), icon: CheckCircle },
         ];
     }
     else {
+        // STUDENT NAVIGATION
         return [
             { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Learning Materials', href: route('materials.index'), icon: FileText },
             { title: 'My Progress', href: user.value ? route('students.show', user.value.id) : '#', icon: BarChart3 },
             { title: 'Discussion Forum', href: route('forum.index'), icon: BookOpen },
             { title: 'Activities', href: route('activities.index'), icon: Gamepad2 },
+            // FIX: Using plural route to match the updated web.php
             { title: 'Quizzes', href: route('quizzes.index'), icon: CheckCircle },
         ];
     }
@@ -129,7 +131,7 @@ const footerNavItems: NavItem[] = [];
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link href="/dashboard">
+                        <Link :href="route('dashboard')">
                             <AppLogo class="w-auto h-10" />
                         </Link>
                     </SidebarMenuButton>
