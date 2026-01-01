@@ -4,14 +4,23 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ChevronRight } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
+// Define Props
+// "students" is now an Object because it contains pagination data (data, links, current_page, etc.)
 defineProps<{
-    students: Array<{
-        id: number;
-        name: string;
-        email: string;
-        username: string;
-        created_at: string;
-    }>;
+    students: {
+        data: Array<{
+            id: number;
+            name: string;
+            email: string;
+            username: string;
+            created_at: string;
+        }>;
+        links: Array<{
+            url: string | null;
+            label: string;
+            active: boolean;
+        }>;
+    };
 }>();
 </script>
 
@@ -53,7 +62,7 @@ defineProps<{
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="student in students" :key="student.id" class="border-b border-[#1e293b] bg-[#111827] hover:bg-[#1e293b]/50 transition-all">
+                                    <tr v-for="student in students.data" :key="student.id" class="border-b border-[#1e293b] bg-[#111827] hover:bg-[#1e293b]/50 transition-all">
                                         <td class="px-6 py-4 font-medium text-white">
                                             <Link :href="route('students.show', student.id)" class="text-blue-400 hover:text-blue-300 transition-colors">
                                                 {{ student.name }}
@@ -63,9 +72,30 @@ defineProps<{
                                         <td class="px-6 py-4">{{ student.email }}</td>
                                         <td class="px-6 py-4 text-right">{{ new Date(student.created_at).toLocaleDateString('en-GB') }}</td>
                                     </tr>
+                                    
+                                    <tr v-if="students.data.length === 0">
+                                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                                            No students found.
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
+
+                        <div v-if="students.links.length > 3" class="mt-6 flex justify-center">
+                            <div class="flex flex-wrap gap-1">
+                                <template v-for="(link, key) in students.links" :key="key">
+                                    <div v-if="link.url === null" class="mr-1 mb-1 px-4 py-3 text-sm leading-4 text-gray-600 border rounded" v-html="link.label" />
+                                    <Link v-else 
+                                        class="mr-1 mb-1 px-4 py-3 text-sm leading-4 border rounded hover:bg-white focus:border-indigo-500 focus:text-indigo-500" 
+                                        :class="{ 'bg-blue-600 text-white': link.active, 'bg-white text-gray-700': !link.active }" 
+                                        :href="link.url" 
+                                        v-html="link.label" 
+                                    />
+                                </template>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

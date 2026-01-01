@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { Plus, Pencil, Trash2, X, ChevronRight } from 'lucide-vue-next';
+import { Plus, Pencil, Trash2, X, ChevronRight, CalendarClock } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 const props = defineProps<{
@@ -18,8 +18,8 @@ const props = defineProps<{
         type: string;
         status: string;
         score: string | number;
-        submitted_at: string | null;
-        due_date: string | null; // Added due_date here
+        date_completed: string | null;
+        due_date: string | null;       
         is_manual: boolean;
     }>;
 }>();
@@ -36,15 +36,38 @@ const editingId = ref<number | null>(null);
 
 const form = useForm({ title: '', score: '' });
 
-const openCreateModal = () => { isEditing.value = false; form.reset(); showModal.value = true; };
-const openEditModal = (activity: any) => { isEditing.value = true; editingId.value = activity.id; form.title = activity.title; form.score = activity.score === '-' ? '' : String(activity.score); showModal.value = true; };
-const closeModal = () => { showModal.value = false; form.reset(); };
+const openCreateModal = () => { 
+    isEditing.value = false; 
+    form.reset(); 
+    showModal.value = true; 
+};
+
+const openEditModal = (activity: any) => { 
+    isEditing.value = true; 
+    editingId.value = activity.id; 
+    form.title = activity.title; 
+    
+    // Ensure the input field shows a clean number (e.g., 100 instead of 100.00)
+    const cleanScore = (activity.score === '-' || activity.score === null) ? '' : Number(activity.score).toString();
+    form.score = cleanScore;
+    
+    showModal.value = true; 
+};
+
+const closeModal = () => { 
+    showModal.value = false; 
+    form.reset(); 
+};
 
 const submit = () => {
     if (isEditing.value && editingId.value) {
-        form.put(route('students.activities.update', [props.student.id, editingId.value]), { onSuccess: () => closeModal() });
+        form.put(route('students.activities.update', [props.student.id, editingId.value]), { 
+            onSuccess: () => closeModal() 
+        });
     } else {
-        form.post(route('students.activities.store', props.student.id), { onSuccess: () => closeModal() });
+        form.post(route('students.activities.store', props.student.id), { 
+            onSuccess: () => closeModal() 
+        });
     }
 };
 
@@ -55,18 +78,33 @@ const deleteActivity = (id: number) => {
     }
 };
 
-// --- Date Logic ---
-const formatDate = (dateString: string) => {
-    if (!dateString) return '';
+// --- Date & Formatting Logic ---
+
+const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const isOverdue = (activity: any) => {
     if (!activity.due_date) return false;
-    // If completed, it's not overdue anymore
-    if (activity.status === 'Completed') return false;
+    if (activity.status.toLowerCase() === 'completed') return false;
     
     return new Date() > new Date(activity.due_date);
+};
+
+const formatStatus = (status: string) => {
+    if (!status) return '';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+/**
+ * NEW HELPER: Format Score
+ * Converts "100.00" -> 100, but keeps "85.5" -> 85.5
+ */
+const formatScore = (score: string | number) => {
+    if (score === '-' || score === null) return '-';
+    const num = Number(score);
+    return isNaN(num) ? score : num; 
 };
 </script>
 
@@ -110,6 +148,7 @@ const isOverdue = (activity: any) => {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                
                 <div class="mb-6 overflow-hidden bg-[#1a2c4e] shadow-sm sm:rounded-lg border border-gray-700">
                     <div class="p-6">
                         <div class="flex items-center gap-4">
@@ -146,33 +185,58 @@ const isOverdue = (activity: any) => {
                             </thead>
                             <tbody>
                                 <tr v-for="activity in activities" :key="activity.id" class="border-b border-gray-700 bg-[#1a2c4e] hover:bg-[#243b61] transition-colors">
+                                    
                                     <td class="px-6 py-4">
-                                        <div class="font-medium text-white">
+                                        <div class="font-medium text-white text-[15px]">
                                             {{ activity.title }} 
                                             <span v-if="activity.is_manual" class="ml-2 text-[10px] text-gray-500 italic uppercase bg-gray-800 px-1 rounded">Manual</span>
                                         </div>
-                                        <div v-if="activity.due_date" class="mt-1 text-xs">
-                                            <span :class="isOverdue(activity) ? 'text-red-400 font-bold' : 'text-gray-500'">
+                                        
+                                        <div v-if="activity.due_date" class="mt-1 flex items-center text-xs">
+                                            <span 
+                                                class="flex items-center gap-1 font-medium"
+                                                :class="isOverdue(activity) ? 'text-red-400 font-bold' : 'text-gray-500'"
+                                            >
+                                                <CalendarClock class="w-3 h-3" />
                                                 {{ isOverdue(activity) ? 'Overdue:' : 'Due:' }} {{ formatDate(activity.due_date) }}
                                             </span>
                                         </div>
                                     </td>
-                                    
+
                                     <td class="px-6 py-4">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm" :class="activity.status === 'Completed' ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-yellow-900/50 text-yellow-400 border border-yellow-800'">
-                                            {{ activity.status }}
+                                        <span 
+                                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm" 
+                                            :class="activity.status.toLowerCase() === 'completed' ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-yellow-900/50 text-yellow-400 border border-yellow-800'"
+                                        >
+                                            {{ formatStatus(activity.status) }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 font-bold text-white">{{ activity.score }}</td>
-                                    <td class="px-6 py-4">{{ activity.submitted_at ? formatDate(activity.submitted_at) : '-' }}</td>
+
+                                    <td class="px-6 py-4 font-bold text-white">
+                                        {{ formatScore(activity.score) }}
+                                    </td>
+
+                                    <td class="px-6 py-4">
+                                        {{ formatDate(activity.date_completed) }}
+                                    </td>
+
                                     <td v-if="!isOwnProfile" class="px-6 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
-                                            <button @click="openEditModal(activity)" class="rounded p-1 text-gray-400 hover:bg-blue-900/50 hover:text-blue-400"><Pencil class="h-4 w-4" /></button>
-                                            <button @click="deleteActivity(activity.id)" class="rounded p-1 text-gray-400 hover:bg-red-900/50 hover:text-red-400"><Trash2 class="h-4 w-4" /></button>
+                                            <button @click="openEditModal(activity)" class="rounded p-1 text-gray-400 hover:bg-blue-900/50 hover:text-blue-400">
+                                                <Pencil class="h-4 w-4" />
+                                            </button>
+                                            <button @click="deleteActivity(activity.id)" class="rounded p-1 text-gray-400 hover:bg-red-900/50 hover:text-red-400">
+                                                <Trash2 class="h-4 w-4" />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="activities.length === 0"><td :colspan="!isOwnProfile ? 5 : 4" class="p-8 text-center text-gray-500 italic">No activities recorded.</td></tr>
+
+                                <tr v-if="activities.length === 0">
+                                    <td :colspan="!isOwnProfile ? 5 : 4" class="p-8 text-center text-gray-500 italic">
+                                        No activities recorded.
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -182,15 +246,26 @@ const isOverdue = (activity: any) => {
 
         <div v-if="showModal && !isOwnProfile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
             <div class="w-full max-w-md rounded-lg bg-[#1a2c4e] p-6 shadow-2xl border border-gray-700">
-                <div class="mb-4 flex items-center justify-between"><h3 class="text-lg font-bold text-white">{{ isEditing ? 'Edit Activity' : 'Add New Activity' }}</h3><button @click="closeModal"><X class="h-5 w-5 text-gray-400" /></button></div>
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-white">{{ isEditing ? 'Edit Activity' : 'Add New Activity' }}</h3>
+                    <button @click="closeModal"><X class="h-5 w-5 text-gray-400 hover:text-white" /></button>
+                </div>
                 <form @submit.prevent="submit">
                     <div class="space-y-4 text-left">
-                        <div><label class="mb-1 block text-sm font-medium text-gray-300">Activity Name</label><input v-model="form.title" type="text" class="w-full rounded-md border-gray-600 bg-[#0f1a30] text-white" required /></div>
-                        <div><label class="mb-1 block text-sm font-medium text-gray-300">Marks Received</label><input v-model="form.score" type="number" min="0" max="100" class="w-full rounded-md border-gray-600 bg-[#0f1a30] text-white" required /></div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-300">Activity Name</label>
+                            <input v-model="form.title" type="text" class="w-full rounded-md border-gray-600 bg-[#0f1a30] text-white focus:border-blue-500 focus:ring-blue-500" required placeholder="e.g. Lab Exercise 1" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-300">Marks Received</label>
+                            <input v-model="form.score" type="number" min="0" max="100" class="w-full rounded-md border-gray-600 bg-[#0f1a30] text-white focus:border-blue-500 focus:ring-blue-500" required placeholder="0-100" />
+                        </div>
                     </div>
                     <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" @click="closeModal" class="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300">Cancel</button>
-                        <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" :disabled="form.processing">{{ isEditing ? 'Update' : 'Save' }}</button>
+                        <button type="button" @click="closeModal" class="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">Cancel</button>
+                        <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500" :disabled="form.processing">
+                            {{ isEditing ? 'Update' : 'Save' }}
+                        </button>
                     </div>
                 </form>
             </div>
@@ -199,17 +274,13 @@ const isOverdue = (activity: any) => {
 </template>
 
 <style>
-/* SMOOTH MOVEMENT:
-   Using 'ease-in-out' matches the sidebar's default animation speed.
-*/
+/* SMOOTH MOVEMENT FOR BREADCRUMBS */
 .dynamic-breadcrumbs {
     left: 305px;
     transition: left 0.3s ease-in-out;
 }
 
-/* COLLAPSED STATE:
-   115px provides safe clearance from the button.
-*/
+/* COLLAPSED STATE ADJUSTMENT */
 body:has([data-state="collapsed"]) .dynamic-breadcrumbs,
 body:has(aside[data-state="collapsed"]) .dynamic-breadcrumbs {
     left: 115px !important;

@@ -11,18 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('activity_user', function (Blueprint $table) {
-            $table->id();
-            
-            // Foreign keys to link User and Activity
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('activity_id')->constrained()->onDelete('cascade');
-            
-            // The score for this specific student on this specific activity
-            $table->decimal('score', 5, 2)->nullable(); // Allows scores like 95.50
-            
-            $table->timestamps();
-        });
+        // Wrap in a check to ensure we don't crash if the table was partially created
+        if (!Schema::hasTable('activity_user')) {
+            Schema::create('activity_user', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('activity_id')->constrained()->cascadeOnDelete();
+                
+                // The status (e.g., Pending, Completed)
+                $table->string('status')->default('Pending');
+                
+                // The score (Decimal ensures precision, handled by Vue for display)
+                $table->decimal('score', 5, 2)->nullable();
+                
+                // Date Completed
+                $table->timestamp('submitted_at')->nullable();
+                
+                // Distinguish between system and manual
+                $table->boolean('is_manual')->default(false);
+                
+                $table->timestamps();
+            });
+        }
     }
 
     /**
@@ -30,6 +40,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Only drop if it exists to avoid errors during rollbacks
         Schema::dropIfExists('activity_user');
     }
 };

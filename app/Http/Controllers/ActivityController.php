@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+// REMOVED: use App\Models\Quiz; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ActivityController extends Controller
@@ -16,54 +17,64 @@ class ActivityController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Activity::query()
-            ->with('user:id,name')
-            ->select('id', 'user_id', 'title', 'type', 'description', 'due_date', 'file_path', 'created_at');
+        $user = Auth::user();
+        
+        $permissions = ['manage_activities' => false];
+        if ($user) {
+            $permissions['manage_activities'] = $user->role === 'teacher' || $user->role === 'admin'; 
+        }
 
-        // Filter by Date
+        // --- FETCH ACTIVITIES ONLY ---
+        $query = Activity::query()->with('user:id,name');
+
+        // IF STUDENT: Only show their own activities
+        // IF TEACHER: Show ALL
+        if ($user->role !== 'teacher' && $user->role !== 'admin') {
+            $query->where('user_id', $user->id);
+        }
+
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
         }
-
+        
         // Sorting
         $sortField = $request->input('sort_by', 'created_at'); 
-        $sortDirection = $request->input('sort', 'desc') === 'oldest' ? 'asc' : 'desc';
+        $sortDirection = $request->input('sort', 'desc');
         $query->orderBy($sortField, $sortDirection);
 
-        // Permissions
-        $permissions = ['manage_activities' => false];
-        if (Auth::check()) {
-            $user = Auth::user(); 
-            // Ensures Admins and Teachers can manage
-            $permissions['manage_activities'] = $user->hasRole(['admin', 'teacher']) || $user->can('manage activities');
-        }
-
-        $activities = $query->paginate(50);
+        // --- PAGINATION ---
+        $activities = $query->paginate(50)->through(function ($item) {
+            return [
+                'id' => $item->id,
+                'title' => $item->title,
+                'type' => $item->type ?? 'Activity', 
+                'status' => $item->status ?? 'pending',
+                'score' => $item->score ?? '-',
+                'due_date' => $item->due_date,
+                'file_path' => $item->file_path,
+                'created_at' => $item->created_at,
+                'model_type' => 'activity'
+            ];
+        });
 
         return Inertia::render('Activities/Index', [
-            'activities' => $activities, 
+            'activities' => $activities,
             'filters' => $request->all(['date', 'sort_by', 'sort']),
             'can' => $permissions,
             'name' => config('app.name'),
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return Inertia::render('Activities/Create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise', // Only these two allowed via form
+            'type' => 'required|string|in:Assignment,Exercise',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -72,13 +83,12 @@ class ActivityController extends Controller
         $data = [
             'user_id' => Auth::id(),
             'title' => $request->title,
-            'type' => $request->type, // 'Assignment' or 'Exercise'
+            'type' => $request->type, 
             'description' => $request->description,
             'due_date' => $request->due_date,
             'quiz_data' => null, 
         ];
 
-        // Handle Main File Upload
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $data['file_path'] = $file->store('activities', 'public');
@@ -86,27 +96,22 @@ class ActivityController extends Controller
             $data['file_type'] = $file->getClientOriginalExtension();
         }
 
-        // 1. Create Main Activity
-        Activity::create($data);
+        $activity = Activity::create($data);
 
-        // 2. AUTOMATICALLY CREATE SUBMISSION SLOT
-        // Since we restricted type to Assignment/Exercise, we always create this slot.
-        Activity::create([
-            'user_id' => Auth::id(),
-            'title' => 'Submission: ' . $request->title,
-            'type' => 'Submission', // This puts it in the Orange section
-            'description' => 'Please upload your work for ' . $request->title . ' here.',
-            'due_date' => $request->due_date,
-            'file_path' => null,
+        // Auto-assign to creator
+        DB::table('activity_user')->insert([
+            'activity_id' => $activity->id,
+            'user_id' => Auth::id(), 
+            'status' => 'pending',
+            'score' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         return redirect()->route('activities.index')
-            ->with('success', 'Activity and Submission slot created successfully.');
+            ->with('success', 'Activity created successfully.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Activity $activity)
     {
         return Inertia::render('Activities/Edit', [
@@ -114,14 +119,11 @@ class ActivityController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Activity $activity)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise,Submission', // Allow Submission edits too
+            'type' => 'required|string|in:Assignment,Exercise,Submission', 
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -134,9 +136,7 @@ class ActivityController extends Controller
             'due_date' => $request->due_date,
         ];
 
-        // Handle File Replacement
         if ($request->hasFile('file')) {
-            // Delete old file
             if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
                 Storage::disk('public')->delete($activity->file_path);
             }
@@ -153,25 +153,19 @@ class ActivityController extends Controller
             ->with('success', 'Activity updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Activity $activity)
     {
-        // Delete attached file if exists
         if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
             Storage::disk('public')->delete($activity->file_path);
         }
         
+        DB::table('activity_user')->where('activity_id', $activity->id)->delete();
         $activity->delete();
         
         return redirect()->route('activities.index')
             ->with('success', 'Activity deleted successfully.');
     }
 
-    /**
-     * Download the attached file.
-     */
     public function download(Activity $activity)
     {
         if (!$activity->file_path || !Storage::disk('public')->exists($activity->file_path)) {
