@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
     Search, Plus, Gamepad2, Pencil, Trash2, Calendar, Clock,
-    Shapes, FileText, CheckCircle, Eye
+    Shapes, FileText, CheckCircle, Eye, X, AlertCircle
 } from 'lucide-vue-next';
 import debounce from 'lodash/debounce';
 import { route } from 'ziggy-js';
@@ -34,9 +34,22 @@ watch(search, updateSearch);
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const deleteActivity = (id: number) => {
-    if (confirm('Are you sure you want to delete this activity?')) {
-        router.delete(route('activities.destroy', id));
+const isDeleteModalOpen = ref(false);
+const activityToDelete = ref<number | null>(null);
+
+const openDeleteModal = (id: number) => {
+    activityToDelete.value = id;
+    isDeleteModalOpen.value = true;
+};
+
+const confirmDelete = () => {
+    if (activityToDelete.value) {
+        router.delete(route('activities.destroy', activityToDelete.value), {
+            onFinish: () => {
+                isDeleteModalOpen.value = false;
+                activityToDelete.value = null;
+            }
+        });
     }
 };
 
@@ -117,28 +130,29 @@ const getActivityTypeStyle = (type: string | undefined) => {
 
                     <div class="flex items-center gap-2 border-l border-slate-100 pl-4 ml-2 md:self-center self-end w-full md:w-auto justify-end md:justify-start">
 
+                        <Link :href="route('activities.show', activity.id)">
+                            <Button size="sm" variant="outline" class="text-teal-600 border-teal-200 hover:bg-teal-50 gap-2">
+                                <Eye class="w-4 h-4" /> View Details
+                            </Button>
+                        </Link>
+
                         <template v-if="can.manage_activities">
                             <Link :href="route('activities.edit', activity.id)">
-                                <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil class="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50">
+                                    <Pencil class="w-4 h-4" />
+                                </Button>
                             </Link>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50" @click="deleteActivity(activity.id)">
-                                <Trash2 class="w-4 h-4" />
+                            <Button variant="ghost" size="icon" @click="openDeleteModal(activity.id)">
+                                <Trash2 class="w-4 h-4 text-red-500" />
                             </Button>
                         </template>
 
                         <template v-else>
-                            <div v-if="activity.type === 'Submission' && activity.my_submission" class="flex flex-col items-end">
-                                <Badge class="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 gap-1 px-3 py-1">
+                            <div v-if="activity.type === 'Submission' && activity.my_submission">
+                                <Badge class="bg-green-100 text-green-700 border-green-200 gap-1 px-3 py-1 ml-2">
                                     <CheckCircle class="w-3 h-3" /> Submitted
                                 </Badge>
-                                <Link :href="route('activities.show', activity.id)" class="text-[10px] text-teal-600 hover:underline mt-1">View / Edit</Link>
                             </div>
-
-                            <Link v-else :href="route('activities.show', activity.id)">
-                                <Button size="sm" variant="outline" class="text-teal-600 border-teal-200 hover:bg-teal-50 gap-2">
-                                    <Eye class="w-4 h-4" /> View Details
-                                </Button>
-                            </Link>
                         </template>
                     </div>
                 </div>
@@ -153,5 +167,20 @@ const getActivityTypeStyle = (type: string | undefined) => {
                 </div>
             </div>
          </div>
+         
+         <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+            <div class="bg-white rounded-none shadow-2xl p-8 max-w-sm w-full border border-slate-200 animate-in fade-in zoom-in duration-200">
+                <h2 class="text-lg font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                    <Trash2 class="w-5 h-5 text-red-500" /> Confirm Delete
+                </h2>
+                <p class="mt-4 text-slate-600 text-sm leading-relaxed font-medium">
+                    Are you sure you want to delete this activity? This will permanently remove all student submissions associated with it.
+                </p>
+                <div class="mt-8 flex justify-end gap-3">
+                    <Button variant="ghost" @click="isDeleteModalOpen = false" class="text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
+                    <Button @click="confirmDelete" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold uppercase tracking-widest px-8 shadow-md">Confirm</Button>
+                </div>
+            </div>
+        </div>
     </AppSidebarLayout>
 </template>
