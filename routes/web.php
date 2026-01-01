@@ -72,6 +72,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+        Route::put('/chatbot/upload/{geminiDocumentName}', [ChatbotUploadController::class, 'update'])
+            ->name('upload.update')
+            ->where('geminiDocumentName', '.*'); // Important to allow slashes in the Gemini ID
 
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
