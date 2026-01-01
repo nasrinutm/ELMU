@@ -117,6 +117,7 @@ class StudentController extends Controller
                 'due_date' => $activity->due_date,
                 'status' => $submission ? 'Completed' : 'Pending',
                 'score' => $submission->score ?? '-',
+                'percentage' => null,
                 'submitted_at' => $submission->created_at ?? null,
                 'is_manual' => false,
             ];
@@ -127,20 +128,17 @@ class StudentController extends Controller
             ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
             ->where('quiz_attempts.user_id', $student->id)
             ->select('quiz_attempts.id', 'quiz_attempts.quiz_id', 'quizzes.title', 'quiz_attempts.score', 'quiz_attempts.total_questions', 'quiz_attempts.created_at')
-            ->orderBy('quiz_attempts.created_at', 'asc') // Sort by date to track order of attempts
+            ->orderBy('quiz_attempts.created_at', 'asc') // Chronological order
             ->get();
 
-        // Tracker for attempt numbering
         $attemptTracker = [];
         $formattedQuizzes = $quizSubmissions->map(function ($q) use (&$attemptTracker) {
-            // Increment attempt count for this specific quiz_id
             $attemptTracker[$q->quiz_id] = ($attemptTracker[$q->quiz_id] ?? 0) + 1;
             $attemptNo = $attemptTracker[$q->quiz_id];
 
-            // Add label if it's a second attempt or higher
+            // Labeling retakes visually
             $displayTitle = $q->title . ($attemptNo > 1 ? " (Attempt $attemptNo)" : "");
-
-            $percentage = ($q->total_questions > 0) ? round(($q->score / $q->total_questions) * 100) : 0;
+            $rawPercentage = ($q->total_questions > 0) ? round(($q->score / $q->total_questions) * 100) : 0;
 
             return [
                 'id' => $q->id,
@@ -148,7 +146,8 @@ class StudentController extends Controller
                 'title' => $displayTitle,
                 'type' => 'Quiz',
                 'status' => 'Completed',
-                'score' => $percentage . '%',
+                'score' => $rawPercentage . '%',
+                'percentage' => $rawPercentage,
                 'submitted_at' => $q->created_at,
                 'due_date' => null,
                 'is_manual' => false,
@@ -167,34 +166,40 @@ class StudentController extends Controller
                     'type' => 'Manual',
                     'status' => 'Completed',
                     'score' => $act->score,
+                    'percentage' => null,
                     'submitted_at' => $act->created_at,
                     'due_date' => null,
                     'is_manual' => true,
                 ];
             });
 
-        // 4. FIX: UNIQUE STATS CALCULATION
+        // 4. FIX: CALCULATE TRUE UNIQUE COMPLETED COUNT
 
-        // Count each Activity and each Quiz only once for the total card (4 Quiz + 2 Activity = 6)
-        $totalSystemQuizzes = Quiz::count();
-        $totalSystemActivities = Activity::count();
-        $totalUniqueItemsPossible = $totalSystemQuizzes + $totalSystemActivities;
-
-        // Completion logic (Uses unique counts)
-        $uniqueActivitiesDone = DB::table('activity_submissions')
+        // Unique Assignments finished
+        $uniqueActivitiesDoneCount = DB::table('activity_submissions')
             ->where('user_id', $student->id)
             ->distinct('activity_id')
             ->count('activity_id');
 
-        $uniqueQuizzesDone = DB::table('quiz_attempts')
+        // Unique Quizzes finished (ignoring retakes)
+        $uniqueQuizzesDoneCount = DB::table('quiz_attempts')
             ->where('user_id', $student->id)
             ->distinct('quiz_id')
             ->count('quiz_id');
 
-        $assignmentCircle = $totalSystemActivities > 0 ? min(100, round(($uniqueActivitiesDone / $totalSystemActivities) * 100)) : 0;
-        $quizCircle = $totalSystemQuizzes > 0 ? min(100, round(($uniqueQuizzesDone / $totalSystemQuizzes) * 100)) : 0;
+        // Total unique completed tasks
+        $trueCompletedCount = $uniqueActivitiesDoneCount + $uniqueQuizzesDoneCount;
 
-        // 5. Combine for timeline
+        // 5. UNIQUE TOTALS FOR STAT CARDS
+        $totalSystemQuizzes = Quiz::count();
+        $totalSystemActivities = Activity::count();
+        $totalUniqueItemsPossible = $totalSystemQuizzes + $totalSystemActivities;
+
+        // Circular math (stays unique)
+        $assignmentCircle = $totalSystemActivities > 0 ? min(100, round(($uniqueActivitiesDoneCount / $totalSystemActivities) * 100)) : 0;
+        $quizCircle = $totalSystemQuizzes > 0 ? min(100, round(($uniqueQuizzesDoneCount / $totalSystemQuizzes) * 100)) : 0;
+
+        // 6. Combine for timeline table
         $finalTimeline = $activitiesReport
             ->concat($formattedQuizzes)
             ->concat($manualActivities)
@@ -206,7 +211,8 @@ class StudentController extends Controller
         return Inertia::render('Students/Show', [
             'student' => $student,
             'activities' => $finalTimeline,
-            'total_unique_count' => $totalUniqueItemsPossible, // Sends "6" to the card
+            'total_unique_count' => $totalUniqueItemsPossible,
+            'true_completed_count' => $trueCompletedCount, // FIXED: Only counts unique tasks
             'completion_stats' => [
                 'activity' => $assignmentCircle,
                 'quiz' => $quizCircle,
