@@ -4,11 +4,18 @@ import { Head, Link } from '@inertiajs/vue3';
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, User, ArrowRight, TrendingUp, Users } from 'lucide-vue-next';
+import { Search, ArrowRight, TrendingUp, Users } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
+// Define the updated student interface to include progress data
 const props = defineProps<{
-    students: Array<{ id: number; name: string; email: string; }>;
+    students: Array<{ 
+        id: number; 
+        name: string; 
+        email: string; 
+        completed_count: number; // Count of activities finished by student
+        total_activities: number; // Total activities available in system
+    }>;
 }>();
 
 const breadcrumbs = [
@@ -26,6 +33,14 @@ const filteredStudents = computed(() => {
         student.email.toLowerCase().includes(query)
     );
 });
+
+/**
+ * Calculates the percentage of completion.
+ */
+const getProgress = (completed: number, total: number) => {
+    if (!total || total === 0) return 0;
+    return Math.round((completed / total) * 100);
+};
 </script>
 
 <template>
@@ -69,6 +84,7 @@ const filteredStudents = computed(() => {
                         <tr>
                             <th class="px-6 py-4">Student Name</th>
                             <th class="px-6 py-4">Email Address</th>
+                            <th class="px-6 py-4">Activity Progress</th>
                             <th class="px-6 py-4 text-right">Action</th>
                         </tr>
                     </thead>
@@ -81,12 +97,33 @@ const filteredStudents = computed(() => {
                                 {{ student.name }}
                             </td>
                             <td class="px-6 py-4 text-slate-500">{{ student.email }}</td>
+                            
+                            <td class="px-6 py-4 min-w-[200px]">
+                                <div class="flex flex-col gap-1.5">
+                                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                        <span>{{ student.completed_count }} / {{ student.total_activities }} Total Tasks</span>
+                                        <span>{{ getProgress(student.completed_count, student.total_activities) }}%</span>
+                                    </div>
+                                    <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div 
+                                            class="h-full bg-teal-500 transition-all duration-500 ease-out"
+                                            :style="{ width: getProgress(student.completed_count, student.total_activities) + '%' }"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </td>
+
                             <td class="px-6 py-4 text-right">
                                 <Link :href="route('reports.student.detail', student.id)">
                                     <Button size="sm" variant="outline" class="text-teal-600 border-teal-200 hover:bg-teal-50 gap-2">
                                         View Report <ArrowRight class="w-4 h-4" />
                                     </Button>
                                 </Link>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredStudents.length === 0">
+                            <td colspan="4" class="px-6 py-12 text-center text-slate-400 italic">
+                                No students found matching your search.
                             </td>
                         </tr>
                     </tbody>

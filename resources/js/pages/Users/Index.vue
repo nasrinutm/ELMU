@@ -3,7 +3,6 @@ import { ref, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { route } from 'ziggy-js';
@@ -39,7 +38,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'User Management', href: route('users.index') },
 ];
 
-// State
+// State - Bound to props from UserController
 const roleFilter = ref(props.filters.role || '');
 const sortOrder = ref(props.filters.sort || 'latest');
 const searchQuery = ref(props.filters.search || '');
@@ -52,7 +51,7 @@ const deleteUser = (id: number) => {
 };
 
 // Debounce Function for Search
-const debounce = (fn: (...args: any[]) => void, delay = 300) => {
+const debounce = (fn: Function, delay = 300) => {
     let timeout: ReturnType<typeof setTimeout>;
     return (...args: any[]) => {
         clearTimeout(timeout);
@@ -60,14 +59,22 @@ const debounce = (fn: (...args: any[]) => void, delay = 300) => {
     };
 };
 
-// Watchers for Filtering
-watch([roleFilter, sortOrder, searchQuery], debounce(([newRole, newSort, newSearch]) => {
+// Combined watcher that correctly passes the 'search' key to Laravel
+const updateFilters = debounce(() => {
     router.get(
         route('users.index'),
-        { role: newRole, sort: newSort, search: newSearch },
+        {
+            role: roleFilter.value,
+            sort: sortOrder.value,
+            search: searchQuery.value
+        },
         { preserveState: true, replace: true }
     );
-}, 300));
+}, 300);
+
+watch([roleFilter, sortOrder, searchQuery], () => {
+    updateFilters();
+});
 
 // Date Formatter
 const formatAccountAge = (dateString: string) => {
@@ -83,22 +90,12 @@ const formatAccountAge = (dateString: string) => {
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Badge Color Logic (Professional Theme)
-const getRoleBadgeVariant = (roleName: string) => {
-    switch (roleName) {
-        case 'admin': return 'destructive'; // Red
-        case 'teacher': return 'default';     // Dark/Black (or Indigo via class)
-        case 'student': return 'secondary';   // Gray/Blue
-        default: return 'outline';
-    }
-};
-
 const getRoleBadgeClass = (roleName: string) => {
     switch (roleName) {
-        case 'admin': return 'bg-red-600 hover:bg-red-700 text-white';
-        case 'teacher': return 'bg-indigo-600 hover:bg-indigo-700 text-white';
-        case 'student': return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
-        default: return 'bg-gray-100 text-gray-800';
+        case 'admin': return 'bg-indigo-600 text-white';
+        case 'teacher': return 'bg-teal-600 text-white';
+        case 'student': return 'bg-orange-500 text-white';
+        default: return 'bg-slate-100 text-slate-800';
     }
 };
 </script>
@@ -107,16 +104,16 @@ const getRoleBadgeClass = (roleName: string) => {
     <Head title="User Management" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 antialiased font-sans font-normal">
 
-            <div v-if="page.props.flash?.success" class="p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center gap-2 shadow-sm">
-                <span class="h-2 w-2 rounded-full bg-green-600"></span>
+            <div v-if="page.props.flash?.success" class="p-4 bg-green-50 border border-green-200 text-green-700 rounded-none flex items-center gap-2 shadow-sm">
+                <span class="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
                 {{ page.props.flash.success }}
             </div>
 
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-6">
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+                    <h1 class="text-3xl font-bold tracking-tight text-slate-900 uppercase">
                         Manage Users
                     </h1>
                     <p class="text-slate-500 mt-1">
@@ -125,33 +122,31 @@ const getRoleBadgeClass = (roleName: string) => {
                 </div>
 
                 <Link :href="route('users.create')">
-                    <Button class="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all">
+                    <Button class="bg-action hover:bg-[#0f172a] text-white font-bold shadow-md rounded-sm transition-all text-[10px] uppercase tracking-widest px-6 py-5">
                         <UserPlus class="w-4 h-4 mr-2" />
                         Add New User
                     </Button>
                 </Link>
             </div>
 
-            <Separator class="bg-slate-200" />
-
-            <div class="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div class="flex flex-col md:flex-row gap-4 bg-white p-5 rounded-none border border-slate-200 shadow-sm">
 
                 <div class="relative w-full md:w-96">
-                    <Search class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Search class="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                     <input
                         v-model="searchQuery"
                         type="text"
                         placeholder="Search by name or email..."
-                        class="w-full h-10 pl-9 pr-4 rounded-md border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        class="w-full h-10 pl-10 pr-4 rounded-none border border-slate-300 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all"
                     />
                 </div>
 
-                <div class="flex gap-4 w-full md:w-auto ml-auto">
+                <div class="flex flex-wrap md:flex-nowrap gap-4 w-full md:w-auto ml-auto">
                     <div class="relative w-full md:w-48">
-                        <Filter class="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <Filter class="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
                         <select
                             v-model="roleFilter"
-                            class="w-full h-10 pl-9 pr-8 rounded-md border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                            class="w-full h-10 pl-10 pr-8 rounded-none border border-slate-300 bg-white text-xs font-bold uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-1 focus:ring-action appearance-none cursor-pointer"
                         >
                             <option value="">All Roles</option>
                             <option v-for="role in roles" :key="role" :value="role">
@@ -161,10 +156,10 @@ const getRoleBadgeClass = (roleName: string) => {
                     </div>
 
                     <div class="relative w-full md:w-48">
-                        <ArrowUpDown class="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <ArrowUpDown class="absolute left-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />
                         <select
                             v-model="sortOrder"
-                            class="w-full h-10 pl-9 pr-8 rounded-md border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                            class="w-full h-10 pl-10 pr-8 rounded-none border border-slate-300 bg-white text-xs font-bold uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-1 focus:ring-action appearance-none cursor-pointer"
                         >
                             <option value="latest">Newest First</option>
                             <option value="oldest">Oldest First</option>
@@ -173,31 +168,31 @@ const getRoleBadgeClass = (roleName: string) => {
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="bg-white rounded-none border border-slate-200 shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="px-6 py-4 font-semibold text-slate-700">User Details</th>
-                                <th class="px-6 py-4 font-semibold text-slate-700">Role</th>
-                                <th class="px-6 py-4 font-semibold text-slate-700">Joined</th>
-                                <th class="px-6 py-4 text-right font-semibold text-slate-700">Actions</th>
+                                <th class="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">User Details</th>
+                                <th class="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">Role</th>
+                                <th class="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">Joined</th>
+                                <th class="px-6 py-5 text-right text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr
                                 v-for="user in users.data"
                                 :key="user.id"
-                                class="group hover:bg-slate-50/80 transition-colors"
+                                class="group hover:bg-slate-50/50 transition-colors"
                             >
                                 <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="h-10 w-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 shrink-0">
-                                            <span class="font-bold text-sm">{{ user.name.charAt(0).toUpperCase() }}</span>
+                                    <div class="flex items-center gap-4">
+                                        <div class="h-10 w-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200 shrink-0 font-bold text-xs uppercase shadow-inner">
+                                            {{ user.name.charAt(0) }}
                                         </div>
                                         <div>
-                                            <div class="font-medium text-slate-900">{{ user.name }}</div>
-                                            <div class="text-xs text-slate-500">{{ user.email }}</div>
+                                            <div class="font-bold text-slate-900">{{ user.name }}</div>
+                                            <div class="text-[11px] text-slate-400 uppercase tracking-tight">{{ user.email }}</div>
                                         </div>
                                     </div>
                                 </td>
@@ -205,20 +200,20 @@ const getRoleBadgeClass = (roleName: string) => {
                                 <td class="px-6 py-4">
                                     <Badge
                                         :class="getRoleBadgeClass(user.roles[0]?.name)"
-                                        class="uppercase text-[10px] font-bold px-2.5 py-0.5 border-none shadow-sm"
+                                        class="uppercase text-[9px] font-bold px-2.5 py-1 rounded-sm border-none shadow-sm"
                                     >
                                         {{ user.roles[0]?.name || 'User' }}
                                     </Badge>
                                 </td>
 
-                                <td class="px-6 py-4 text-slate-500">
+                                <td class="px-6 py-4 text-[11px] font-medium text-slate-500 uppercase tracking-widest">
                                     {{ formatAccountAge(user.created_at) }}
                                 </td>
 
                                 <td class="px-6 py-4 text-right">
-                                    <div class="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <div class="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                                         <Link :href="route('users.edit', user.id)">
-                                            <Button size="icon" variant="ghost" class="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                            <Button size="icon" variant="ghost" class="h-9 w-9 rounded-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
                                                 <Edit class="w-4 h-4" />
                                             </Button>
                                         </Link>
@@ -226,7 +221,7 @@ const getRoleBadgeClass = (roleName: string) => {
                                         <Button
                                             size="icon"
                                             variant="ghost"
-                                            class="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            class="h-9 w-9 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-all"
                                             @click="deleteUser(user.id)"
                                         >
                                             <Trash2 class="w-4 h-4" />
@@ -236,11 +231,13 @@ const getRoleBadgeClass = (roleName: string) => {
                             </tr>
 
                             <tr v-if="users.data.length === 0">
-                                <td colspan="4" class="px-6 py-12 text-center">
-                                    <div class="flex flex-col items-center justify-center text-slate-500">
-                                        <User class="h-12 w-12 text-slate-200 mb-3" />
-                                        <p class="font-medium text-slate-900">No users found</p>
-                                        <p class="text-sm">Try adjusting your search or filters.</p>
+                                <td colspan="4" class="px-6 py-20 text-center">
+                                    <div class="flex flex-col items-center justify-center text-slate-400">
+                                        <div class="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                            <User class="h-8 w-8 text-slate-200" />
+                                        </div>
+                                        <p class="font-bold text-slate-900 uppercase tracking-widest text-xs">No users found</p>
+                                        <p class="text-xs mt-1">Try adjusting your search or filters.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -249,20 +246,20 @@ const getRoleBadgeClass = (roleName: string) => {
                 </div>
             </div>
 
-            <div v-if="users.links.length > 3" class="flex justify-center pt-2">
+            <div v-if="users.links.length > 3" class="flex justify-center pt-4">
                 <div class="flex flex-wrap gap-1">
                     <template v-for="(link, key) in users.links" :key="key">
                         <div
                             v-if="link.url === null"
-                            class="px-3 py-1 text-sm text-slate-400 border border-slate-200 rounded-md bg-slate-50 select-none"
+                            class="px-4 py-2 text-[10px] font-bold uppercase text-slate-400 border border-slate-200 bg-slate-50 select-none"
                             v-html="link.label"
                         />
                         <Link
                             v-else
-                            class="px-3 py-1 text-sm border rounded-md transition-colors"
+                            class="px-4 py-2 text-[10px] font-bold uppercase border transition-all"
                             :class="{
-                                'bg-blue-600 text-white border-blue-600 font-medium': link.active,
-                                'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300': !link.active
+                                'bg-action text-white border-action shadow-sm': link.active,
+                                'bg-white text-slate-600 border-slate-200 hover:bg-slate-50': !link.active
                             }"
                             :href="link.url"
                             v-html="link.label"

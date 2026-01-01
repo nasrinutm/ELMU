@@ -9,9 +9,7 @@ use Inertia\Middleware;
 class HandleInertiaRequests extends Middleware
 {
     /**
-     * The root template that's loaded on the first page visit.
-     *
-     * @see https://inertiajs.com/server-side-setup#root-template
+     * The root view that's loaded on the first page visit.
      *
      * @var string
      */
@@ -19,8 +17,6 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
      */
     public function version(Request $request): ?string
     {
@@ -28,9 +24,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
+     * Defines the props that are shared by default.
      *
      * @return array<string, mixed>
      */
@@ -43,20 +37,25 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
 
-            // Authentication Data
+            // USER AUTH & ROLES
             'auth' => [
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
                     'username' => $request->user()->username,
                     'email' => $request->user()->email,
-                    // Add ->toArray() here for cleaner frontend data
                     'roles' => $request->user()->getRoleNames()->toArray(),
+                    // Shares the primary role to drive logic in layouts/dashboards
+                    'role' => $request->user()->getRoleNames()->first(),
                 ] : null,
             ],
+
+            // FLASH NOTIFICATIONS
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info' => fn () => $request->session()->get('info'),
             ],
 
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
