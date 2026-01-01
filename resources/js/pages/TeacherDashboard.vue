@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
-import { FileText, GraduationCap, Trophy, HelpCircle, Database, Download, BookOpen, Users } from 'lucide-vue-next';
+import {
+    FileText,
+    GraduationCap,
+    Trophy,
+    HelpCircle,
+    Download,
+    BookOpen,
+    Users,
+    ClipboardCheck,
+    BarChart3,
+    PlusCircle,
+    UserPlus
+} from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 const props = defineProps<{
@@ -28,7 +40,7 @@ const formatDate = (dateString: string) => {
             <div class="border-b border-slate-200 pb-6 flex justify-between items-end">
                 <div>
                     <h1 class="text-3xl font-bold tracking-tight text-slate-900 uppercase">Teacher Overview</h1>
-                    <p class="text-sm text-slate-500 mt-1 font-medium">Monitoring classroom performance and unit resources.</p>
+                    <p class="text-sm text-slate-500 mt-1 font-medium italic">Empowering education through organized resources and student insights.</p>
                 </div>
             </div>
 
@@ -38,7 +50,7 @@ const formatDate = (dateString: string) => {
                         <p class="text-[10px] font-bold opacity-80 uppercase tracking-[0.2em] mb-4">Material Resources</p>
                         <h3 class="text-4xl font-bold tabular-nums leading-none">{{ stats.materials || 0 }}</h3>
                         <p class="mt-4 text-[9px] font-bold uppercase opacity-60 tracking-widest flex items-center gap-1">
-                            <BookOpen class="w-3 h-3" /> Total system modules
+                            <BookOpen class="w-3 h-3" /> System modules
                         </p>
                     </div>
                     <FileText class="w-10 h-10 opacity-20" />
@@ -60,17 +72,17 @@ const formatDate = (dateString: string) => {
                         <p class="text-[10px] font-bold opacity-80 uppercase tracking-[0.2em] mb-4">Total Quizzes</p>
                         <h3 class="text-4xl font-bold tabular-nums leading-none">{{ stats.available_quizzes || 0 }}</h3>
                         <p class="mt-4 text-[9px] font-bold uppercase opacity-60 tracking-widest flex items-center gap-1">
-                            <Trophy class="w-3 h-3" /> Assessments created
+                            <Trophy class="w-3 h-3" /> Assessments
                         </p>
                     </div>
                     <HelpCircle class="w-10 h-10 opacity-20" />
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 items-stretch font-sans">
 
                 <div class="lg:col-span-2 flex flex-col bg-white border border-slate-200 shadow-sm rounded-none">
-                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30 font-sans">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                         <h3 class="font-bold text-slate-900 uppercase text-[10px] tracking-[0.2em]">Recent Study Materials</h3>
                         <Link :href="route('materials.index')" class="text-[10px] text-action hover:underline font-bold uppercase tracking-widest">View All</Link>
                     </div>
@@ -92,26 +104,38 @@ const formatDate = (dateString: string) => {
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-y-6">
-                    <div class="bg-white border border-slate-200 shadow-sm p-8 flex flex-col rounded-none font-sans">
-                        <h3 class="font-bold text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-2">
-                            <Database class="w-4 h-4 text-action" /> Academic Hub
-                        </h3>
-                        <div class="space-y-6">
-                            <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                                <span class="text-slate-500">Publish Status</span>
-                                <span class="text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1">READY</span>
-                            </div>
-                            <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                                <span class="text-slate-500">Module Index</span>
-                                <span class="text-blue-700 bg-blue-50 border border-blue-100 px-2 py-1">{{ stats.materials }} Units</span>
+                <div class="flex flex-col">
+                    <div class="flex-grow bg-white border border-slate-200 shadow-sm p-8 flex flex-col justify-between rounded-none">
+                        <div>
+                            <h3 class="font-bold text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-2">
+                                <ClipboardCheck class="w-4 h-4 text-action" /> Teaching Toolkit
+                            </h3>
+                            <div class="space-y-2">
+                                <Link :href="route('students.index')" class="flex items-center justify-between p-3 border border-slate-50 hover:bg-slate-50 transition group rounded-none">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 group-hover:text-action">Manage Roster</span>
+                                    <UserPlus class="w-4 h-4 text-slate-300 group-hover:text-action" />
+                                </Link>
+                                <Link :href="route('reports.index')" class="flex items-center justify-between p-3 border border-slate-50 hover:bg-slate-50 transition group rounded-none">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 group-hover:text-action">Class Performance</span>
+                                    <BarChart3 class="w-4 h-4 text-slate-300 group-hover:text-action" />
+                                </Link>
+                                <Link :href="route('teacher.quiz.index')" class="flex items-center justify-between p-3 border border-slate-50 hover:bg-slate-50 transition group rounded-none">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600 group-hover:text-action">Assessment List</span>
+                                    <Trophy class="w-4 h-4 text-slate-300 group-hover:text-action" />
+                                </Link>
                             </div>
                         </div>
+
                         <div class="mt-12 pt-8 border-t border-slate-50">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-4 text-center tracking-widest">Expand the Knowledge Library</p>
-                            <Link :href="route('materials.create')" class="block w-full text-center bg-slate-900 text-white py-4 hover:bg-action transition text-[10px] font-bold uppercase tracking-[0.3em] shadow-lg">
-                                Deploy Material
-                            </Link>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase mb-4 text-center tracking-widest leading-relaxed italic">Instructional Quick Actions</p>
+                            <div class="space-y-3">
+                                <Link :href="route('materials.create')" class="block w-full text-center bg-slate-900 text-white py-4 hover:bg-action transition text-[10px] font-bold uppercase tracking-[0.3em] shadow-lg rounded-none">
+                                    <PlusCircle class="inline-block w-3 h-3 mr-2 mb-0.5" /> Add Material
+                                </Link>
+                                <Link :href="route('teacher.quiz.create')" class="block w-full text-center border border-slate-200 text-slate-600 py-3 hover:bg-slate-100 transition text-[9px] font-bold uppercase tracking-[0.2em] rounded-none">
+                                    New Assessment
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
