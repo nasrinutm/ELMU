@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
-// REMOVED: use App\Models\Quiz; 
+use App\Models\ActivitySubmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -12,50 +12,29 @@ use Inertia\Inertia;
 
 class ActivityController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
-        $user = Auth::user();
-        
-        $permissions = ['manage_activities' => false];
-        if ($user) {
-            $permissions['manage_activities'] = $user->role === 'teacher' || $user->role === 'admin'; 
-        }
-
-        // --- FETCH ACTIVITIES ONLY ---
-        $query = Activity::query()->with('user:id,name');
-
-        // IF STUDENT: Only show their own activities
-        // IF TEACHER: Show ALL
-        if ($user->role !== 'teacher' && $user->role !== 'admin') {
-            $query->where('user_id', $user->id);
-        }
+        $query = Activity::query()
+            ->with('user:id,name')
+            ->with('mySubmission')
+            ->select('id', 'user_id', 'title', 'type', 'description', 'due_date', 'file_path', 'created_at');
 
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
         }
-        
-        // Sorting
-        $sortField = $request->input('sort_by', 'created_at'); 
-        $sortDirection = $request->input('sort', 'desc');
+
+        $sortField = $request->input('sort_by', 'created_at');
+        $sortDirection = $request->input('sort', 'desc') === 'oldest' ? 'asc' : 'desc';
         $query->orderBy($sortField, $sortDirection);
 
-        // --- PAGINATION ---
-        $activities = $query->paginate(50)->through(function ($item) {
-            return [
-                'id' => $item->id,
-                'title' => $item->title,
-                'type' => $item->type ?? 'Activity', 
-                'status' => $item->status ?? 'pending',
-                'score' => $item->score ?? '-',
-                'due_date' => $item->due_date,
-                'file_path' => $item->file_path,
-                'created_at' => $item->created_at,
-                'model_type' => 'activity'
-            ];
-        });
+        $permissions = ['manage_activities' => false];
+        if (Auth::check()) {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            $permissions['manage_activities'] = $user->hasRole(['admin', 'teacher']) || $user->can('manage activities');
+        }
+
+        $activities = $query->paginate(50);
 
         return Inertia::render('Activities/Index', [
             'activities' => $activities,
@@ -74,7 +53,7 @@ class ActivityController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise',
+            'type' => 'required|string|in:Assignment,Exercise,Submission',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -83,10 +62,10 @@ class ActivityController extends Controller
         $data = [
             'user_id' => Auth::id(),
             'title' => $request->title,
-            'type' => $request->type, 
+            'type' => $request->type,
             'description' => $request->description,
             'due_date' => $request->due_date,
-            'quiz_data' => null, 
+            'quiz_data' => null,
         ];
 
         if ($request->hasFile('file')) {
@@ -96,20 +75,80 @@ class ActivityController extends Controller
             $data['file_type'] = $file->getClientOriginalExtension();
         }
 
-        $activity = Activity::create($data);
-
-        // Auto-assign to creator
-        DB::table('activity_user')->insert([
-            'activity_id' => $activity->id,
-            'user_id' => Auth::id(), 
-            'status' => 'pending',
-            'score' => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        Activity::create($data);
 
         return redirect()->route('activities.index')
             ->with('success', 'Activity created successfully.');
+    }
+
+    public function show(Activity $activity)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $isTeacher = $user->hasRole(['admin', 'teacher']);
+
+        // Load specific submission for the logged-in user
+        $activity->load('mySubmission');
+
+        // If teacher, load ALL submissions with student names
+        $allSubmissions = [];
+        if ($isTeacher) {
+            $allSubmissions = ActivitySubmission::where('activity_id', $activity->id)
+                ->with('user:id,name,email')
+                ->orderBy('submitted_at', 'desc')
+                ->get();
+        }
+
+        return Inertia::render('Activities/Show', [
+            'activity' => $activity,
+            'allSubmissions' => $allSubmissions,
+            'isTeacher' => $isTeacher
+        ]);
+    }
+
+    /**
+     * FIX: Handles user submissions correctly to update status from Pending to Completed.
+     */
+    public function submit(Request $request, Activity $activity)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->store('submissions', 'public');
+
+        // This triggers the change from "Pending" to "Completed" in your views
+        ActivitySubmission::updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'activity_id' => $activity->id
+            ],
+            [
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+                'submitted_at' => now(),
+            ]
+        );
+
+        return back()->with('success', 'Work submitted successfully!');
+    }
+
+    public function downloadSubmission(ActivitySubmission $submission)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($submission->user_id !== $user->id && !$user->hasRole(['admin', 'teacher'])) {
+            abort(403);
+        }
+
+        $path = storage_path('app/public/' . $submission->file_path);
+
+        if (!file_exists($path)) {
+            return back()->with('error', 'File not found.');
+        }
+
+        return response()->download($path, $submission->file_name);
     }
 
     public function edit(Activity $activity)
@@ -123,7 +162,7 @@ class ActivityController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string|in:Assignment,Exercise,Submission', 
+            'type' => 'required|string|in:Assignment,Exercise,Submission',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
             'file' => 'nullable|file|max:10240',
@@ -140,7 +179,7 @@ class ActivityController extends Controller
             if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
                 Storage::disk('public')->delete($activity->file_path);
             }
-            
+
             $file = $request->file('file');
             $data['file_path'] = $file->store('activities', 'public');
             $data['file_name'] = $file->getClientOriginalName();
@@ -158,10 +197,8 @@ class ActivityController extends Controller
         if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
             Storage::disk('public')->delete($activity->file_path);
         }
-        
-        DB::table('activity_user')->where('activity_id', $activity->id)->delete();
         $activity->delete();
-        
+
         return redirect()->route('activities.index')
             ->with('success', 'Activity deleted successfully.');
     }
@@ -173,5 +210,46 @@ class ActivityController extends Controller
         }
         $path = storage_path('app/public/' . $activity->file_path);
         return response()->download($path, $activity->file_name);
+    }
+
+    public function unsubmit(Activity $activity)
+    {
+        $submission = ActivitySubmission::where('activity_id', $activity->id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (! $submission) {
+            return back()->with('error', 'No submission found to remove.');
+        }
+
+        // Standard 2-minute window for unsubmitting
+        if ($submission->created_at->diffInMinutes(now()) >= 2) {
+            return back()->with('error', 'Time limit exceeded. You can only remove a submission within 2 minutes.');
+        }
+
+        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
+            Storage::disk('public')->delete($submission->file_path);
+        }
+
+        $submission->delete();
+
+        return back()->with('success', 'Submission removed. You can now upload a new file.');
+    }
+
+    public function destroySubmission(ActivitySubmission $submission)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->hasRole(['teacher', 'admin'])) {
+            abort(403);
+        }
+
+        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
+            Storage::disk('public')->delete($submission->file_path);
+        }
+
+        $submission->delete();
+
+        return back()->with('success', 'Submission has been permanently deleted.');
     }
 }

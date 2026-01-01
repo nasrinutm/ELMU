@@ -15,7 +15,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 // 'title' and 'body' match the columns in your 'posts' table
 const form = useForm({
     title: '',
-    body: '',
+    content: '',
 });
 
 // Submit handler
@@ -38,7 +38,7 @@ const submit = () => {
             
             <h1 class="text-xl font-semibold mb-4">Create New Discussion</h1>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
                 <form @submit.prevent="submit" class="p-6 space-y-4">
                     
                     <div>
@@ -56,16 +56,20 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <label for="body" class="block mb-1 font-medium">Body</label>
+                        <label for="content" class="block mb-1 font-medium">Content</label>
                         <textarea
-                            id="body"
-                            v-model="form.body"
+                            id="content"
+                            v-model="form.content" 
                             rows="8"
+                            autocomplete="off"
+                            spellcheck="false"
+                            data-1p-ignore
+                            data-lpignore="true"
                             class="w-full rounded border px-3 py-2"
                             placeholder="Write the main content of your post..."
                         ></textarea>
-                        <p v-if="form.errors.body" class="text-red-500 text-sm mt-1">
-                            {{ form.errors.body }}
+                        <p v-if="form.errors.content" class="text-red-500 text-sm mt-1">
+                            {{ form.errors.content }}
                         </p>
                     </div>
 

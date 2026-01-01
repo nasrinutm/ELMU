@@ -5,54 +5,49 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne; // <--- Import this
+use Illuminate\Support\Facades\Auth; // <--- Import this
 
 class Activity extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     * Includes fields for general activities, manual entries, and quiz data.
-     */
+    protected $guarded = [];
+
     protected $fillable = [
-        'user_id',
-        'title',
-        'type',        // e.g., 'Homework', 'Lab', 'Quiz', 'manual'
-        'description', // Used for manual entry details or assignment instructions
-        'due_date',
-        'file_path',   // Path to teacher-uploaded files
-        'file_name',   
-        'file_type',   
-        'time_limit',  // For quiz activities
-        'quiz_data',   // JSON blob for quiz questions
+        'user_id', 
+        'title', 
+        'type', 
+        'description', 
+        'due_date', 
+        'file_path', 
+        'file_name', 
+        'file_type', 
+        'time_limit', 
+        'quiz_data'
     ];
 
-    /**
-     * The attributes that should be cast to native types.
-     */
     protected $casts = [
         'due_date' => 'date',
-        'quiz_data' => 'array', // Automatically handles JSON serialization
+        'quiz_data' => 'array'
     ];
 
-    /**
-     * Get the user (teacher/admin) who created the activity.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the students assigned to this activity.
-     * * This defines the Many-to-Many relationship via the 'activity_user' table.
-     * The pivot columns match your consolidated migration.
-     */
-    public function users(): BelongsToMany
+    // --- NEW METHODS BELOW ---
+
+    public function submissions()
     {
-        return $this->belongsToMany(User::class, 'activity_user')
-            ->withPivot('status', 'score', 'submitted_at', 'is_manual')
-            ->withTimestamps();
+        return $this->hasMany(ActivitySubmission::class);
+    }
+
+    // This checks if the CURRENTLY logged-in user has a submission
+    public function mySubmission(): HasOne
+    {
+        return $this->hasOne(ActivitySubmission::class)
+            ->where('user_id', Auth::id());
     }
 }

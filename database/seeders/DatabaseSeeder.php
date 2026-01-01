@@ -33,5 +33,9 @@ class DatabaseSeeder extends Seeder
         // Optional: Assign the permission to the 'admin' role too if needed
         $adminRole = Role::firstOrCreate(['name' => 'Admin']);
         $adminRole->givePermissionTo($manageActivities);
+
+        $this->call([
+            FaqPromptSeeder::class,
+        ]);
     }
 }

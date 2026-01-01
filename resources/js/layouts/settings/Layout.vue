@@ -1,37 +1,37 @@
 <script setup lang="ts">
-import Heading from '@/components/Heading.vue';
+import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { toUrl, urlIsActive } from '@/lib/utils';
-import profileRoutes from '@/routes/profile';
-import userPasswordRoutes from '@/routes/user-password';
-import TwoFactorRoutes from '@/routes/two-factor';
-import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-const sidebarNavItems: NavItem[] = [
+// Fix for TypeScript not knowing about the global route function
+declare const route: Function;
+
+// Define navigation items using standard Laravel route names
+const sidebarNavItems = computed(() => [
     {
         title: 'Profile',
-        href: profileRoutes.edit(),
+        href: route('profile.edit'),
+        active: route().current('profile.edit'),
     },
     {
         title: 'Password',
-        href: userPasswordRoutes.edit(),
+        href: route('password.edit'),
+        active: route().current('password.edit') || route().current('password.update'),
     },
-    {
-        title: 'Two-Factor Auth',
-        // changed: cast to any and call url() safely
-        href: (TwoFactorRoutes as any)?.show?.url?.() ?? '',
-    },
-    // DELETED: Appearance link was here
-];
-
-const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    // Uncomment below if you add Two-Factor routes to web.php later
+    // {
+    //     title: 'Two-Factor Auth',
+    //     href: route('two-factor.show'),
+    //     active: route().current('two-factor.*'),
+    // },
+]);
 </script>
 
 <template>
     <div class="px-4 py-6">
-        <Heading
+        <HeadingSmall
             title="Settings"
             description="Manage your profile and account settings"
         />
@@ -41,16 +41,15 @@ const currentPath = typeof window !== 'undefined' ? window.location.pathname : '
                 <nav class="flex flex-col space-y-1 space-x-0">
                     <Button
                         v-for="item in sidebarNavItems"
-                        :key="toUrl(item.href)"
+                        :key="item.title"
                         variant="ghost"
                         :class="[
                             'w-full justify-start',
-                            { 'bg-muted': urlIsActive(item.href, currentPath) },
+                            { 'bg-muted': item.active },
                         ]"
                         as-child
                     >
                         <Link :href="item.href">
-                            <component :is="item.icon" class="h-4 w-4" />
                             {{ item.title }}
                         </Link>
                     </Button>

@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import { Plus, Pencil, Trash2, X, ChevronRight, CalendarClock } from 'lucide-vue-next';
+import { Head, useForm, usePage, router, Link } from '@inertiajs/vue3';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+    Plus, Pencil, Trash2, X, Clock, Calendar,
+    GraduationCap, Mail, ArrowLeft
+} from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 const props = defineProps<{
@@ -14,275 +19,247 @@ const props = defineProps<{
     };
     activities: Array<{
         id: number;
+        submission_id: number | null;
         title: string;
         type: string;
         status: string;
         score: string | number;
-        date_completed: string | null;
-        due_date: string | null;       
+        submitted_at: string | null;
+        due_date: string | null;
         is_manual: boolean;
     }>;
 }>();
 
-// --- Role & Permission Logic ---
 const page = usePage();
-const currentUser = computed(() => page.props.auth.user);
+const currentUser = computed(() => page.props.auth.user as any);
 const isOwnProfile = computed(() => currentUser.value?.id === props.student.id);
+
+// --- Breadcrumb Logic ---
+const breadcrumbs = computed(() => {
+    const crumbs = [{ title: 'Dashboard', href: route('dashboard') }];
+
+    if (isOwnProfile.value) {
+        crumbs.push({ title: 'My Progress', href: '#' });
+    } else {
+        crumbs.push({ title: 'Student Roster', href: route('students.index') });
+        crumbs.push({ title: props.student.name, href: '#' });
+    }
+    return crumbs;
+});
 
 // --- Modal Logic ---
 const showModal = ref(false);
 const isEditing = ref(false);
 const editingId = ref<number | null>(null);
-
 const form = useForm({ title: '', score: '' });
 
-const openCreateModal = () => { 
-    isEditing.value = false; 
-    form.reset(); 
-    showModal.value = true; 
+const openCreateModal = () => { isEditing.value = false; form.reset(); showModal.value = true; };
+const openEditModal = (activity: any) => {
+    isEditing.value = true;
+    editingId.value = activity.id;
+    form.title = activity.title;
+    form.score = activity.score === '-' ? '' : String(activity.score);
+    showModal.value = true;
 };
-
-const openEditModal = (activity: any) => { 
-    isEditing.value = true; 
-    editingId.value = activity.id; 
-    form.title = activity.title; 
-    
-    // Ensure the input field shows a clean number (e.g., 100 instead of 100.00)
-    const cleanScore = (activity.score === '-' || activity.score === null) ? '' : Number(activity.score).toString();
-    form.score = cleanScore;
-    
-    showModal.value = true; 
-};
-
-const closeModal = () => { 
-    showModal.value = false; 
-    form.reset(); 
-};
+const closeModal = () => { showModal.value = false; form.reset(); };
 
 const submit = () => {
     if (isEditing.value && editingId.value) {
-        form.put(route('students.activities.update', [props.student.id, editingId.value]), { 
-            onSuccess: () => closeModal() 
-        });
+        form.put(route('students.activities.update', [props.student.id, editingId.value]), { onSuccess: () => closeModal() });
     } else {
-        form.post(route('students.activities.store', props.student.id), { 
-            onSuccess: () => closeModal() 
-        });
+        form.post(route('students.activities.store', props.student.id), { onSuccess: () => closeModal() });
     }
 };
 
+// --- Helpers ---
 const deleteActivity = (id: number) => {
-    if (confirm('Are you sure you want to delete this activity record?')) {
-        const deleteForm = useForm({});
-        deleteForm.delete(route('students.activities.destroy', [props.student.id, id]));
+    if (confirm('Delete this activity record?')) {
+        router.delete(route('students.activities.destroy', [props.student.id, id]));
     }
 };
 
-// --- Date & Formatting Logic ---
-
-const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+const deleteStudentSubmission = (submissionId: number) => {
+    if (confirm('Delete this student submission? This cannot be undone.')) {
+        router.delete(route('submissions.destroy', submissionId), { preserveScroll: true });
+    }
 };
+
+const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
 const isOverdue = (activity: any) => {
-    if (!activity.due_date) return false;
-    if (activity.status.toLowerCase() === 'completed') return false;
-    
+    if (!activity.due_date || activity.status === 'Completed') return false;
     return new Date() > new Date(activity.due_date);
-};
-
-const formatStatus = (status: string) => {
-    if (!status) return '';
-    return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
-/**
- * NEW HELPER: Format Score
- * Converts "100.00" -> 100, but keeps "85.5" -> 85.5
- */
-const formatScore = (score: string | number) => {
-    if (score === '-' || score === null) return '-';
-    const num = Number(score);
-    return isNaN(num) ? score : num; 
 };
 </script>
 
 <template>
-    <Head :title="`${student.name}'s Progress`" />
+    <Head :title="student.name" />
 
-    <AppLayout>
-        <Teleport to="body">
-            <div class="dynamic-breadcrumbs fixed top-2 z-[9999] flex items-center h-16 pointer-events-none">
-                <nav class="flex items-center text-[16px] font-normal pointer-events-auto">
-                    <Link 
-                        :href="route('dashboard')" 
-                        class="text-black transition-colors duration-200 hover:text-[#FFD700] tracking-tight"
-                    >
-                        Dashboard
-                    </Link>
-                    
-                    <ChevronRight class="mx-3 h-3 w-3 text-black stroke-[2px]" />
-                    
-                    <template v-if="!isOwnProfile">
-                        <Link 
-                            :href="route('students.index')" 
-                            class="text-black transition-colors duration-200 hover:text-[#FFD700] tracking-tight"
-                        >
-                            Students
-                        </Link>
-                        <ChevronRight class="mx-3 h-3 w-3 text-black stroke-[2px]" />
-                        <span class="text-[#FFD700] font-medium tracking-tight">
-                            {{ student.name }}
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6">
+
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div class="h-20 w-20 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-3xl font-bold border-4 border-white shadow-sm shrink-0">
+                    {{ student.name.charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="flex-1">
+                    <h1 class="text-2xl font-bold text-slate-900">{{ student.name }}</h1>
+                    <div class="flex flex-wrap gap-4 mt-2 text-sm text-slate-500">
+                        <span class="flex items-center gap-1.5">
+                            <Mail class="w-4 h-4 text-slate-400" /> {{ student.email }}
                         </span>
-                    </template>
-
-                    <template v-else>
-                        <span class="text-[#FFD700] font-medium tracking-tight">
-                            My Progress
+                        <span class="flex items-center gap-1.5">
+                            <GraduationCap class="w-4 h-4 text-slate-400" /> @{{ student.username }}
                         </span>
-                    </template>
-                </nav>
-            </div>
-        </Teleport>
-
-        <div class="py-12">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                
-                <div class="mb-6 overflow-hidden bg-[#1a2c4e] shadow-sm sm:rounded-lg border border-gray-700">
-                    <div class="p-6">
-                        <div class="flex items-center gap-4">
-                            <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-900 text-2xl font-bold text-blue-200 border border-blue-700">
-                                {{ student.name.charAt(0) }}
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-white">{{ student.name }}</h3>
-                                <p class="text-sm text-gray-400">{{ student.email }}</p>
-                                <p class="text-xs text-blue-400 uppercase tracking-wide mt-1 font-semibold">Student</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                <div class="overflow-hidden bg-[#1a2c4e] shadow-sm sm:rounded-lg border border-gray-700">
-                    <div class="flex items-center justify-between border-b border-gray-700 bg-[#243b61] px-6 py-4">
-                        <h3 class="text-lg font-medium text-white">Activity Reports</h3>
-                        <button v-if="!isOwnProfile" @click="openCreateModal" class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-blue-500 shadow-lg">
-                            <Plus class="h-4 w-4" /> Add Activity
-                        </button>
-                    </div>
-                    
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-400">
-                            <thead class="bg-[#243b61] text-xs uppercase text-gray-300">
-                                <tr>
-                                    <th class="px-6 py-3 font-bold">Activity Name</th>
-                                    <th class="px-6 py-3 font-bold">Status</th>
-                                    <th class="px-6 py-3 font-bold">Score</th>
-                                    <th class="px-6 py-3 font-bold">Date Completed</th>
-                                    <th v-if="!isOwnProfile" class="px-6 py-3 text-right font-bold">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="activity in activities" :key="activity.id" class="border-b border-gray-700 bg-[#1a2c4e] hover:bg-[#243b61] transition-colors">
-                                    
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium text-white text-[15px]">
-                                            {{ activity.title }} 
-                                            <span v-if="activity.is_manual" class="ml-2 text-[10px] text-gray-500 italic uppercase bg-gray-800 px-1 rounded">Manual</span>
-                                        </div>
-                                        
-                                        <div v-if="activity.due_date" class="mt-1 flex items-center text-xs">
-                                            <span 
-                                                class="flex items-center gap-1 font-medium"
-                                                :class="isOverdue(activity) ? 'text-red-400 font-bold' : 'text-gray-500'"
-                                            >
-                                                <CalendarClock class="w-3 h-3" />
-                                                {{ isOverdue(activity) ? 'Overdue:' : 'Due:' }} {{ formatDate(activity.due_date) }}
-                                            </span>
-                                        </div>
-                                    </td>
+                <Link v-if="!isOwnProfile" :href="route('students.index')">
+                    <Button variant="outline" class="gap-2">
+                        <ArrowLeft class="w-4 h-4" /> Back to Roster
+                    </Button>
+                </Link>
+            </div>
 
-                                    <td class="px-6 py-4">
-                                        <span 
-                                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm" 
-                                            :class="activity.status.toLowerCase() === 'completed' ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-yellow-900/50 text-yellow-400 border border-yellow-800'"
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <Clock class="w-5 h-5 text-teal-600" />
+                        Activity History & Grades
+                    </h3>
+
+                    <Button
+                        v-if="!isOwnProfile"
+                        @click="openCreateModal"
+                        class="bg-teal-600 hover:bg-teal-700 text-white gap-2 shadow-sm"
+                        size="sm"
+                    >
+                        <Plus class="h-4 w-4" /> Add Manual Score
+                    </Button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-4">Activity Name</th>
+                                <th class="px-6 py-4">Status</th>
+                                <th class="px-6 py-4">Score</th>
+                                <th class="px-6 py-4">Date</th>
+                                <th v-if="!isOwnProfile" class="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-if="activities.length === 0">
+                                <td :colspan="!isOwnProfile ? 5 : 4" class="px-6 py-12 text-center text-slate-500">
+                                    No activity records found for this student.
+                                </td>
+                            </tr>
+
+                            <tr
+                                v-for="activity in activities"
+                                :key="activity.id"
+                                class="hover:bg-slate-50 transition-colors group"
+                            >
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-slate-900">{{ activity.title }}</div>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <Badge v-if="activity.is_manual" variant="outline" class="text-[10px] uppercase text-slate-500 border-slate-200 bg-slate-50">
+                                            Manual Entry
+                                        </Badge>
+                                        <div v-if="activity.due_date" class="text-xs flex items-center gap-1" :class="isOverdue(activity) ? 'text-red-600 font-bold' : 'text-slate-400'">
+                                            <Calendar class="w-3 h-3" />
+                                            {{ isOverdue(activity) ? 'Overdue:' : 'Due:' }} {{ formatDate(activity.due_date) }}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    <Badge class="font-medium"
+                                        :class="activity.status === 'Completed'
+                                            ? 'bg-green-100 text-green-700 hover:bg-green-100 border-none'
+                                            : 'bg-amber-100 text-amber-700 hover:bg-amber-100 border-none'"
+                                    >
+                                        {{ activity.status }}
+                                    </Badge>
+                                </td>
+
+                                <td class="px-6 py-4 font-bold text-slate-700 text-base">
+                                    {{ activity.score }}
+                                </td>
+
+                                <td class="px-6 py-4 text-slate-500">
+                                    {{ activity.submitted_at ? formatDate(activity.submitted_at) : '-' }}
+                                </td>
+
+                                <td v-if="!isOwnProfile" class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            v-if="!activity.is_manual && activity.status === 'Completed' && activity.submission_id"
+                                            @click="deleteStudentSubmission(activity.submission_id)"
+                                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                            title="Delete Submission"
                                         >
-                                            {{ formatStatus(activity.status) }}
-                                        </span>
-                                    </td>
+                                            <Trash2 class="h-4 w-4" />
+                                        </button>
 
-                                    <td class="px-6 py-4 font-bold text-white">
-                                        {{ formatScore(activity.score) }}
-                                    </td>
-
-                                    <td class="px-6 py-4">
-                                        {{ formatDate(activity.date_completed) }}
-                                    </td>
-
-                                    <td v-if="!isOwnProfile" class="px-6 py-4 text-right">
-                                        <div class="flex items-center justify-end gap-2">
-                                            <button @click="openEditModal(activity)" class="rounded p-1 text-gray-400 hover:bg-blue-900/50 hover:text-blue-400">
+                                        <template v-if="activity.is_manual">
+                                            <button @click="openEditModal(activity)" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded">
                                                 <Pencil class="h-4 w-4" />
                                             </button>
-                                            <button @click="deleteActivity(activity.id)" class="rounded p-1 text-gray-400 hover:bg-red-900/50 hover:text-red-400">
+                                            <button @click="deleteActivity(activity.id)" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded">
                                                 <Trash2 class="h-4 w-4" />
                                             </button>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <tr v-if="activities.length === 0">
-                                    <td :colspan="!isOwnProfile ? 5 : 4" class="p-8 text-center text-gray-500 italic">
-                                        No activities recorded.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </template>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <div v-if="showModal && !isOwnProfile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-            <div class="w-full max-w-md rounded-lg bg-[#1a2c4e] p-6 shadow-2xl border border-gray-700">
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-white">{{ isEditing ? 'Edit Activity' : 'Add New Activity' }}</h3>
-                    <button @click="closeModal"><X class="h-5 w-5 text-gray-400 hover:text-white" /></button>
+        <div v-if="showModal && !isOwnProfile" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border border-slate-200">
+                <div class="mb-5 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-slate-900">{{ isEditing ? 'Edit Manual Score' : 'Add Manual Score' }}</h3>
+                    <button @click="closeModal" class="text-slate-400 hover:text-slate-600 transition"><X class="h-5 w-5" /></button>
                 </div>
-                <form @submit.prevent="submit">
-                    <div class="space-y-4 text-left">
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-300">Activity Name</label>
-                            <input v-model="form.title" type="text" class="w-full rounded-md border-gray-600 bg-[#0f1a30] text-white focus:border-blue-500 focus:ring-blue-500" required placeholder="e.g. Lab Exercise 1" />
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-300">Marks Received</label>
-                            <input v-model="form.score" type="number" min="0" max="100" class="w-full rounded-md border-gray-600 bg-[#0f1a30] text-white focus:border-blue-500 focus:ring-blue-500" required placeholder="0-100" />
-                        </div>
+
+                <form @submit.prevent="submit" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Activity Title</label>
+                        <input
+                            v-model="form.title"
+                            type="text"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition"
+                            placeholder="e.g. Pop Quiz 1"
+                            required
+                        />
                     </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" @click="closeModal" class="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800">Cancel</button>
-                        <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500" :disabled="form.processing">
-                            {{ isEditing ? 'Update' : 'Save' }}
-                        </button>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Score (0-100)</label>
+                        <input
+                            v-model="form.score"
+                            type="number"
+                            min="0"
+                            max="100"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition"
+                            placeholder="85"
+                            required
+                        />
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                        <Button type="button" variant="outline" @click="closeModal">Cancel</Button>
+                        <Button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white" :disabled="form.processing">
+                            {{ isEditing ? 'Update Score' : 'Save Score' }}
+                        </Button>
                     </div>
                 </form>
             </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>
-
-<style>
-/* SMOOTH MOVEMENT FOR BREADCRUMBS */
-.dynamic-breadcrumbs {
-    left: 305px;
-    transition: left 0.3s ease-in-out;
-}
-
-/* COLLAPSED STATE ADJUSTMENT */
-body:has([data-state="collapsed"]) .dynamic-breadcrumbs,
-body:has(aside[data-state="collapsed"]) .dynamic-breadcrumbs {
-    left: 115px !important;
-}
-</style>

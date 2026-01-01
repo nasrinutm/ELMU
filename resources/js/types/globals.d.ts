@@ -1,9 +1,7 @@
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { AppPageProps } from '@/types/index';
-import { createHeadManager, Page, Router } from '@inertiajs/core';
-import ziggyRoute, { Config as ZiggyConfig } from 'ziggy-js';
+import { route as routeFn } from 'ziggy-js'; // Import the route function type
 
-// Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
     interface ImportMetaEnv {
         readonly VITE_APP_NAME: string;
@@ -31,6 +29,6 @@ declare module 'vue' {
         $inertia: typeof Router;
         $page: Page;
         $headManager: ReturnType<typeof createHeadManager>;
-        route: typeof ziggyRoute; // <--- Allows route() in Vue templates
+        route: typeof routeFn; // <--- ADD THIS LINE TO FIX THE ERROR
     }
 }
