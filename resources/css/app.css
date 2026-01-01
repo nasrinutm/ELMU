@@ -33,26 +33,39 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
-    /* Dynamic Button Colors */
+    /* Dynamic Action/Button Colors */
     --color-action: var(--action-color);
     --color-action-hover: var(--action-hover);
 }
 
 @layer base {
-    * { border-color: var(--border); }
-    body { background-color: var(--background); color: var(--foreground); }
+    /* FORCE ZERO RADIUS ON EVERYTHING (Sharp Edges) */
+    * {
+        border-color: var(--border);
+        border-radius: 0rem !important;
+    }
 
-    /* Font readability adjustments */
-    aside a, aside button { font-size: 15px !important; font-weight: 500; }
+    body {
+        background-color: var(--background);
+        color: var(--foreground);
+    }
+
+    /* Font readability adjustments for Sidebar */
+    aside a, aside button {
+        font-size: 15px !important;
+        font-weight: 500;
+    }
 
     /* Standardized Action Button Utility */
     .btn-theme {
-        background-color: var(--action-color);
-        color: white;
+        background-color: var(--action-color) !important;
+        color: white !important;
+        border-radius: 0rem !important;
         transition: all 0.2s ease-in-out;
     }
+
     .btn-theme:hover {
-        background-color: var(--action-hover);
+        background-color: var(--action-hover) !important;
     }
 }
 
@@ -136,23 +149,28 @@
     --action-hover: #059669;
 }
 
-/* --- STUDENT THEME (Modern Blue/Indigo) --- */
+/* --- STUDENT THEME (Vibrant Royal Indigo) --- */
 .theme-student {
-    --background: #f0f9ff;
-    --foreground: #0f172a;
-    --primary: #0284c7;
+    --background: #f8fafc;
+    --foreground: #1e1b4b;
+    --primary: #6366f1;
     --primary-foreground: #ffffff;
 
-    /* Royal Blue Sidebar */
-    --sidebar-background: #1e40af;
-    --sidebar-foreground: #eff6ff;
-    --sidebar-primary: #38bdf8;
-    --sidebar-primary-foreground: #0c4a6e;
-    --sidebar-accent: #1e3a8a;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #1e40af;
+    /* SIDEBAR: Distinct Deep Royal Indigo (Easier on eyes) */
+    --sidebar-background: #312e81;
+    --sidebar-foreground: #e0e7ff;
 
-    /* Action Colors: Bright Blue */
-    --action-color: #2563eb;
-    --action-hover: #1d4ed8;
+    /* Active Item: Bright Indigo */
+    --sidebar-primary: #818cf8;
+    --sidebar-primary-foreground: #ffffff;
+
+    /* Hover Item */
+    --sidebar-accent: #3730a3;
+    --sidebar-accent-foreground: #ffffff;
+
+    --sidebar-border: #312e81;
+
+    /* Action Colors: Standard Indigo */
+    --action-color: #6366f1;
+    --action-hover: #4f46e5;
 }
