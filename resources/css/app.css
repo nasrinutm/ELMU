@@ -43,10 +43,11 @@
     /* 2. GLOBAL DESIGN SYSTEM */
     * {
         border-color: var(--border);
-        border-radius: 0rem !important; /* Sharp Edges as requested */
+        border-radius: 0rem !important; /* Force Sharp Edges */
     }
 
     html {
+        /* Force unified font strategy at root level */
         font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -61,7 +62,7 @@
 
     /* 3. RESTORED TYPOGRAPHIC HIERARCHY (NON-BOLD) */
 
-    /* Headers: Semibold instead of Black (900) for a cleaner look */
+    /* Headers: Semibold (600) instead of Black (900) for a cleaner look */
     h1, h2, h3, h4 {
         font-weight: 600;
         letter-spacing: -0.015em;
@@ -79,6 +80,7 @@
     /* Fixed-width numbers for technical data (Percentages, Scores) */
     .tabular-nums {
         font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
     }
 
     /* 4. BALANCED COMPONENT UTILITIES */
@@ -89,7 +91,7 @@
         border-radius: 0rem !important;
         font-weight: 600 !important; /* Reduced from 900 for suitability */
         text-transform: uppercase !important;
-        letter-spacing: 0.05em !important; /* Reduced tracking for a standard look */
+        letter-spacing: 0.05em !important; /* Standard tracking for professional look */
         font-size: 0.875rem !important; /* Standardized 14px size */
         transition: all 0.2s ease-in-out;
         display: inline-flex;
