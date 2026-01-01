@@ -4,9 +4,10 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-/* --- TAILWIND CONFIGURATION --- */
+/* --- TAILWIND CONFIGURATION (LMS PRO UPGRADE) --- */
 @theme inline {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    /* 1. UNIFIED FONT STRATEGY: Inter as the system primary */
+    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 
     /* Map Tailwind Utilities to CSS Variables */
     --color-background: var(--background);
@@ -39,33 +40,73 @@
 }
 
 @layer base {
-    /* FORCE ZERO RADIUS ON EVERYTHING (Sharp Edges) */
+    /* 2. FORCE GLOBAL DESIGN SYSTEM */
     * {
         border-color: var(--border);
-        border-radius: 0rem !important;
+        border-radius: 0rem !important; /* Force Sharp Edges */
+    }
+
+    html {
+        /* Force unified font strategy at the root level */
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        scroll-behavior: smooth;
     }
 
     body {
         background-color: var(--background);
         color: var(--foreground);
+        /* Standardized line-height for a clean LMS look */
+        line-height: 1.5;
     }
 
-    /* Font readability adjustments for Sidebar */
+    /* 3. TYPOGRAPHIC HIERARCHY UTILITIES */
+
+    /* Headers: Bold and tight tracking */
+    h1, h2, h3, h4 {
+        font-weight: 900;
+        letter-spacing: -0.025em;
+        line-height: 1.2;
+    }
+
+    /* Professional LMS Sidebar Typography */
     aside a, aside button {
-        font-size: 15px !important;
-        font-weight: 500;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
 
-    /* Standardized Action Button Utility */
+    /* Fixed-width numbers for technical data (Percentages, Scores) */
+    .tabular-nums {
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+    }
+
+    /* 4. COMPONENT UTILITIES */
+
     .btn-theme {
         background-color: var(--action-color) !important;
         color: white !important;
         border-radius: 0rem !important;
-        transition: all 0.2s ease-in-out;
+        font-weight: 900 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.25em !important; /* Modern wide-tracking for buttons */
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .btn-theme:hover {
         background-color: var(--action-hover) !important;
+        transform: translateY(-1px);
+        filter: brightness(1.1);
+    }
+
+    .btn-theme:active {
+        transform: translateY(0);
     }
 }
 
@@ -107,35 +148,25 @@
    ROLE-BASED THEMES
 ========================================= */
 
-/* --- ADMIN THEME (Navy) --- */
+/* ADMIN THEME (Navy/Slate) */
 .theme-admin {
-    --background: #f3f4f6;
-    --foreground: #1e293b;
-    --primary: #2563eb;
-    --primary-foreground: #ffffff;
-
-    /* Navy Sidebar */
-    --sidebar-background: #1e293b;
+    --background: #f1f5f9;
+    --foreground: #0f172a;
+    --sidebar-background: #0f172a;
     --sidebar-foreground: #f1f5f9;
     --sidebar-primary: #3b82f6;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #334155;
+    --sidebar-accent: #1e293b;
     --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #1e293b;
-
-    /* Action Colors: Professional Navy */
-    --action-color: #1e293b;
-    --action-hover: #0f172a;
+    --sidebar-border: #0f172a;
+    --action-color: #0f172a;
+    --action-hover: #020617;
 }
 
-/* --- TEACHER THEME (Professional Teal) --- */
+/* TEACHER THEME (Professional Teal) */
 .theme-teacher {
     --background: #f0fdfa;
     --foreground: #134e4a;
-    --primary: #0d9488;
-    --primary-foreground: #ffffff;
-
-    /* Deep Teal Sidebar */
     --sidebar-background: #0f766e;
     --sidebar-foreground: #f0fdfa;
     --sidebar-primary: #2dd4bf;
@@ -143,34 +174,21 @@
     --sidebar-accent: #115e59;
     --sidebar-accent-foreground: #ffffff;
     --sidebar-border: #0f766e;
-
-    /* Action Colors: Emerald/Teal Green */
-    --action-color: #10b981;
-    --action-hover: #059669;
+    --action-color: #0d9488;
+    --action-hover: #0f766e;
 }
 
-/* --- STUDENT THEME (Vibrant Royal Indigo) --- */
+/* STUDENT THEME (Vibrant Royal Indigo) */
 .theme-student {
     --background: #f8fafc;
     --foreground: #1e1b4b;
-    --primary: #6366f1;
-    --primary-foreground: #ffffff;
-
-    /* SIDEBAR: Distinct Deep Royal Indigo (Easier on eyes) */
     --sidebar-background: #312e81;
     --sidebar-foreground: #e0e7ff;
-
-    /* Active Item: Bright Indigo */
     --sidebar-primary: #818cf8;
     --sidebar-primary-foreground: #ffffff;
-
-    /* Hover Item */
     --sidebar-accent: #3730a3;
     --sidebar-accent-foreground: #ffffff;
-
     --sidebar-border: #312e81;
-
-    /* Action Colors: Standard Indigo */
-    --action-color: #6366f1;
-    --action-hover: #4f46e5;
+    --action-color: #4338ca;
+    --action-hover: #3730a3;
 }

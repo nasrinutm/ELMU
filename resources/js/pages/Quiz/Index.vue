@@ -33,7 +33,6 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-// FIX: Access roles[0] to match your User model and HandleInertiaRequests structure
 const userRole = computed(() => page.props.auth.user?.roles[0] || 'student');
 
 const search = ref(props.filters.search || '');
@@ -55,12 +54,17 @@ const getDifficultyClass = (level: string) => {
     if (l === 'medium') return 'bg-amber-50 text-amber-600 border-amber-100';
     return 'bg-rose-50 text-rose-600 border-rose-100';
 };
+
+// FIX: Define breadcrumbs for the layout
+const breadcrumbs = [
+    { title: 'Quizzes', href: route('quizzes.index') }
+];
 </script>
 
 <template>
     <Head title="Available Quizzes" />
 
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <div :class="`theme-${userRole}`" class="min-h-screen bg-slate-50 p-6 space-y-6">
 
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -95,7 +99,7 @@ const getDifficultyClass = (level: string) => {
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div v-for="quiz in quizzes" :key="quiz.id"
-                    class="group bg-white rounded-none border border-slate-200 shadow-sm hover:shadow-md hover:border-action transition-all overflow-hidden flex flex-col">
+                    class="group bg-white rounded-none border border-slate-200 shadow-sm hover:shadow-md hover:border-action transition-all overflow-hidden flex flex-col font-sans">
 
                     <div class="p-6 space-y-4 flex-1">
                         <div class="flex justify-between items-start">
@@ -108,7 +112,7 @@ const getDifficultyClass = (level: string) => {
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-bold text-slate-900 group-hover:text-action transition-colors">
+                            <h3 class="text-lg font-bold text-slate-900 group-hover:text-action transition-colors uppercase tracking-tight">
                                 {{ quiz.title }}
                             </h3>
                             <p class="text-slate-500 text-sm line-clamp-2 mt-1">{{ quiz.description }}</p>
@@ -138,19 +142,19 @@ const getDifficultyClass = (level: string) => {
                     </div>
 
                     <div class="px-6 pb-6 pt-2">
-                        <div v-if="quiz.is_locked" class="w-full bg-slate-100 text-slate-400 font-bold py-2.5 rounded-none flex items-center justify-center gap-2 text-sm cursor-not-allowed">
+                        <div v-if="quiz.is_locked" class="w-full bg-slate-100 text-slate-400 font-bold py-2.5 rounded-none flex items-center justify-center gap-2 text-sm cursor-not-allowed uppercase tracking-wider">
                             <Lock class="w-4 h-4" /> Max Attempts
                         </div>
 
-                        <Link v-else :href="route('quiz.show', quiz.id)">
-                            <Button class="btn-theme w-full font-bold py-5 shadow-sm gap-2">
+                        <Link v-else :href="route('quizzes.show', quiz.id)">
+                            <Button class="btn-theme w-full font-bold py-5 shadow-sm gap-2 uppercase tracking-widest">
                                 Start Quiz <ChevronRight class="w-4 h-4" />
                             </Button>
                         </Link>
 
                         <div v-if="quiz.attempts_taken > 0" class="mt-4 text-center">
-                            <Link :href="route('quiz.history', quiz.id)"
-                                class="text-xs font-bold text-slate-400 hover:text-action flex items-center justify-center gap-1.5 transition-colors">
+                            <Link :href="route('quizzes.history', quiz.id)"
+                                class="text-[10px] font-black text-slate-400 hover:text-action flex items-center justify-center gap-1.5 transition-colors uppercase tracking-widest">
                                 <BarChart3 class="w-3.5 h-3.5" /> View Past Results
                             </Link>
                         </div>

@@ -4,12 +4,13 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // REQUIRED FOR THE DASHBOARD COUNT
+use Illuminate\Support\Facades\DB;
 use Gemini\Laravel\Facades\Gemini;
 
 // --- MODEL IMPORTS ---
 use App\Models\User;
 use App\Models\Material;
+use App\Models\Quiz;
 
 // --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
@@ -30,9 +31,9 @@ use App\Http\Controllers\ReportController;
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
+| Root URL redirects directly to Login
 */
 
-// Root URL redirects directly to Login
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
@@ -76,10 +77,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $stats = [
             'users' => User::count(),
             'materials' => Material::count(),
-            // FIX: Count actual submissions for students
             'my_materials' => $user->hasRole('teacher')
                 ? Material::where('user_id', $user->id)->count()
                 : DB::table('activity_submissions')->where('user_id', $user->id)->count(),
+            'available_quizzes' => Quiz::count(),
         ];
 
         $recentMaterials = Material::with('user:id,name')
@@ -96,7 +97,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 2. CHATBOT
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES (NO NAME PREFIX)
+    // 3. ADMIN ROUTES
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
@@ -154,10 +155,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
     // 8. QUIZZES (Student Facing)
+    // Synchronized to plural naming "quizzes.*" to prevent frontend route list errors
     Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quizzes.show');
-    Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
-    Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quiz.history');
+    Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quizzes.submit');
+    Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quizzes.history');
 
     // 9. TEACHER QUIZ MANAGEMENT
     Route::middleware(['role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {

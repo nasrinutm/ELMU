@@ -6,11 +6,11 @@ import {
     Download,
     BookOpen,
     Trophy,
-    Clock,
     ArrowRight,
     GraduationCap,
-    TrendingUp,
-    LayoutDashboard
+    LayoutDashboard,
+    HelpCircle,
+    TrendingUp
 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
@@ -26,7 +26,7 @@ defineProps<{
         users: number;
         materials: number;
         my_materials: number;
-        quiz_avg?: number; // Optional prop for professional version
+        available_quizzes?: number; // Prop for the quiz count
     };
     recentMaterials: Array<{
         id: number;
@@ -64,7 +64,7 @@ const formatDate = (dateString: string) => {
         <div class="max-w-7xl mx-auto space-y-8 pb-10 px-4 sm:px-0">
 
             <div class="border-b border-slate-200 pb-6">
-                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
+                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3 uppercase">
                     <LayoutDashboard class="w-8 h-8 text-indigo-600" />
                     Student Overview
                 </h1>
@@ -101,17 +101,17 @@ const formatDate = (dateString: string) => {
                 <div class="relative overflow-hidden shadow-md bg-gradient-to-br from-orange-500 to-amber-600 p-6 text-white rounded-none border-0 group transition-all">
                     <div class="relative z-10 flex justify-between items-center">
                         <div>
-                            <p class="text-xs font-bold opacity-80 uppercase tracking-widest mb-1">Average Grade</p>
-                            <h3 class="text-4xl font-black">{{ stats.quiz_avg || 0 }}%</h3>
-                            <p class="mt-2 text-[10px] font-medium bg-white/20 inline-block px-2 py-0.5 rounded-none uppercase tracking-tighter">Current Standing</p>
+                            <p class="text-xs font-bold opacity-80 uppercase tracking-widest mb-1">Available Quizzes</p>
+                            <h3 class="text-4xl font-black">{{ stats.available_quizzes || 0 }}</h3>
+                            <p class="mt-2 text-[10px] font-medium bg-white/20 inline-block px-2 py-0.5 rounded-none uppercase tracking-tighter">Tests to complete</p>
                         </div>
-                        <TrendingUp class="w-10 h-10 opacity-30 group-hover:scale-110 transition-transform" />
+                        <HelpCircle class="w-10 h-10 opacity-30 group-hover:scale-110 transition-transform" />
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
+                <div class="lg:col-span-2 bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden font-sans">
                     <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                         <h3 class="font-black text-slate-900 flex items-center gap-2 text-sm uppercase tracking-wider">
                             <GraduationCap class="w-4 h-4 text-indigo-600" /> Recent Study Materials
@@ -122,7 +122,7 @@ const formatDate = (dateString: string) => {
                     </div>
 
                     <div class="divide-y divide-slate-50">
-                        <div v-if="recentMaterials.length === 0" class="p-12 text-center text-slate-400 italic">
+                        <div v-if="recentMaterials.length === 0" class="p-12 text-center text-slate-400 italic font-medium">
                             No study materials found.
                         </div>
 
@@ -149,8 +149,7 @@ const formatDate = (dateString: string) => {
 
                             <a
                                 :href="route('materials.download', material.id)"
-                                class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100"
-                                title="Download Module"
+                                class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent"
                             >
                                 <Download class="w-4 h-4" />
                             </a>
@@ -158,34 +157,32 @@ const formatDate = (dateString: string) => {
                     </div>
                 </div>
 
-                <div class="space-y-6">
+                <div class="space-y-6 font-sans">
                     <div class="bg-white border border-slate-200 p-6 shadow-sm rounded-none">
                         <h3 class="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-6 border-b border-slate-100 pb-2">Academic Hub</h3>
                         <div class="space-y-3">
-                            <Link :href="route('forum.index')" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-indigo-600 hover:text-white transition-all group font-bold text-xs uppercase tracking-widest border border-slate-100">
+                            <Link :href="route('forum.index')" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-indigo-600 hover:text-white transition-all group font-bold text-xs uppercase tracking-widest border border-slate-100">
                                 <span>Discussion Forum</span>
                                 <ArrowRight class="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                             </Link>
-                            <Link :href="route('activities.index')" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-emerald-600 hover:text-white transition-all group font-bold text-xs uppercase tracking-widest border border-slate-100">
-                                <span>Tasks & Games</span>
+                            <Link :href="route('activities.index')" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-teal-600 hover:text-white transition-all group font-bold text-xs uppercase tracking-widest border border-slate-100">
+                                <span>Activities</span>
                                 <ArrowRight class="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                             </Link>
                         </div>
                     </div>
 
-                    <div v-if="!isTeacher" class="bg-indigo-800 p-8 text-white rounded-none shadow-xl border-l-4 border-indigo-400 relative overflow-hidden">
+                    <div v-if="!isTeacher" class="bg-indigo-900 p-8 text-white rounded-none shadow-xl border-l-4 border-indigo-400 relative overflow-hidden">
                         <div class="relative z-10">
                             <h3 class="font-black text-xl mb-3 tracking-tight italic">Level Up Your Learning</h3>
                             <p class="text-xs font-medium text-indigo-100 mb-6 leading-relaxed uppercase tracking-tighter">
                                 You have successfully submitted {{ stats.my_materials }} activities. Consistency leads to excellence.
                             </p>
-                            <Link :href="route('activities.index')" class="inline-block bg-white text-indigo-800 px-4 py-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-lg">
-                                Next Activity &rarr;
+                            <Link :href="route('activities.index')" class="inline-block bg-white text-indigo-900 px-4 py-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-colors shadow-lg">
+                                Explore Activities &rarr;
                             </Link>
                         </div>
-                        <div class="absolute -right-4 -bottom-4 w-32 h-32 opacity-10 rotate-12">
-                            <TrendingUp class="w-full h-full" />
-                        </div>
+                        <TrendingUp class="absolute -right-4 -bottom-4 w-32 h-32 opacity-10 rotate-12" />
                     </div>
 
                     <div v-if="isTeacher" class="bg-slate-900 text-white p-6 shadow-md rounded-none border border-slate-800">
