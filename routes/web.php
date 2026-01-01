@@ -53,8 +53,45 @@ Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 1. DASHBOARD
-    Route::get('/dashboard', [StudentController::class, 'dashboardStats'])->name('dashboard');
+    // 1. DASHBOARD - FULL ROLE SEPARATION
+    // The Dashboard.vue file can now be safely deleted.
+    Route::get('/dashboard', function () {
+        $user = Auth::user();
+
+        // Standardized Stats for all views
+        $stats = [
+            'admins'            => User::role('admin')->count(),
+            'teachers'          => User::role('teacher')->count(),
+            'students'          => User::role('student')->count(), // Main Student Count key
+            'total_students'    => User::role('student')->count(), // Fallback key
+            'total_users'       => User::count(),
+            'materials'         => Material::count(),
+            'my_materials'      => Material::where('user_id', $user->id)->count(),
+            'available_quizzes' => Quiz::count(),
+        ];
+
+        // Redirect Admin to AdminDashboard.vue
+        if ($user->hasRole('admin')) {
+            return Inertia::render('AdminDashboard', [
+                'stats' => $stats,
+                'recentUsers' => User::latest()->take(5)->get()
+            ]);
+        }
+
+        // Redirect Teacher to TeacherDashboard.vue
+        if ($user->hasRole('teacher')) {
+            return Inertia::render('TeacherDashboard', [
+                'stats' => $stats,
+                'recentMaterials' => Material::with('user')->latest()->take(5)->get()
+            ]);
+        }
+
+        // Redirect Students to StudentDashboard.vue
+        return Inertia::render('StudentDashboard', [
+            'stats' => $stats,
+            'recentMaterials' => Material::with('user')->latest()->take(5)->get()
+        ]);
+    })->name('dashboard');
 
     // 2. CHATBOT INTERACTION
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
