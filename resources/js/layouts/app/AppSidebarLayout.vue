@@ -18,9 +18,12 @@ withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 
+// Refined themeClass logic to match Spatie role structures
 const themeClass = computed(() => {
-    const user = (page.props as any).auth?.user;
-    const roles = user?.roles || [];
+    const auth = (page.props as any).auth;
+    const user = auth?.user;
+    // Check both user.roles and auth.roles for maximum compatibility
+    const roles = user?.roles || auth?.roles || [];
 
     const hasRole = (role: string) => roles.some((r: any) =>
         typeof r === 'string' ? r === role : r.name === role
@@ -51,15 +54,13 @@ const themeClass = computed(() => {
                 </main>
             </div>
 
-            <div class="fixed bottom-6 right-8 z-50 no-print">
-                <ChatbotWidget />
-            </div>
+            <ChatbotWidget />
         </AppContent>
     </AppShell>
 </template>
 
 <style scoped>
-/* Force strict sidebar dimensions regardless of screen resolution */
+/* Force strict sidebar dimensions across all resolutions */
 :deep(aside) {
     width: 280px !important;
     min-width: 280px !important;
@@ -67,7 +68,7 @@ const themeClass = computed(() => {
     flex-shrink: 0 !important;
 }
 
-/* Ensure the layout remains crisp at 100% scale */
+/* Connects the sidebar background to the dynamic CSS variables in app.css */
 .bg-sidebar {
     background-color: var(--sidebar-background);
 }

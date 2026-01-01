@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 class StudentController extends Controller
 {
     /**
-     * Get statistics for the Student Dashboard.
+     * Get statistics for the Merged Dashboard based on User Role.
      */
     public function dashboardStats()
     {
@@ -22,32 +22,56 @@ class StudentController extends Controller
         $user = Auth::user();
         $userId = $user->id;
 
-        // 1. Total unique quiz modules available
-        $totalQuizzes = Quiz::count();
+        // 1. Handle Admin Dashboard Data
+        if ($user->hasRole('admin')) {
+            return Inertia::render('Dashboard', [
+                // Explicitly pass roles to fix the "Student Overview" issue on the frontend
+                'auth' => [
+                    'user' => $user,
+                    'roles' => $user->getRoleNames(),
+                ],
+                'stats' => [
+                    'admins' => User::role('admin')->count(),
+                    'teachers' => User::role('teacher')->count(),
+                    'students' => User::role('student')->count(),
+                    'total_users' => User::count(),
+                ],
+                'recentUsers' => User::latest()
+                    ->select('id', 'name', 'email', 'created_at')
+                    ->take(5)
+                    ->get()
+            ]);
+        }
 
-        // 2. Identify unique quizzes the student has attempted
+        // 2. Handle Student/Teacher Dashboard Data
+
+        // Calculate Remaining Quizzes (Total Quizzes - Unique Quizzes Attempted)
+        $totalQuizzes = Quiz::count();
         $attemptedQuizCount = DB::table('quiz_attempts')
             ->where('user_id', $userId)
             ->distinct('quiz_id')
             ->count('quiz_id');
 
-        // 3. Remaining quizzes logic
-        $remainingQuizzes = $totalQuizzes - $attemptedQuizCount;
+        $remainingQuizzes = max(0, $totalQuizzes - $attemptedQuizCount);
 
-        // 4. Other Dashboard Stats
+        // Fetch Total Materials count
         $materialsCount = Material::count();
 
-        // Count total activities submitted by this user
+        // Count total activities submitted by this specific user
         $activitiesDone = DB::table('activity_submissions')
             ->where('user_id', $userId)
             ->count();
 
         return Inertia::render('Dashboard', [
+            // Explicitly pass roles here as well for consistency
+            'auth' => [
+                'user' => $user,
+                'roles' => $user->getRoleNames(),
+            ],
             'stats' => [
                 'materials' => $materialsCount,
-                // FIX: Key changed from 'activities_done' to 'my_materials' to match Dashboard.vue
                 'my_materials' => $activitiesDone,
-                'available_quizzes' => max(0, $remainingQuizzes),
+                'available_quizzes' => $remainingQuizzes,
             ],
             'recentMaterials' => Material::with('user:id,name')
                 ->latest()
@@ -56,8 +80,9 @@ class StudentController extends Controller
         ]);
     }
 
-    // ... rest of your methods (index, show, storeActivity, etc.) stay exactly the same ...
-
+    /**
+     * Display a listing of students (used for User Management lists).
+     */
     public function index(Request $request)
     {
         $query = User::role('student')
@@ -79,6 +104,9 @@ class StudentController extends Controller
         ]);
     }
 
+    /**
+     * Display the specified student's activity report.
+     */
     public function show(User $student)
     {
         $allTeacherActivities = Activity::all();
@@ -134,6 +162,9 @@ class StudentController extends Controller
         ]);
     }
 
+    /**
+     * Store a manual activity for a student.
+     */
     public function storeActivity(Request $request, User $student)
     {
         $validated = $request->validate([
@@ -152,6 +183,9 @@ class StudentController extends Controller
         return back()->with('success', 'Activity recorded successfully.');
     }
 
+    /**
+     * Update a manual activity for a student.
+     */
     public function updateActivity(Request $request, User $student, $activityId)
     {
         $validated = $request->validate([
@@ -171,6 +205,9 @@ class StudentController extends Controller
         return back()->with('success', 'Activity updated successfully.');
     }
 
+    /**
+     * Remove a manual activity for a student.
+     */
     public function destroyActivity(User $student, $activityId)
     {
         DB::table('student_manual_activities')
