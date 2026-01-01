@@ -51,7 +51,7 @@ const hasRole = (roleName: string) => {
 // --- DYNAMIC SIDEBAR THEME ---
 const sidebarTheme = computed(() => {
     const baseSettings = {
-        '--sidebar-width': '16rem',      
+        '--sidebar-width': '16rem',
         '--sidebar-width-icon': '3rem',
     };
 

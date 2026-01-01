@@ -76,7 +76,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $stats = [
             'users' => User::count(),
             'materials' => Material::count(),
-            // FIX: Use activity_submissions table for students to show correct "Activities Done" count
+            // FIX: Count actual submissions for students
             'my_materials' => $user->hasRole('teacher')
                 ? Material::where('user_id', $user->id)->count()
                 : DB::table('activity_submissions')->where('user_id', $user->id)->count(),
@@ -96,7 +96,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 2. CHATBOT
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES
+    // 3. ADMIN ROUTES (NO NAME PREFIX)
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
@@ -154,9 +154,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
     // 8. QUIZZES (Student Facing)
-    // FIX: Renamed from 'quiz.index' to 'quizzes.index' to resolve Ziggy error
     Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
-    Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quiz.show');
+    Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quizzes.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
     Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quiz.history');
 
