@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // REQUIRED FOR THE DASHBOARD COUNT
 use Gemini\Laravel\Facades\Gemini;
 
 // --- MODEL IMPORTS ---
@@ -31,7 +32,7 @@ use App\Http\Controllers\ReportController;
 |--------------------------------------------------------------------------
 */
 
-// FIX: Root URL now redirects directly to Login
+// Root URL redirects directly to Login
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
@@ -75,7 +76,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $stats = [
             'users' => User::count(),
             'materials' => Material::count(),
-            'my_materials' => Material::where('user_id', Auth::id())->count(),
+            // FIX: Use activity_submissions table for students to show correct "Activities Done" count
+            'my_materials' => $user->hasRole('teacher')
+                ? Material::where('user_id', $user->id)->count()
+                : DB::table('activity_submissions')->where('user_id', $user->id)->count(),
         ];
 
         $recentMaterials = Material::with('user:id,name')
@@ -150,8 +154,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
     // 8. QUIZZES (Student Facing)
-    Route::resource('quizzes', QuizController::class);
-    Route::get('/quiz', [QuizController::class, 'index'])->name('quiz.index');
+    // FIX: Renamed from 'quiz.index' to 'quizzes.index' to resolve Ziggy error
+    Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quiz.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quiz.submit');
     Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quiz.history');
@@ -181,11 +185,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])->name('reports.student.detail');
 
     Route::middleware(['role:teacher|admin'])->group(function () {
-        Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
-        Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
-        Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
-        Route::get('/reports/{report}/edit', [ReportController::class, 'edit'])->name('reports.edit');
-        Route::put('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
         Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });

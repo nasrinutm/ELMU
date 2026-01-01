@@ -19,6 +19,7 @@ interface User {
 }
 
 // --- PROPS DEFINITION ---
+// Prop names must match exactly what is sent from web.php
 defineProps<{
     stats: {
         users: number;
@@ -72,7 +73,7 @@ const formatDate = (dateString: string) => {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white rounded-none border-0">
+                <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-sky-500 to-blue-600 p-6 text-white rounded-none border-0">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
                             <p class="text-sm font-medium opacity-90 uppercase tracking-wider">Total Materials</p>
@@ -85,7 +86,7 @@ const formatDate = (dateString: string) => {
                     </div>
                 </div>
 
-                <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white rounded-none border-0">
+                <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white rounded-none border-0">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
                             <p class="text-sm font-medium opacity-90 uppercase tracking-wider">
@@ -139,7 +140,7 @@ const formatDate = (dateString: string) => {
                             class="p-4 flex items-center justify-between hover:bg-slate-50 transition group"
                         >
                             <div class="flex items-center gap-4 overflow-hidden">
-                                <div class="w-10 h-10 rounded-none bg-slate-100 text-slate-500 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 group-hover:text-blue-600">
+                                <div class="w-10 h-10 rounded-none bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                                     <FileText class="w-5 h-5" />
                                 </div>
                                 <div class="min-w-0">
@@ -190,12 +191,12 @@ const formatDate = (dateString: string) => {
                         </Link>
                     </div>
 
-                    <div v-else class="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 shadow-lg text-white rounded-none">
+                    <div v-else class="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 shadow-lg text-white rounded-none border-0">
                         <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
                              Keep it up!
                         </h3>
                         <p class="text-sm opacity-90 mb-4 leading-relaxed">
-                            You've completed {{ stats.my_materials }} learning activities. Ready for your next challenge?
+                            You've completed {{ stats.my_materials }} activities. Ready for your next challenge?
                         </p>
                         <Link :href="route('activities.index')" class="text-xs font-bold text-white transition uppercase tracking-widest hover:underline flex items-center gap-2">
                             Explore Activities <ArrowRight class="w-3 h-3" />
