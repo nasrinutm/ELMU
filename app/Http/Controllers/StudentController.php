@@ -4,12 +4,85 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Activity;
+use App\Models\Quiz;
+use App\Models\Material;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class StudentController extends Controller
 {
+    /**
+     * Get statistics for the Merged Dashboard based on User Role.
+     */
+    public function dashboardStats()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $userId = $user->id;
+
+        // 1. Handle Admin Dashboard Data
+        if ($user->hasRole('admin')) {
+            return Inertia::render('Dashboard', [
+                // Explicitly pass roles to fix the "Student Overview" issue on the frontend
+                'auth' => [
+                    'user' => $user,
+                    'roles' => $user->getRoleNames(),
+                ],
+                'stats' => [
+                    'admins' => User::role('admin')->count(),
+                    'teachers' => User::role('teacher')->count(),
+                    'students' => User::role('student')->count(),
+                    'total_users' => User::count(),
+                ],
+                'recentUsers' => User::latest()
+                    ->select('id', 'name', 'email', 'created_at')
+                    ->take(5)
+                    ->get()
+            ]);
+        }
+
+        // 2. Handle Student/Teacher Dashboard Data
+
+        // Calculate Remaining Quizzes (Total Quizzes - Unique Quizzes Attempted)
+        $totalQuizzes = Quiz::count();
+        $attemptedQuizCount = DB::table('quiz_attempts')
+            ->where('user_id', $userId)
+            ->distinct('quiz_id')
+            ->count('quiz_id');
+
+        $remainingQuizzes = max(0, $totalQuizzes - $attemptedQuizCount);
+
+        // Fetch Total Materials count
+        $materialsCount = Material::count();
+
+        // Count total activities submitted by this specific user
+        $activitiesDone = DB::table('activity_submissions')
+            ->where('user_id', $userId)
+            ->count();
+
+        return Inertia::render('Dashboard', [
+            // Explicitly pass roles here as well for consistency
+            'auth' => [
+                'user' => $user,
+                'roles' => $user->getRoleNames(),
+            ],
+            'stats' => [
+                'materials' => $materialsCount,
+                'my_materials' => $activitiesDone,
+                'available_quizzes' => $remainingQuizzes,
+            ],
+            'recentMaterials' => Material::with('user:id,name')
+                ->latest()
+                ->take(5)
+                ->get()
+        ]);
+    }
+
+    /**
+     * Display a listing of students (used for User Management lists).
+     */
     public function index(Request $request)
     {
         $query = User::role('student')
@@ -31,18 +104,18 @@ class StudentController extends Controller
         ]);
     }
 
+    /**
+     * Display the specified student's activity report.
+     */
     public function show(User $student)
     {
-        // 1. Fetch all teacher-created activities
         $allTeacherActivities = Activity::all();
 
-        // 2. Fetch the student's actual submissions directly from the DB to avoid model relationship issues
         $studentSubmissions = DB::table('activity_submissions')
             ->where('user_id', $student->id)
             ->get()
             ->keyBy('activity_id');
 
-        // 3. Merge them so we see "Pending" vs "Completed" correctly
         $activitiesReport = $allTeacherActivities->map(function ($activity) use ($studentSubmissions) {
             $submission = $studentSubmissions->get($activity->id);
 
@@ -52,15 +125,13 @@ class StudentController extends Controller
                 'title' => $activity->title,
                 'type' => $activity->type ?? 'General',
                 'due_date' => $activity->due_date,
-                // FIX: If submission exists in activity_submissions, it is COMPLETED
                 'status' => $submission ? 'Completed' : 'Pending',
-                'score' => ($submission && property_exists($submission, 'score')) ? $submission->score : '-',
-                'submitted_at' => $submission ? $submission->created_at : null,
+                'score' => $submission->score ?? '-',
+                'submitted_at' => $submission->created_at ?? null,
                 'is_manual' => false,
             ];
         });
 
-        // 4. Fetch Manual Activities
         $manualActivities = DB::table('student_manual_activities')
             ->where('user_id', $student->id)
             ->get()
@@ -78,7 +149,6 @@ class StudentController extends Controller
                 ];
             });
 
-        // 5. Combine and Sort
         $finalActivities = $activitiesReport
             ->concat($manualActivities)
             ->sortByDesc(function ($item) {
@@ -92,6 +162,9 @@ class StudentController extends Controller
         ]);
     }
 
+    /**
+     * Store a manual activity for a student.
+     */
     public function storeActivity(Request $request, User $student)
     {
         $validated = $request->validate([
@@ -110,6 +183,9 @@ class StudentController extends Controller
         return back()->with('success', 'Activity recorded successfully.');
     }
 
+    /**
+     * Update a manual activity for a student.
+     */
     public function updateActivity(Request $request, User $student, $activityId)
     {
         $validated = $request->validate([
@@ -129,6 +205,9 @@ class StudentController extends Controller
         return back()->with('success', 'Activity updated successfully.');
     }
 
+    /**
+     * Remove a manual activity for a student.
+     */
     public function destroyActivity(User $student, $activityId)
     {
         DB::table('student_manual_activities')
