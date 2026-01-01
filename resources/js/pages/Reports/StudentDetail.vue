@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
@@ -17,6 +17,17 @@ const props = defineProps<{
     existingReport: any | null;
     stats: { quiz_avg: number; activities_completed: number };
 }>();
+
+const uniqueHighestQuizzes = computed(() => {
+    const highestScores: Record<string, any> = {};
+
+    props.quizzes.forEach((quiz) => {
+          if (!highestScores[quiz.title] || quiz.score > highestScores[quiz.title].score) {
+            highestScores[quiz.title] = quiz;
+        }
+    });
+    return Object.values(highestScores).sort((a, b) => b.score - a.score);
+});
 
 const page = usePage();
 const teacherName = (page.props.auth.user as any).name;
@@ -135,12 +146,16 @@ const handlePrint = () => {
 
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-slate-900">
                     <div class="px-6 py-4 border-b bg-slate-50 font-bold text-xs uppercase tracking-tight flex items-center gap-2">
-                        <Trophy class="w-4 h-4 text-teal-600" /> Quizzes
+                        <Trophy class="w-4 h-4 text-teal-600" /> Quizzes (Best Attempts)
                     </div>
                     <div class="divide-y divide-slate-100">
-                        <div v-for="(quiz, index) in quizzes" :key="index" class="p-4 flex justify-between items-center">
+                        <div v-for="(quiz, index) in uniqueHighestQuizzes" :key="index" class="p-4 flex justify-between items-center">
                             <span class="font-medium">{{ quiz.title }}</span>
                             <Badge class="bg-teal-50 text-teal-700 border-teal-200 font-bold">{{ quiz.score }}%</Badge>
+                        </div>
+                        
+                        <div v-if="uniqueHighestQuizzes.length === 0" class="p-6 text-center text-slate-400 italic">
+                            No quizzes attempted yet.
                         </div>
                     </div>
                 </div>

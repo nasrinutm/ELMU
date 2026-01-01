@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useForm, Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { route } from 'ziggy-js';
 import {
     Server, Database, Cpu, Trash2, FileText, Plus,
     Search, ChevronUp, ChevronDown, X, Bot, Edit2, Save, UploadCloud, AlertCircle, FilePlus
 } from 'lucide-vue-next';
+import { route } from 'ziggy-js';
 
 // Define Props with TypeScript types
 const props = defineProps<{
@@ -154,8 +154,8 @@ const formatBytes = (bytes: number) => {
 <template>
     <Head title="AI Knowledge Center" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 antialiased font-sans font-normal text-gray-900">
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="flex h-full flex-1 flex-col gap-8 p-4 md:p-8 w-full">
 
             <div class="border-b border-slate-200 pb-6">
                 <h1 class="text-3xl font-bold tracking-tight text-slate-900 uppercase">AI Knowledge Center</h1>
@@ -337,5 +337,5 @@ const formatBytes = (bytes: number) => {
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>
