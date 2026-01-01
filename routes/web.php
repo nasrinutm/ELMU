@@ -27,6 +27,7 @@ use App\Http\Controllers\ReportController;
 use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
+use App\Models\Quiz;
 
 // --- TEST & SETUP ROUTES ---
 Route::get('/test-models', function () {
@@ -215,6 +216,6 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
 
-});
+
 
 require __DIR__.'/settings.php';
