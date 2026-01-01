@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { type Reply as ReplyType } from '@/types';
-import { useForm, router } from '@inertiajs/vue3';
+import { useForm, router, usePage } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
-import { Trash2, Reply as ReplyIcon, Pencil, AlertCircle } from 'lucide-vue-next';
+import { Trash2, Reply as ReplyIcon, Pencil, AlertCircle, CheckCircle2, X } from 'lucide-vue-next';
 
 const props = defineProps<{
     reply: ReplyType & {
@@ -15,20 +15,43 @@ const props = defineProps<{
     post_id: number;
 }>();
 
+const page = usePage();
 const showReplyForm = ref(false);
 const showEditForm = ref(false);
 const isDeleteModalOpen = ref(false);
+const showSuccessNotification = ref(false);
 
-const confirmDelete = () => {
-    isDeleteModalOpen.value = false;
-    router.delete(route('replies.destroy', props.reply.id), { preserveScroll: true });
-};
-
+// --- FORMS ---
 const nestedReplyForm = useForm({
     body: '',
     post_id: props.post_id,
     parent_id: props.reply.id, 
 });
+
+const editForm = useForm({ 
+    body: props.reply.body 
+});
+
+// --- NOTIFICATION WATCHER ---
+watch(
+    () => (page.props as any).flash,
+    (flash) => {
+        if (flash?.success) {
+            showSuccessNotification.value = false;
+            nextTick(() => {
+                showSuccessNotification.value = true;
+                setTimeout(() => { showSuccessNotification.value = false; }, 5000);
+            });
+        }
+    },
+    { deep: true }
+);
+
+// --- ACTIONS ---
+const confirmDelete = () => {
+    isDeleteModalOpen.value = false;
+    router.delete(route('replies.destroy', props.reply.id), { preserveScroll: true });
+};
 
 const submitNestedReply = () => {
     nestedReplyForm.post(route('replies.store'), {
@@ -40,7 +63,6 @@ const submitNestedReply = () => {
     });
 };
 
-const editForm = useForm({ body: props.reply.body });
 const submitEdit = () => {
     editForm.put(route('replies.update', props.reply.id), {
         preserveScroll: true,
@@ -52,6 +74,18 @@ const submitEdit = () => {
 <template>
     <div class="border-b border-slate-100 py-8 last:border-0 group">
         <div class="relative"> 
+            
+            <transition name="toast">
+                <div v-if="showSuccessNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
+                    <div class="bg-emerald-500/20 p-2"><CheckCircle2 class="w-6 h-6 text-emerald-500" /></div>
+                    <div class="flex-grow">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">Reply Updated</p>
+                        <p class="text-sm font-medium">{{ (page.props as any).flash.success }}</p>
+                    </div>
+                    <button @click="showSuccessNotification = false" class="text-slate-500 hover:text-white transition"><X class="w-4 h-4" /></button>
+                </div>
+            </transition>
+
             <div class="flex items-center justify-between mb-3">
                 <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 bg-slate-50 px-2 py-0.5 border border-slate-100">
                     @{{ reply.user.username }}
@@ -63,10 +97,15 @@ const submitEdit = () => {
                     v-model="editForm.body"
                     rows="3"
                     class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none text-sm shadow-inner"
+                    required
                 ></textarea>
+                <div v-if="editForm.errors.body" class="text-red-500 text-[10px] font-bold uppercase">{{ editForm.errors.body }}</div>
+                
                 <div class="flex justify-end items-center gap-4">
                     <button type="button" @click="showEditForm = false" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
-                    <button type="submit" class="px-6 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest rounded-none shadow-md">Save Changes</button>
+                    <button type="submit" :disabled="editForm.processing" class="px-6 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest rounded-none shadow-md disabled:opacity-50">
+                        {{ editForm.processing ? 'Saving...' : 'Save Changes' }}
+                    </button>
                 </div>
             </form>
 
@@ -100,9 +139,10 @@ const submitEdit = () => {
                     rows="2"
                     class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-1 focus:ring-slate-900 shadow-inner"
                     placeholder="Write a response..."
+                    required
                 ></textarea>
                 <div class="flex justify-end mt-3">
-                    <button type="submit" :disabled="nestedReplyForm.processing" class="px-6 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest shadow-md">
+                    <button type="submit" :disabled="nestedReplyForm.processing" class="px-6 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest shadow-md disabled:opacity-50">
                         Post Response
                     </button>
                 </div>
@@ -129,3 +169,9 @@ const submitEdit = () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast-enter-from { transform: translateX(100%); opacity: 0; }
+.toast-leave-to { transform: translateY(-20px); opacity: 0; }
+</style>
