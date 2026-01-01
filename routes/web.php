@@ -21,7 +21,6 @@ use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
-// --------------------------
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\TeacherQuizController;
 use App\Http\Controllers\StudentController;
@@ -31,7 +30,6 @@ use App\Http\Controllers\ReportController;
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-| Root URL redirects directly to Login
 */
 
 Route::get('/', function () {
@@ -56,49 +54,14 @@ Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 Route::middleware(['auth', 'verified'])->group(function () {
 
     // 1. DASHBOARD
-    Route::get('/dashboard', function () {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+    Route::get('/dashboard', [StudentController::class, 'dashboardStats'])->name('dashboard');
 
-        // --- ADMIN DASHBOARD ---
-        if ($user->hasRole('admin')) {
-            return Inertia::render('Dashboard/AdminDashboard', [
-                'stats' => [
-                    'admins' => User::role('admin')->count(),
-                    'teachers' => User::role('teacher')->count(),
-                    'students' => User::role('student')->count(),
-                    'total_users' => User::count(),
-                ],
-                'recentUsers' => User::latest()->take(5)->get()
-            ]);
-        }
-
-        // --- TEACHER & STUDENT DASHBOARD ---
-        $stats = [
-            'users' => User::count(),
-            'materials' => Material::count(),
-            'my_materials' => $user->hasRole('teacher')
-                ? Material::where('user_id', $user->id)->count()
-                : DB::table('activity_submissions')->where('user_id', $user->id)->count(),
-            'available_quizzes' => Quiz::count(),
-        ];
-
-        $recentMaterials = Material::with('user:id,name')
-            ->latest()
-            ->take(5)
-            ->get();
-
-        return Inertia::render('Dashboard', [
-            'stats' => $stats,
-            'recentMaterials' => $recentMaterials
-        ]);
-    })->name('dashboard');
-
-    // 2. CHATBOT
+    // 2. CHATBOT INTERACTION
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES
+    // 3. ADMIN ROUTES (Prefix applied for cleaner URL structure)
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+        // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -106,12 +69,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
+        // AI Knowledge Base Management
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
         Route::post('/chatbot/upload', [ChatbotUploadController::class, 'store'])->name('upload.store');
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+
+        // System Prompt Management
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
     });
@@ -129,7 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIALS
+    // 5. MATERIALS (General Study Materials)
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
@@ -154,8 +120,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])->name('activities.downloadSubmission');
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
-    // 8. QUIZZES (Student Facing)
-    // Synchronized to plural naming "quizzes.*" to prevent frontend route list errors
+    // 8. QUIZZES
     Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quizzes.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quizzes.submit');
