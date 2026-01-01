@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
-import { route } from 'ziggy-js'; 
+import { route } from 'ziggy-js';
 
 defineProps<{
     canResetPassword?: boolean;
@@ -34,14 +34,14 @@ const submit = () => {
 <template>
     <Head title="Log in" />
 
-    <div 
+    <div
         class="relative min-h-screen flex flex-col justify-center items-center p-4 bg-cover bg-center bg-no-repeat"
         style="background-image: url('/bg-raw.jpg');"
     >
         <div class="absolute inset-0 bg-slate-900/20 z-0"></div>
 
         <div class="relative z-10 w-full flex flex-col items-center">
-            
+
             <div class="mb-8">
                 <Link href="/">
                     <img src="/logo.png" alt="ELMU Logo" class="h-36 w-auto object-contain" />
@@ -78,9 +78,6 @@ const submit = () => {
                     <div>
                         <div class="flex items-center justify-between">
                             <label for="password" class="block font-medium text-sm text-gray-700">Password</label>
-                            <Link v-if="canResetPassword" :href="route('password.request')" class="text-xs text-blue-600 hover:underline">
-                                Forgot password?
-                            </Link>
                         </div>
                         <input
                             id="password"
@@ -95,13 +92,6 @@ const submit = () => {
                     </div>
 
                     <div class="flex items-center">
-                        <input 
-                            type="checkbox" 
-                            id="remember" 
-                            v-model="form.remember" 
-                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
-                        />
-                        <label for="remember" class="ml-2 block text-sm text-gray-600">Remember me</label>
                     </div>
 
                     <button
