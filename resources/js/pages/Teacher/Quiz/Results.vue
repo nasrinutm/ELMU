@@ -4,7 +4,8 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, PlusCircle, CheckCircle, User, Mail, History, Award } from 'lucide-vue-next';
+// Added Eye and Trash2 icons here
+import { ArrowLeft, Search, PlusCircle, CheckCircle, User, Mail, History, Award, Eye, Trash2 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 import { computed, ref } from 'vue';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,16 @@ const grantAttempt = (userId: number, name: string, current: number, max: number
         router.post(route('teacher.attempt.grant', { quiz: props.quiz.id, user: userId }), {}, {
             preserveScroll: true,
             onSuccess: () => console.log('Attempt granted')
+        });
+    }
+};
+
+// --- NEW FUNCTION: DELETE ATTEMPT ---
+const deleteAttempt = (attemptId: number) => {
+    if (confirm('Are you sure you want to delete this attempt record? This cannot be undone.')) {
+        router.delete(route('teacher.attempt.destroy', attemptId), {
+            preserveScroll: true,
+            onSuccess: () => console.log('Attempt deleted')
         });
     }
 };
@@ -156,11 +167,22 @@ const formatDate = (dateString: string) => {
                                     </div>
                                 </div>
                                 
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-3">
                                     <div class="px-4 py-1.5 rounded-lg font-black text-sm" 
                                         :class="(attempt.score / attempt.total_questions) >= 0.5 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'">
                                         {{ attempt.score }} / {{ attempt.total_questions }}
                                     </div>
+
+                                    <Link :href="route('teacher.attempt.review', attempt.id)">
+                                        <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg">
+                                            <Eye class="h-4 w-4" />
+                                        </Button>
+                                    </Link>
+
+                                    <Button @click="deleteAttempt(attempt.id)" variant="ghost" size="icon" 
+                                        class="h-8 w-8 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg">
+                                        <Trash2 class="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
 
