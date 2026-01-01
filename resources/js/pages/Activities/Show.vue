@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3'; 
+import { Badge } from '@/components/ui/badge';
 import { route } from 'ziggy-js';
 import { ArrowLeft, Calendar, FileText, UploadCloud, Save, CheckCircle, Trash2, Clock, Download, Users } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted } from 'vue';
@@ -49,6 +50,8 @@ const checkTimeLimit = () => {
     }
 };
 
+const formatDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
 onMounted(() => {
     checkTimeLimit();
     timerInterval = setInterval(checkTimeLimit, 1000);
@@ -94,30 +97,30 @@ const submitWork = () => {
         { title: activity.title, href: '#' }
     ]">
         <div class="py-12">
-            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <div class="mx-auto sm:px-6 lg:px-8 space-y-6">
                 
-                <Link :href="route('activities.index')" class="flex items-center text-blue-400 hover:text-white transition mb-4">
+                <Link :href="route('activities.index')" class="flex items-center text-blue-400 hover:text-action-hover transition mb-4">
                     <ArrowLeft class="w-4 h-4 mr-2" /> Back to Activities
                 </Link>
 
-                <div class="bg-[#003366] rounded-lg shadow-xl border border-[#004080]">
+                <div class="bg-card rounded-lg shadow-xl border border-border">
                     <div class="p-6 md:p-8">
                         <div class="flex flex-col md:flex-row justify-between gap-4 mb-6">
                             <div>
-                                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase border mb-3 inline-block bg-blue-900/50 text-blue-200 border-blue-700">
-                                    {{ activity.type }}
-                                </span>
-                                <h1 class="text-3xl font-bold text-white">{{ activity.title }}</h1>
+                                <Badge variant="outline" class="uppercase text-[10px] tracking-wider bg-slate-50 text-slate-600 border-slate-200">
+                                    {{ activity.type || 'Activity' }}
+                                </Badge>
+                                <h1 class="text-3xl font-bold text-card-foreground">{{ activity.title }}</h1>
                             </div>
-                            <div v-if="activity.due_date" class="flex items-center bg-red-900/20 border border-red-500/30 text-red-300 px-4 py-2 rounded-md h-fit">
+                            <div v-if="activity.due_date" class="flex items-center text-orange-700 bg-orange-50 border border-red-500/30 px-4 py-2 rounded-md h-fit">
                                 <Calendar class="w-4 h-4 mr-2" />
                                 <span class="font-bold text-sm">Due: {{ new Date(activity.due_date).toLocaleDateString() }}</span>
                             </div>
                         </div>
 
                         <div class="prose prose-invert max-w-none mb-8">
-                            <h3 class="text-lg font-bold text-blue-200 mb-2 underline">Instructions</h3>
-                            <p class="text-gray-300 whitespace-pre-wrap leading-relaxed">{{ activity.description }}</p>
+                            <h3 class="text-lg font-semibold text-blue-500/80 mb-5">Instructions</h3>
+                            <p class="text-slate-500 whitespace-pre-wrap leading-relaxed">{{ activity.description || 'No description provided.'  }}</p>
                         </div>
 
                         <div v-if="activity.file_path" class="bg-[#002244] border border-[#004080] rounded-lg p-4 flex items-center justify-between">
