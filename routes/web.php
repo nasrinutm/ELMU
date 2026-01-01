@@ -53,14 +53,15 @@ Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 1. DASHBOARD - Now cleaned up and pointing to the Controller
+    // 1. DASHBOARD
     Route::get('/dashboard', [StudentController::class, 'dashboardStats'])->name('dashboard');
 
-    // 2. CHATBOT
+    // 2. CHATBOT INTERACTION
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES
+    // 3. ADMIN ROUTES (Prefix applied for cleaner URL structure)
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+        // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -68,12 +69,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
+        // AI Knowledge Base Management
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
         Route::post('/chatbot/upload', [ChatbotUploadController::class, 'store'])->name('upload.store');
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+
+        // System Prompt Management
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
     });
@@ -91,7 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIALS
+    // 5. MATERIALS (General Study Materials)
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 

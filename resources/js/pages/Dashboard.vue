@@ -67,11 +67,10 @@ const formatDate = (dateString: string) => {
     <Head title="Dashboard" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-7xl mx-auto space-y-8 pb-10 px-4 sm:px-0 font-sans font-normal antialiased">
+        <div class="max-w-7xl mx-auto space-y-8 pb-10 px-4 sm:px-0 font-sans font-normal antialiased text-gray-900">
 
             <div class="border-b border-slate-200 pb-6">
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 flex items-center gap-3 uppercase">
-                    <LayoutDashboard class="w-7 h-7 text-action" />
+                <h1 class="text-3xl font-bold tracking-tight text-gray-900 uppercase">
                     {{ isAdmin ? 'System Overview' : 'Student Overview' }}
                 </h1>
                 <p class="text-sm text-slate-500 mt-1">
@@ -84,122 +83,101 @@ const formatDate = (dateString: string) => {
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-fuchsia-600 to-purple-700 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90 uppercase tracking-wider">Admins</p>
+                            <p class="text-xs font-medium opacity-90 uppercase tracking-wider">Admins</p>
                             <h3 class="mt-2 text-4xl font-bold tabular-nums">{{ stats.admins }}</h3>
-                            <p class="mt-2 text-xs opacity-75">System Managers</p>
+                            <p class="mt-2 text-[10px] opacity-75">System Managers</p>
                         </div>
-                        <div class="p-2 bg-white/20 rounded-sm backdrop-blur-sm">
-                            <ShieldCheck class="w-6 h-6 text-white" />
-                        </div>
+                        <div class="p-1.5 bg-white/20 rounded-sm"><ShieldCheck class="w-5 h-5 text-white" /></div>
                     </div>
                 </div>
 
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-teal-500 to-emerald-600 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90 uppercase tracking-wider">Teachers</p>
+                            <p class="text-xs font-medium opacity-90 uppercase tracking-wider">Teachers</p>
                             <h3 class="mt-2 text-4xl font-bold tabular-nums">{{ stats.teachers }}</h3>
-                            <p class="mt-2 text-xs opacity-75">Instructors</p>
+                            <p class="mt-2 text-[10px] opacity-75">Instructors</p>
                         </div>
-                        <div class="p-2 bg-white/20 rounded-sm backdrop-blur-sm">
-                            <BookOpen class="w-6 h-6 text-white" />
-                        </div>
+                        <div class="p-1.5 bg-white/20 rounded-sm"><BookOpen class="w-5 h-5 text-white" /></div>
                     </div>
                 </div>
 
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-orange-500 to-amber-600 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90 uppercase tracking-wider">Students</p>
+                            <p class="text-xs font-medium opacity-90 uppercase tracking-wider">Students</p>
                             <h3 class="mt-2 text-4xl font-bold tabular-nums">{{ stats.students }}</h3>
-                            <p class="mt-2 text-xs opacity-75">Learners</p>
+                            <p class="mt-2 text-[10px] opacity-75">Learners</p>
                         </div>
-                        <div class="p-2 bg-white/20 rounded-sm backdrop-blur-sm">
-                            <GraduationCap class="w-6 h-6 text-white" />
-                        </div>
+                        <div class="p-1.5 bg-white/20 rounded-sm"><GraduationCap class="w-5 h-5 text-white" /></div>
                     </div>
                 </div>
 
                 <div class="relative overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white rounded-sm">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-sm font-medium opacity-90 uppercase tracking-wider">Total Users</p>
+                            <p class="text-xs font-medium opacity-90 uppercase tracking-wider">Total Users</p>
                             <h3 class="mt-2 text-4xl font-bold tabular-nums">{{ stats.total_users }}</h3>
-                            <p class="mt-2 text-xs opacity-75">All Accounts</p>
+                            <p class="mt-2 text-[10px] opacity-75">All Accounts</p>
                         </div>
-                        <div class="p-2 bg-white/20 rounded-sm backdrop-blur-sm">
-                            <Users class="w-6 h-6 text-white" />
-                        </div>
+                        <div class="p-1.5 bg-white/20 rounded-sm"><Users class="w-5 h-5 text-white" /></div>
                     </div>
                 </div>
             </div>
 
             <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="relative overflow-hidden bg-indigo-600 p-6 text-white shadow-sm flex justify-between items-start group">
+                <div class="bg-indigo-600 p-6 text-white shadow-sm flex justify-between items-start rounded-sm">
                     <div>
                         <p class="text-[10px] font-medium opacity-80 uppercase tracking-widest mb-1">Learning Resources</p>
                         <h3 class="text-4xl font-semibold tabular-nums tracking-tight">{{ stats.materials }}</h3>
-                        <div class="mt-4 bg-white/20 text-[9px] font-bold px-2 py-1 uppercase inline-block">Available Modules</div>
                     </div>
                     <BookOpen class="w-10 h-10 opacity-20" />
                 </div>
-
-                <div class="relative overflow-hidden bg-emerald-500 p-6 text-white shadow-sm flex justify-between items-start group">
+                <div class="bg-emerald-500 p-6 text-white shadow-sm flex justify-between items-start rounded-sm">
                     <div>
-                        <p class="text-[10px] font-medium opacity-80 uppercase tracking-widest mb-1">
-                            {{ isTeacher ? 'Content Shared' : 'Activities Done' }}
-                        </p>
+                        <p class="text-[10px] font-medium opacity-80 uppercase tracking-widest mb-1">{{ isTeacher ? 'Content Shared' : 'Activities Done' }}</p>
                         <h3 class="text-4xl font-semibold tabular-nums tracking-tight">{{ stats.my_materials }}</h3>
-                        <div class="mt-4 bg-white/20 text-[9px] font-bold px-2 py-1 uppercase inline-block">Tasks Completed</div>
                     </div>
                     <Trophy class="w-10 h-10 opacity-20" />
                 </div>
-
-                <div class="relative overflow-hidden bg-orange-500 p-6 text-white shadow-sm flex justify-between items-start group">
+                <div class="bg-orange-500 p-6 text-white shadow-sm flex justify-between items-start rounded-sm">
                     <div>
                         <p class="text-[10px] font-medium opacity-80 uppercase tracking-widest mb-1">Remaining Quizzes</p>
                         <h3 class="text-4xl font-semibold tabular-nums tracking-tight">{{ stats.available_quizzes }}</h3>
-                        <div class="mt-4 bg-white/20 text-[9px] font-bold px-2 py-1 uppercase inline-block">Tests to complete</div>
                     </div>
                     <HelpCircle class="w-10 h-10 opacity-20" />
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 space-y-4">
-                    <div class="px-2 py-1 flex justify-between items-center border-b border-slate-100 pb-4">
-                        <h3 class="font-semibold text-slate-900 flex items-center gap-2 text-sm uppercase tracking-widest">
-                            <template v-if="isAdmin">
-                                <Users class="w-4 h-4 text-action" /> Recent Registrations
-                            </template>
-                            <template v-else>
-                                <GraduationCap class="w-4 h-4 text-indigo-600" /> Recent Study Materials
-                            </template>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+
+                <div class="lg:col-span-2 flex flex-col bg-white border border-slate-200 shadow-sm rounded-sm">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-900 flex items-center gap-2 uppercase text-sm tracking-widest">
+                            {{ isAdmin ? 'Recent Registrations' : 'Recent Study Materials' }}
                         </h3>
-                        <Link :href="isAdmin ? route('users.index') : route('materials.index')" class="text-[10px] font-bold text-action hover:underline uppercase tracking-widest">
-                            View All &rarr;
-                        </Link>
+                        <Link :href="isAdmin ? route('users.index') : route('materials.index')" class="text-xs text-blue-600 hover:underline font-bold uppercase">View All</Link>
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="flex-grow divide-y divide-slate-50">
                         <template v-if="isAdmin">
-                            <div v-for="u in recentUsers" :key="u.id" class="bg-white border border-slate-200 p-4 flex items-center justify-between shadow-sm hover:border-slate-300 transition-colors">
+                            <div v-for="u in recentUsers" :key="u.id" class="p-4 flex items-center justify-between hover:bg-slate-50 transition">
                                 <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                        {{ u.name.charAt(0).toUpperCase() }}
+                                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                        {{ u.name.charAt(0) }}
                                     </div>
                                     <div>
-                                        <h4 class="text-sm font-medium text-slate-900">{{ u.name }}</h4>
-                                        <p class="text-[10px] text-slate-400 uppercase tracking-wider">{{ u.email }}</p>
+                                        <p class="text-sm font-bold text-gray-900">{{ u.name }}</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">{{ u.email }}</p>
                                     </div>
                                 </div>
-                                <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 uppercase">{{ formatDate(u.created_at) }}</span>
+                                <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded-sm">{{ formatDate(u.created_at) }}</span>
                             </div>
                         </template>
 
                         <template v-else>
                             <div v-if="recentMaterials?.length === 0" class="p-12 text-center text-slate-400 italic text-sm">No study materials found.</div>
-                            <div v-for="material in recentMaterials" :key="material.id" class="bg-white border border-slate-200 p-4 flex items-center justify-between group hover:border-indigo-200 transition-all shadow-sm">
+                            <div v-for="material in recentMaterials" :key="material.id" class="p-4 flex items-center justify-between group hover:bg-slate-50 transition-all">
                                 <div class="flex items-center gap-4 min-w-0">
                                     <div class="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><FileText class="w-5 h-5" /></div>
                                     <div class="min-w-0">
@@ -217,53 +195,37 @@ const formatDate = (dateString: string) => {
                     </div>
                 </div>
 
-                <div class="space-y-6">
-                    <div v-if="isAdmin" class="bg-white border border-gray-200 shadow-sm p-6 rounded-none">
-                        <h3 class="font-bold text-[10px] uppercase tracking-widest text-gray-900 mb-6 flex items-center gap-2">
-                            <ShieldCheck class="w-4 h-4 text-green-500" /> System Status
-                        </h3>
-                        <div class="space-y-5">
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="text-gray-600 font-medium uppercase tracking-wider">Server Status</span>
-                                <span class="text-green-700 font-bold bg-green-50 px-2 py-1 uppercase tracking-tighter">Operational</span>
-                            </div>
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="text-gray-600 font-medium uppercase tracking-wider">AI Chatbot</span>
-                                <span class="text-blue-700 font-bold bg-blue-50 px-2 py-1 uppercase tracking-tighter">Active</span>
+                <div class="flex flex-col space-y-6">
+                    <div v-if="isAdmin" class="flex-grow bg-white border border-gray-200 shadow-sm p-6 flex flex-col justify-between rounded-sm">
+                        <div>
+                            <h3 class="font-bold text-[10px] uppercase tracking-widest text-gray-900 mb-6 flex items-center gap-2">
+                                <ShieldCheck class="w-4 h-4 text-green-500" /> System Status
+                            </h3>
+                            <div class="space-y-5">
+                                <div class="flex items-center justify-between text-xs font-normal">
+                                    <span class="text-gray-600 uppercase tracking-wider">Server Status</span>
+                                    <span class="text-green-700 font-bold bg-green-50 px-2 py-1 uppercase tracking-tighter">Operational</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs font-normal">
+                                    <span class="text-gray-600 uppercase tracking-wider">AI Chatbot</span>
+                                    <span class="text-blue-700 font-bold bg-blue-50 px-2 py-1 uppercase tracking-tighter">Active</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mt-8">
-                            <p class="text-xs text-slate-400 uppercase tracking-wide font-bold mb-3">Quick Actions</p>
-                            <Link :href="route('upload.create')" class="block w-full text-center bg-blue-600 text-white py-3 hover:bg-blue-700 transition text-sm font-semibold rounded-sm">
+                        <div class="mt-8 border-t border-gray-50 pt-6">
+                            <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4">Quick Actions</p>
+                            <Link :href="route('upload.create')" class="block w-full text-center bg-action text-white py-3 hover:opacity-90 transition text-[10px] font-bold uppercase tracking-widest rounded-sm shadow-md">
                                 Update Knowledge Base
                             </Link>
                         </div>
                     </div>
 
-                    <div class="bg-white border border-slate-200 p-6 shadow-sm rounded-none">
-                        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 border-b border-slate-50 pb-2">Academic Hub</h3>
-                        <div class="space-y-3">
-                            <Link :href="route('forum.index')" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-action hover:text-white transition-all group border border-slate-100">
-                                <span class="text-xs font-semibold uppercase tracking-widest">Discussion Forum</span>
-                                <ArrowRight class="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                            </Link>
-                            <Link v-if="!isAdmin" :href="route('activities.index')" class="flex items-center justify-between p-4 bg-slate-50 hover:bg-teal-600 hover:text-white transition-all group border border-slate-100">
-                                <span class="text-xs font-semibold uppercase tracking-widest">Activities</span>
-                                <ArrowRight class="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div v-if="!isAdmin" class="bg-slate-900 p-6 text-white shadow-xl border-l-4 border-indigo-500 relative overflow-hidden">
-                        <div class="relative z-10">
+                    <div v-if="!isAdmin" class="bg-slate-900 p-6 text-white shadow-xl border-l-4 border-indigo-500 relative overflow-hidden rounded-sm">
+                        <div class="relative z-10 font-normal">
                             <h3 class="font-semibold text-lg mb-2 tracking-tight">Level Up Your Learning</h3>
-                            <p class="text-[11px] text-slate-400 mb-5 leading-relaxed uppercase tracking-wider">
-                                You have completed {{ stats.my_materials }} activities. Consistency leads to excellence.
-                            </p>
-                            <Link :href="route('activities.index')" class="inline-block bg-white text-slate-900 px-4 py-2 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-colors">
-                                Explore Activities &rarr;
-                            </Link>
+                            <p class="text-[11px] text-slate-400 mb-5 leading-relaxed uppercase tracking-wider">You have completed {{ stats.my_materials }} activities. Consistency leads to excellence.</p>
+                            <Link :href="route('activities.index')" class="inline-block bg-white text-slate-900 px-4 py-2 font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-colors">Explore Activities &rarr;</Link>
                         </div>
                         <TrendingUp class="absolute -right-4 -bottom-4 w-24 h-24 opacity-5" />
                     </div>
