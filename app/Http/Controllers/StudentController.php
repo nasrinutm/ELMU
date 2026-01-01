@@ -4,12 +4,60 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Activity;
+use App\Models\Quiz;
+use App\Models\Material;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class StudentController extends Controller
 {
+    /**
+     * Get statistics for the Student Dashboard.
+     */
+    public function dashboardStats()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $userId = $user->id;
+
+        // 1. Total unique quiz modules available
+        $totalQuizzes = Quiz::count();
+
+        // 2. Identify unique quizzes the student has attempted
+        $attemptedQuizCount = DB::table('quiz_attempts')
+            ->where('user_id', $userId)
+            ->distinct('quiz_id')
+            ->count('quiz_id');
+
+        // 3. Remaining quizzes logic
+        $remainingQuizzes = $totalQuizzes - $attemptedQuizCount;
+
+        // 4. Other Dashboard Stats
+        $materialsCount = Material::count();
+
+        // Count total activities submitted by this user
+        $activitiesDone = DB::table('activity_submissions')
+            ->where('user_id', $userId)
+            ->count();
+
+        return Inertia::render('Dashboard', [
+            'stats' => [
+                'materials' => $materialsCount,
+                // FIX: Key changed from 'activities_done' to 'my_materials' to match Dashboard.vue
+                'my_materials' => $activitiesDone,
+                'available_quizzes' => max(0, $remainingQuizzes),
+            ],
+            'recentMaterials' => Material::with('user:id,name')
+                ->latest()
+                ->take(5)
+                ->get()
+        ]);
+    }
+
+    // ... rest of your methods (index, show, storeActivity, etc.) stay exactly the same ...
+
     public function index(Request $request)
     {
         $query = User::role('student')
@@ -33,16 +81,13 @@ class StudentController extends Controller
 
     public function show(User $student)
     {
-        // 1. Fetch all teacher-created activities
         $allTeacherActivities = Activity::all();
 
-        // 2. Fetch the student's actual submissions directly from the DB to avoid model relationship issues
         $studentSubmissions = DB::table('activity_submissions')
             ->where('user_id', $student->id)
             ->get()
             ->keyBy('activity_id');
 
-        // 3. Merge them so we see "Pending" vs "Completed" correctly
         $activitiesReport = $allTeacherActivities->map(function ($activity) use ($studentSubmissions) {
             $submission = $studentSubmissions->get($activity->id);
 
@@ -52,15 +97,13 @@ class StudentController extends Controller
                 'title' => $activity->title,
                 'type' => $activity->type ?? 'General',
                 'due_date' => $activity->due_date,
-                // FIX: If submission exists in activity_submissions, it is COMPLETED
                 'status' => $submission ? 'Completed' : 'Pending',
-                'score' => ($submission && property_exists($submission, 'score')) ? $submission->score : '-',
-                'submitted_at' => $submission ? $submission->created_at : null,
+                'score' => $submission->score ?? '-',
+                'submitted_at' => $submission->created_at ?? null,
                 'is_manual' => false,
             ];
         });
 
-        // 4. Fetch Manual Activities
         $manualActivities = DB::table('student_manual_activities')
             ->where('user_id', $student->id)
             ->get()
@@ -78,7 +121,6 @@ class StudentController extends Controller
                 ];
             });
 
-        // 5. Combine and Sort
         $finalActivities = $activitiesReport
             ->concat($manualActivities)
             ->sortByDesc(function ($item) {

@@ -26,7 +26,7 @@ defineProps<{
         users: number;
         materials: number;
         my_materials: number;
-        available_quizzes?: number;
+        available_quizzes: number; // This now receives the "Remaining" count from Controller
     };
     recentMaterials: Array<{
         id: number;
@@ -101,8 +101,8 @@ const formatDate = (dateString: string) => {
                 <div class="relative overflow-hidden bg-orange-500 p-6 text-white rounded-none shadow-sm group transition-all">
                     <div class="relative z-10 flex justify-between items-start">
                         <div>
-                            <p class="text-[10px] font-medium opacity-80 uppercase tracking-widest mb-1">Available Quizzes</p>
-                            <h3 class="text-4xl font-semibold tabular-nums tracking-tight">{{ stats.available_quizzes || 0 }}</h3>
+                            <p class="text-[10px] font-medium opacity-80 uppercase tracking-widest mb-1">Remaining Quizzes</p>
+                            <h3 class="text-4xl font-semibold tabular-nums tracking-tight">{{ stats.available_quizzes }}</h3>
                             <div class="mt-4 bg-white/20 text-[9px] font-bold px-2 py-1 uppercase inline-block">Tests to complete</div>
                         </div>
                         <HelpCircle class="w-10 h-10 opacity-20 group-hover:opacity-40 transition-opacity" />
