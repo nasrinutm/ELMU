@@ -40,8 +40,7 @@ const page = usePage();
 const userRole = computed(() => page.props.auth.user?.roles[0] || 'student');
 
 const breadcrumbs = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Discussion Forum', href: '/forum' },
+    { title: 'Forum', href: '/forum' },
 ];
 
 const search = ref(props.filters.search || '');

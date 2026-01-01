@@ -18,9 +18,8 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: route('dashboard') },
     { title: 'Forum', href: route('forum.index') },
-    { title: 'View Post', href: '#' },
+    { title: 'Post', href: '#' },
 ];
 
 // --- NOTIFICATION & MODAL STATE ---
