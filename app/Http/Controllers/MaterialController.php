@@ -11,18 +11,18 @@ use Inertia\Inertia;
 class MaterialController extends Controller
 {
     /**
-     * 1. INDEX: Handles List, Search, and Filters
+     * 1. INDEX: Handles List, Search (Case-Insensitive), and Filters
      */
     public function index(Request $request)
     {
         $query = Material::query()->with('user:id,name');
 
-        // Search Logic
+        // FIX: Case-Insensitive Search using LOWER()
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = strtolower($request->search);
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('subject', 'like', '%' . $search . '%');
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(subject) LIKE ?', ["%{$search}%"]);
             });
         }
 
@@ -85,11 +85,12 @@ class MaterialController extends Controller
                 'file_type' => $extension,
             ]);
 
+            // Timestamp ensures Vue watcher detects a fresh message every time
             return redirect()->route('materials.index')
                 ->with('success', 'New material has been successfully deployed. [' . now()->timestamp . ']');
         }
 
-        return back()->with('error', 'File upload failed. Please try again.');
+        return back()->with('error', 'File upload failed. Please try again. [' . now()->timestamp . ']');
     }
 
     /**
@@ -103,7 +104,7 @@ class MaterialController extends Controller
                 $material->file_name ?? ($material->name . '.' . $material->file_type)
             );
         }
-        return back()->with('error', 'The requested file could not be found.');
+        return back()->with('error', 'The requested file could not be found. [' . now()->timestamp . ']');
     }
 
     /**
@@ -114,7 +115,7 @@ class MaterialController extends Controller
         // Ownership Check: Block access if not owner and not admin
         if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
              return redirect()->route('materials.index')
-                ->with('error', 'Access Denied: This material belongs to another instructor.');
+                ->with('error', 'Access Denied: This material belongs to another instructor. [' . now()->timestamp . ']');
         }
 
         return Inertia::render('Materials/Edit', [
@@ -130,7 +131,7 @@ class MaterialController extends Controller
         // Security Check: Ensure the user is authorized to perform this update
         if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
             return redirect()->route('materials.index')
-                ->with('error', 'Unauthorized: You cannot modify another teacher\'s material.');
+                ->with('error', 'Unauthorized: You cannot modify another teacher\'s material. [' . now()->timestamp . ']');
         }
 
         $request->validate([
@@ -143,6 +144,7 @@ class MaterialController extends Controller
         $data = $request->only(['name', 'subject', 'description']);
 
         if ($request->hasFile('file')) {
+            // Delete the old file from storage
             if (Storage::disk('public')->exists($material->file_path)) {
                 Storage::disk('public')->delete($material->file_path);
             }
@@ -167,7 +169,7 @@ class MaterialController extends Controller
         // Security Check: Block unauthorized deletion
         if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
              return redirect()->route('materials.index')
-                ->with('error', 'Delete Failed: You do not have permission to remove this resource.');
+                ->with('error', 'Delete Failed: You do not have permission to remove this resource. [' . now()->timestamp . ']');
         }
 
         if (Storage::disk('public')->exists($material->file_path)) {
