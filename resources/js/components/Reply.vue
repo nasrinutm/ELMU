@@ -3,9 +3,8 @@ import { ref } from 'vue';
 import { type Reply as ReplyType } from '@/types';
 import { useForm, router } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
-import { Trash2, Reply as ReplyIcon, Pencil } from 'lucide-vue-next';
+import { Trash2, Reply as ReplyIcon, Pencil, AlertCircle } from 'lucide-vue-next';
 
-// Props
 const props = defineProps<{
     reply: ReplyType & {
         user: { name: string, username: string };
@@ -16,24 +15,15 @@ const props = defineProps<{
     post_id: number;
 }>();
 
-// State
 const showReplyForm = ref(false);
 const showEditForm = ref(false);
 const isDeleteModalOpen = ref(false);
 
-// Deletion Logic
-const openDeleteModal = () => {
-    isDeleteModalOpen.value = true;
-};
-
 const confirmDelete = () => {
     isDeleteModalOpen.value = false;
-    router.delete(route('replies.destroy', props.reply.id), {
-        preserveScroll: true,
-    });
+    router.delete(route('replies.destroy', props.reply.id), { preserveScroll: true });
 };
 
-// Form for nested replies
 const nestedReplyForm = useForm({
     body: '',
     post_id: props.post_id,
@@ -50,11 +40,7 @@ const submitNestedReply = () => {
     });
 };
 
-// Form for editing
-const editForm = useForm({
-    body: props.reply.body,
-});
-
+const editForm = useForm({ body: props.reply.body });
 const submitEdit = () => {
     editForm.put(route('replies.update', props.reply.id), {
         preserveScroll: true,
@@ -64,114 +50,81 @@ const submitEdit = () => {
 </script>
 
 <template>
-    <div class="border-b border-gray-300 py-4 last:border-0">
-        <div> 
-            <div class="flex items-center justify-between mb-0.5">
-                <div class="font-bold text-sm text-black">
+    <div class="border-b border-slate-100 py-8 last:border-0 group">
+        <div class="relative"> 
+            <div class="flex items-center justify-between mb-3">
+                <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 bg-slate-50 px-2 py-0.5 border border-slate-100">
                     @{{ reply.user.username }}
                 </div>
             </div>
             
-            <form v-if="showEditForm" @submit.prevent="submitEdit" class="mt-2 space-y-3">
+            <form v-if="showEditForm" @submit.prevent="submitEdit" class="mt-4 space-y-4 bg-slate-50 p-6 border border-slate-200">
                 <textarea
                     v-model="editForm.body"
                     rows="3"
-                    class="w-full p-3 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none text-sm shadow-inner"
                 ></textarea>
-                <div class="flex justify-end items-center gap-2">
-                    <button type="button" @click="showEditForm = false" class="text-sm text-gray-500">Cancel</button>
-                    <button type="submit" class="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">Save</button>
+                <div class="flex justify-end items-center gap-4">
+                    <button type="button" @click="showEditForm = false" class="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest rounded-none shadow-md">Save Changes</button>
                 </div>
             </form>
 
             <div v-else>
-                <p class="text-gray-800 leading-snug text-[15px] break-words whitespace-pre-wrap">
+                <div class="text-slate-700 leading-relaxed text-[15px] break-words whitespace-pre-wrap font-medium">
                     {{ reply.body }}
-                </p>
+                </div>
 
-                <div class="flex justify-between mt-2">
-                    <button 
-                        @click="showReplyForm = !showReplyForm"
-                        class="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors h-6"
-                        title="Reply"
-                    >
-                        <ReplyIcon class="w-4 h-4" />
-                        <span class="text-xs font-bold uppercase tracking-tight">
+                <div class="flex justify-between items-center mt-6 h-6">
+                    <button @click="showReplyForm = !showReplyForm" class="flex items-center gap-2 text-teal-600 hover:text-slate-900 transition-colors">
+                        <ReplyIcon class="w-6 h-6" />
+                        <span class="text-sm font-bold uppercase tracking-widest">
                             {{ showReplyForm ? 'Cancel' : 'Reply' }}
                         </span>
                     </button>
 
-                    <div v-if="props.reply.can_update || props.reply.can_delete" class="flex items-center gap-3 h-6">
-                        <button
-                            v-if="props.reply.can_update"
-                            @click="showEditForm = true"
-                            class="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                            title="Edit"
-                        >
-                            <Pencil class="w-5 h-5" />
+                    <div v-if="props.reply.can_update || props.reply.can_delete" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button v-if="props.reply.can_update" @click="showEditForm = true" class="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                            <Pencil class="w-6 h-6" />
                         </button>
-
-                        <button
-                            v-if="props.reply.can_delete"
-                            @click="openDeleteModal"
-                            class="p-1 text-red-600 transition-colors"
-                            title="Delete"
-                        >
-                            <Trash2 class="w-5 h-5" />
+                        <button v-if="props.reply.can_delete" @click="isDeleteModalOpen = true" class="p-2 text-slate-300 hover:text-red-600 transition-colors">
+                            <Trash2 class="w-6 h-6" />
                         </button>
                     </div>
                 </div>
             </div>
 
-            <form v-if="showReplyForm" @submit.prevent="submitNestedReply" class="mt-3 pl-4 border-l-2 border-blue-500">
+            <form v-if="showReplyForm" @submit.prevent="submitNestedReply" class="mt-6 pl-6 border-l-2 border-slate-900 animate-in slide-in-from-left-2 duration-200">
                 <textarea
                     v-model="nestedReplyForm.body"
                     rows="2"
-                    class="w-full p-3 rounded-lg border border-gray-200 bg-white text-black text-sm outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Write a reply..."
+                    class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-1 focus:ring-slate-900 shadow-inner"
+                    placeholder="Write a response..."
                 ></textarea>
-                <div class="flex justify-end mt-2">
-                    <button type="submit" :disabled="nestedReplyForm.processing" class="px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-md hover:bg-blue-700">
-                        Post Reply
+                <div class="flex justify-end mt-3">
+                    <button type="submit" :disabled="nestedReplyForm.processing" class="px-6 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest shadow-md">
+                        Post Response
                     </button>
                 </div>
             </form>
 
-            <div v-if="props.reply.children && props.reply.children.length > 0" class="mt-1 ml-4 pl-4 border-l-2 border-gray-100">
-                <Reply
-                    v-for="childReply in props.reply.children"
-                    :key="childReply.id"
-                    :reply="childReply"
-                    :post_id="props.post_id"
-                />
+            <div v-if="props.reply.children && props.reply.children.length > 0" class="mt-6 ml-4 pl-8 border-l border-slate-100">
+                <Reply v-for="childReply in props.reply.children" :key="childReply.id" :reply="childReply" :post_id="props.post_id" />
             </div>
         </div>
     </div>
 
-    <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full border border-gray-100">
-            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Trash2 class="w-6 h-6 text-red-500" />
-                Confirm Deletion
-            </h2>
-            <p class="mt-4 text-gray-700">
-                Are you sure you want to permanently delete this reply?
+    <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white max-w-sm w-full p-8 border border-slate-200 rounded-none shadow-2xl animate-in zoom-in duration-200">
+            <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2 flex items-center gap-2">
+                <AlertCircle class="w-5 h-5 text-red-500" /> Remove Reply
+            </h3>
+            <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed italic">
+                Permanently delete this response from the thread? This cannot be undone.
             </p>
-            <div class="mt-6 flex justify-end gap-3">
-                <button 
-                    type="button"
-                    @click="isDeleteModalOpen = false" 
-                    class="px-4 py-2 text-sm font-medium border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                    Cancel
-                </button>
-                <button 
-                    type="button"
-                    @click="confirmDelete" 
-                    class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                    OK, Delete Reply
-                </button>
+            <div class="flex gap-3">
+                <button @click="isDeleteModalOpen = false" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-slate-100 hover:bg-slate-50 transition">Cancel</button>
+                <button @click="confirmDelete" class="flex-1 py-3 bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 shadow-lg transition">Delete</button>
             </div>
         </div>
     </div>

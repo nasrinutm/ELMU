@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useForm, Head, Link, router } from '@inertiajs/vue3';
+import { ref, computed, watch, nextTick } from 'vue';
+import { useForm, Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
     Server, Database, Cpu, Trash2, FileText, Plus,
-    Search, ChevronUp, ChevronDown, X, Bot, Edit2, Save, UploadCloud, AlertCircle, FilePlus
+    Search, ChevronUp, ChevronDown, X, Bot, Edit2, Save, UploadCloud, 
+    AlertCircle, FilePlus, CheckCircle2
 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
@@ -31,6 +32,33 @@ const breadcrumbs = [
     { title: 'Dashboard', href: route('dashboard') },
     { title: 'AI Details', href: route('chatbot.details') },
 ];
+
+// --- NOTIFICATION STATE ---
+const page = usePage();
+const flashSuccess = computed(() => (page.props as any).flash?.success);
+const flashError = computed(() => (page.props as any).flash?.error);
+
+const showSuccessNotification = ref(false);
+const showErrorNotification = ref(false);
+
+// --- FLASH WATCHERS ---
+watch(flashSuccess, async (newVal) => {
+    if (newVal) {
+        showSuccessNotification.value = false;
+        await nextTick();
+        showSuccessNotification.value = true;
+        setTimeout(() => { showSuccessNotification.value = false; }, 5000);
+    }
+}, { immediate: true });
+
+watch(flashError, async (newVal) => {
+    if (newVal) {
+        showErrorNotification.value = false;
+        await nextTick();
+        showErrorNotification.value = true;
+        setTimeout(() => { showErrorNotification.value = false; }, 5000);
+    }
+}, { immediate: true });
 
 // --- MODAL STATES ---
 const isPromptModalOpen = ref(false);
@@ -155,7 +183,37 @@ const formatBytes = (bytes: number) => {
     <Head title="AI Knowledge Center" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-8 p-4 md:p-8 w-full">
+        <div class="flex h-full flex-1 flex-col gap-8 p-4 md:p-8 w-full relative">
+
+            <transition name="toast">
+                <div v-if="showSuccessNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-6 bg-slate-900 text-white p-6 shadow-2xl border-l-4 border-emerald-500 min-w-[400px]">
+                    <div class="bg-emerald-500/20 p-3 flex-shrink-0">
+                        <CheckCircle2 class="w-8 h-8 text-emerald-500" />
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-500 mb-1">AI System Update</p>
+                        <p class="text-sm font-bold text-slate-100 leading-tight">{{ flashSuccess }}</p>
+                    </div>
+                    <button @click="showSuccessNotification = false" class="text-slate-500 hover:text-white transition p-2">
+                        <X class="w-5 h-5" />
+                    </button>
+                </div>
+            </transition>
+
+            <transition name="toast">
+                <div v-if="showErrorNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-6 bg-slate-900 text-white p-6 shadow-2xl border-l-4 border-red-500 min-w-[400px]">
+                    <div class="bg-red-500/20 p-3 flex-shrink-0">
+                        <AlertCircle class="w-8 h-8 text-red-500" />
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-[11px] font-black uppercase tracking-[0.3em] text-red-500 mb-1">System Alert</p>
+                        <p class="text-sm font-bold text-slate-100 leading-tight">{{ flashError }}</p>
+                    </div>
+                    <button @click="showErrorNotification = false" class="text-slate-500 hover:text-white transition p-2">
+                        <X class="w-5 h-5" />
+                    </button>
+                </div>
+            </transition>
 
             <div class="border-b border-slate-200 pb-6">
                 <h1 class="text-3xl font-bold tracking-tight text-slate-900 uppercase">AI Knowledge Center</h1>
@@ -339,3 +397,9 @@ const formatBytes = (bytes: number) => {
         </div>
     </AppSidebarLayout>
 </template>
+
+<style scoped>
+.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast-enter-from { transform: translateX(100%); opacity: 0; }
+.toast-leave-to { transform: translateY(-20px); opacity: 0; }
+</style>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, useForm, Link, router } from '@inertiajs/vue3';
+import { Head, useForm, Link, router, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type Post, type Reply as ReplyType } from '@/types';
 import { route } from 'ziggy-js';
 import Reply from '@/components/Reply.vue';
-import { ref } from 'vue';
-import { Trash2, Pencil } from 'lucide-vue-next';
+import { ref, computed, watch, nextTick } from 'vue';
+import { Trash2, Pencil, CheckCircle2, AlertCircle, X } from 'lucide-vue-next';
 
 const props = defineProps<{
     post: Post & {
@@ -18,9 +18,26 @@ const props = defineProps<{
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: route('dashboard') },
     { title: 'Forum', href: route('forum.index') },
-    { title: 'Post', href: '#' },
+    { title: 'View Post', href: '#' },
 ];
+
+// --- NOTIFICATION & MODAL STATE ---
+const page = usePage();
+const flashSuccess = computed(() => (page.props as any).flash?.success);
+const showSuccessNotification = ref(false);
+const isDeleteModalOpen = ref(false);
+
+// --- FLASH WATCHER ---
+watch(flashSuccess, async (newVal) => {
+    if (newVal) {
+        showSuccessNotification.value = false;
+        await nextTick();
+        showSuccessNotification.value = true;
+        setTimeout(() => { showSuccessNotification.value = false; }, 5000);
+    }
+}, { immediate: true });
 
 const replyForm = useForm({
     body: '',
@@ -28,21 +45,9 @@ const replyForm = useForm({
     parent_id: null as number | null,
 });
 
-// --- CUSTOM MODAL STATE ---
-const isDeleteModalOpen = ref(false);
-
-const openDeleteModal = () => {
-    isDeleteModalOpen.value = true;
-};
-
 const confirmDelete = () => {
     isDeleteModalOpen.value = false;
-    router.delete(route('forum.destroy', props.post.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            router.get(route('forum.index')); 
-        }
-    });
+    router.delete(route('forum.destroy', props.post.id));
 };
 
 const submitReply = () => {
@@ -57,110 +62,90 @@ const submitReply = () => {
     <Head :title="post.title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="w-full mx-auto py-4 px-6">
+        <div class="w-full mx-auto py-8 px-6 relative min-h-screen bg-white">
 
-            <div class="pb-5 mx-4 border-b border-gray-300 mb-5">
-                <div class="flex justify-between items-start">
-                    <h1 class="text-4xl font-extrabold text-black tracking-tight break-words whitespace-pre-wrap min-w-0 flex-1">
+            <transition name="toast">
+                <div v-if="showSuccessNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
+                    <div class="bg-emerald-500/20 p-2"><CheckCircle2 class="w-6 h-6 text-emerald-500" /></div>
+                    <div class="flex-grow">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">Forum Update</p>
+                        <p class="text-sm font-medium">{{ flashSuccess }}</p>
+                    </div>
+                    <button @click="showSuccessNotification = false" class="text-slate-500 hover:text-white transition"><X class="w-4 h-4" /></button>
+                </div>
+            </transition>
+
+            <div class="pb-8 mx-4 border-b border-slate-200 mb-8">
+                <div class="flex justify-between items-start gap-6">
+                    <h1 class="text-4xl font-black text-slate-900 tracking-tighter break-words whitespace-pre-wrap min-w-0 flex-1 uppercase">
                         {{ post.title }}
                     </h1>
                     
-                    <div v-if="props.post.can_update || props.post.can_delete" class="flex items-center gap-2">
-                        <Link
-                            v-if="props.post.can_update"
-                            :href="route('forum.edit', props.post.id)"
-                            class="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-                            title="Edit Post"
-                        >
-                            <Pencil class="w-5 h-5" />
+                    <div v-if="props.post.can_update || props.post.can_delete" class="flex items-center gap-1">
+                        <Link v-if="props.post.can_update" :href="route('forum.edit', props.post.id)" class="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                            <Pencil class="w-6 h-6" />
                         </Link>
-                        <button
-                            v-if="props.post.can_delete"
-                            @click="openDeleteModal"
-                            class="p-2 text-red-600 transition-colors"
-                            title="Delete Post"
-                        >
-                            <Trash2 class="w-5 h-5" />
+                        <button v-if="props.post.can_delete" @click="isDeleteModalOpen = true" class="p-2 text-slate-400 hover:text-red-600 transition-colors">
+                            <Trash2 class="w-6 h-6" />
                         </button>
                     </div>
                 </div>
                 
-                <div class="flex items-center text-sm text-gray-500 mb-6 mt-2">
-                    Posted by <span class="ml-1 font-bold text-black">@{{ post.user.username }}</span>
+                <div class="flex items-center text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-4">
+                    Authored by <span class="ml-2 text-slate-900">@{{ post.user.username }}</span>
                 </div>
 
-                <div class="prose prose-lg max-w-none text-black leading-relaxed">
+                <div class="mt-8 text-slate-700 leading-relaxed text-lg font-medium max-w-none">
                     <p class="break-words whitespace-pre-wrap">{{ post.content }}</p>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl p-6 border-2 border-gray-300 mx-2">
-                <h2 class="text-2xl font-bold mb-4">Leave a Reply</h2>
+            <div class="bg-slate-50 rounded-none p-8 border border-slate-200 mx-4 shadow-sm">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6">Join the Discussion</h2>
                 <form @submit.prevent="submitReply">
                     <textarea
-                        id="body"
                         v-model="replyForm.body"
-                        rows="1"
-                        class="w-full p-4 rounded-lg border border-gray-300 bg-gray-50 text-black focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                        placeholder="Share your thoughts..."
+                        rows="4"
+                        class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition-all placeholder:text-slate-300 shadow-inner"
+                        placeholder="Type your reply here..."
                     ></textarea>            
-                    <p v-if="replyForm.errors.body" class="text-red-500 text-sm mt-2 font-medium">
-                        {{ replyForm.errors.body }}
-                    </p>
-                    <div class="flex justify-end mt-4">
-                        <button
-                            type="submit"
-                            :disabled="replyForm.processing"
-                            class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md"
-                        >
-                            {{ replyForm.processing ? 'Posting...' : 'Post Reply' }}
+                    <div class="flex justify-end mt-6">
+                        <button type="submit" :disabled="replyForm.processing" class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 disabled:opacity-50 transition-all shadow-xl rounded-none">
+                            {{ replyForm.processing ? 'Sending...' : 'Post Reply' }}
                         </button>
                     </div>
                 </form>
             </div>
 
-            <div class="px-6">
-                <div >
-                    <h2 class="text-2xl font-bold mt-4">Replies</h2>
-                    <Reply 
-                        v-for="reply in post.replies"
-                        :key="reply.id"
-                        :reply="reply"
-                        :post_id="post.id"
-                    />
+            <div class="px-4 mt-12">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
+                    Active Thread <span class="h-[1px] flex-1 bg-slate-100"></span> <span class="text-slate-900">{{ post.replies.length }} Replies</span>
+                </h2>
+                <div class="space-y-2">
+                    <Reply v-for="reply in post.replies" :key="reply.id" :reply="reply" :post_id="post.id" />
                 </div>
-
             </div>
         </div>
         
-        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full border border-gray-100 mx-4">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="p-3 bg-red-100 rounded-full">
-                        <Trash2 class="w-6 h-6 text-red-600" />
-                    </div>
-                    <h2 class="text-xl font-bold text-gray-900">Confirm Deletion</h2>
-                </div>
-                
-                <p class="text-gray-600 leading-relaxed">
-                    Are you sure you want to permanently delete this post? This action cannot be undone.
+        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div class="bg-white max-w-sm w-full p-8 border border-slate-200 rounded-none shadow-2xl animate-in zoom-in duration-200">
+                <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2 flex items-center gap-2">
+                    <AlertCircle class="w-5 h-5 text-red-500" /> Remove Thread
+                </h3>
+                <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed italic">
+                    Are you sure? Deleting this post will permanently remove all associated replies and discussion data.
                 </p>
-
-                <div class="mt-8 flex justify-end gap-3">
-                    <button 
-                        @click="isDeleteModalOpen = false" 
-                        class="px-5 py-2 text-sm font-bold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        @click="confirmDelete" 
-                        class="px-5 py-2 text-sm font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-lg shadow-red-100"
-                    >
-                        Yes, Delete Post
-                    </button>
+                <div class="flex gap-3">
+                    <button @click="isDeleteModalOpen = false" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-slate-100 hover:bg-slate-50 transition">Cancel</button>
+                    <button @click="confirmDelete" class="flex-1 py-3 bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 shadow-lg transition">Delete Post</button>
                 </div>
             </div>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast-enter-from { transform: translateX(100%); opacity: 0; }
+.toast-leave-to { transform: translateY(-20px); opacity: 0; }
+</style>
