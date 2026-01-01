@@ -51,7 +51,6 @@ class HandleInertiaRequests extends Middleware
             ],
 
             // FLASH NOTIFICATIONS
-            // These closures ensure that notifications appear exactly once after an action.
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
