@@ -96,7 +96,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         return [
             { title: 'Dashboard', href: route('dashboard'), icon: LayoutGrid },
             { title: 'Learning Materials', href: route('materials.index'), icon: FileText },
-            { title: 'Student Roster', href: route('students.index'), icon: GraduationCap },
+            { title: 'Student Progress', href: route('students.index'), icon: GraduationCap },
             { title: 'Performance Reports', href: route('reports.index'), icon: BarChart3 },
             { title: 'Discussion Forum', href: route('forum.index'), icon: BookOpen },
             { title: 'Activities', href: route('activities.index'), icon: Gamepad2 },
