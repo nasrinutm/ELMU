@@ -1,19 +1,20 @@
 <script setup lang="ts">
-// 1. Change Layout to the new Sidebar version for consistent Admin UI
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
-// 2. REMOVED 'defineProps' from this import line to fix the error
-import { ref } from 'vue';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
+import { AlertCircle, UserPlus } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
 
-// Breadcrumbs
+const page = usePage();
+const successMessage = computed(() => page.props.flash?.success);
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Users', href: route('users.index') },
     { title: 'Add User', href: route('users.create') },
 ];
 
-// defineProps is automatically available, no import needed
 const props = defineProps({
     roles: {
         type: Array as () => string[],
@@ -21,8 +22,7 @@ const props = defineProps({
     },
 });
 
-// Form fields
-const form = ref({
+const form = useForm({
     name: '',
     username: '',
     email: '',
@@ -31,32 +31,10 @@ const form = ref({
     role: '',
 });
 
-// Form errors
-const errors = ref({
-    name: '',
-    username: '',
-    email: '',
-    password: '',
-    password_confirmation: '',
-    role: '',
-});
-
-// Submit handler
 const submit = () => {
-    router.post(route('users.store'), form.value, {
-        onError: (err: any) => {
-            Object.assign(errors.value, err);
-        },
-        onSuccess: () => {
-            form.value = {
-                name: '',
-                email: '',
-                username: '',
-                password: '',
-                password_confirmation: '',
-                role: '',
-            };
-        },
+    form.post(route('users.store'), {
+        onSuccess: () => form.reset(),
+        onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
 </script>
@@ -65,112 +43,142 @@ const submit = () => {
     <Head title="Add User" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-4xl mx-auto p-6">
+        <div class="max-w-4xl mx-auto p-6 space-y-6 font-sans antialiased text-slate-900">
 
-            <div class="mb-6">
-                <h1 class="text-2xl font-bold tracking-tight text-foreground">Add New User</h1>
-                <p class="text-muted-foreground">Create a new student, teacher, or admin account.</p>
+            <transition
+                enter-active-class="transform transition ease-out duration-300"
+                enter-from-class="translate-y-2 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+            >
+                <div v-if="successMessage" class="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-none shadow-sm font-bold uppercase text-[10px] tracking-widest">
+                    {{ successMessage }}
+                </div>
+            </transition>
+
+            <div class="mb-6 flex items-center gap-4 border-b border-slate-100 pb-6">
+                <div class="p-3 bg-slate-100 rounded-lg text-slate-600 border border-slate-200 shadow-sm">
+                    <UserPlus class="w-6 h-6" />
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight uppercase">Add New User</h1>
+                    <p class="text-sm text-slate-500 font-medium">Create a new student, teacher, or admin account.</p>
+                </div>
             </div>
 
-            <div class="bg-card text-card-foreground border rounded-xl shadow-sm p-6">
-                <form @submit.prevent="submit" class="space-y-6">
+            <div class="bg-white border border-slate-200 rounded-none shadow-sm p-8 sm:p-12">
+                <form @submit.prevent="submit" class="space-y-8">
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="name" class="block font-medium text-sm">Full Name</label>
+                        <label for="name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Full Name</label>
                         <div class="md:col-span-3">
                             <input
                                 id="name"
                                 v-model="form.name"
                                 type="text"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-all focus:outline-none focus:ring-1 focus:ring-action focus:border-action placeholder:text-slate-300"
+                                :class="{'border-red-500 ring-1 ring-red-500': form.errors.name}"
                                 placeholder="e.g. Ahmad Albab"
                             />
-                            <p v-if="errors.name" class="text-destructive text-sm mt-1">{{ errors.name }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="username" class="block font-medium text-sm">Username</label>
-                        <div class="md:col-span-3">
-                            <input
-                                id="username"
-                                v-model="form.username"
-                                type="text"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                                placeholder="e.g. ahmad123"
-                            />
-                            <p v-if="errors.username" class="text-destructive text-sm mt-1">{{ errors.username }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="email" class="block font-medium text-sm">Email Address</label>
-                        <div class="md:col-span-3">
-                            <input
-                                id="email"
-                                v-model="form.email"
-                                type="email"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                                placeholder="e.g. ahmad@example.com"
-                            />
-                            <p v-if="errors.email" class="text-destructive text-sm mt-1">{{ errors.email }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="password" class="block font-medium text-sm">Password</label>
-                        <div class="md:col-span-3">
-                            <input
-                                id="password"
-                                v-model="form.password"
-                                type="password"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                                placeholder="Min 8 characters"
-                            />
-                            <p v-if="errors.password" class="text-destructive text-sm mt-1">{{ errors.password }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="password_confirmation" class="block font-medium text-sm">Confirm Password</label>
-                        <div class="md:col-span-3">
-                            <input
-                                id="password_confirmation"
-                                v-model="form.password_confirmation"
-                                type="password"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
-                                placeholder="Re-enter password"
-                            />
-                            <p v-if="errors.password_confirmation" class="text-destructive text-sm mt-1">
-                                {{ errors.password_confirmation }}
+                            <p v-if="form.errors.name" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
+                                <AlertCircle class="w-3 h-3" /> {{ form.errors.name }}
                             </p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="role" class="block font-medium text-sm">Role</label>
+                        <label for="username" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Username</label>
+                        <div class="md:col-span-3">
+                            <input
+                                id="username"
+                                v-model="form.username"
+                                type="text"
+                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
+                                :class="{'border-red-500 ring-1 ring-red-500': form.errors.username}"
+                                placeholder="e.g. ahmad123"
+                            />
+                            <p v-if="form.errors.username" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
+                                <AlertCircle class="w-3 h-3" /> {{ form.errors.username }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <label for="email" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Email Address</label>
+                        <div class="md:col-span-3">
+                            <input
+                                id="email"
+                                v-model="form.email"
+                                type="email"
+                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
+                                :class="{'border-red-500 ring-1 ring-red-500': form.errors.email}"
+                                placeholder="e.g. ahmad@example.com"
+                            />
+                            <p v-if="form.errors.email" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
+                                <AlertCircle class="w-3 h-3" /> {{ form.errors.email }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <label for="role" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">System Role</label>
                         <div class="md:col-span-3">
                             <select
                                 id="role"
                                 v-model="form.role"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all appearance-none cursor-pointer"
+                                :class="{'border-red-500 ring-1 ring-red-500': form.errors.role}"
                             >
                                 <option value="" disabled>Select a role</option>
                                 <option v-for="roleName in roles" :key="roleName" :value="roleName">
-                                    {{ roleName.charAt(0).toUpperCase() + roleName.slice(1) }}
+                                    {{ roleName.toUpperCase() }}
                                 </option>
                             </select>
-                            <p v-if="errors.role" class="text-destructive text-sm mt-1">{{ errors.role }}</p>
+                            <p v-if="form.errors.role" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
+                                <AlertCircle class="w-3 h-3" /> {{ form.errors.role }}
+                            </p>
                         </div>
                     </div>
 
-                    <div class="pt-4 flex justify-end">
-                        <button
+                    <div class="pt-6 border-t border-slate-100 border-dashed space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                            <label for="password" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Password</label>
+                            <div class="md:col-span-3">
+                                <input
+                                    id="password"
+                                    v-model="form.password"
+                                    type="password"
+                                    class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
+                                    :class="{'border-red-500 ring-1 ring-red-500': form.errors.password}"
+                                    placeholder="Enter secure password"
+                                />
+                                <p v-if="form.errors.password" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
+                                    <AlertCircle class="w-3 h-3" /> {{ form.errors.password }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                            <label for="password_confirmation" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Confirm</label>
+                            <div class="md:col-span-3">
+                                <input
+                                    id="password_confirmation"
+                                    v-model="form.password_confirmation"
+                                    type="password"
+                                    class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
+                                    placeholder="Re-enter password"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 flex justify-end border-t border-slate-50">
+                        <Button
                             type="submit"
-                            class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                            :disabled="form.processing"
+                            class="bg-action hover:opacity-90 text-white font-bold text-[10px] uppercase tracking-[0.3em] px-12 py-5 rounded-none shadow-md transition-all disabled:opacity-50 h-auto"
                         >
-                            Create User
-                        </button>
+                            {{ form.processing ? 'Saving...' : 'Add User' }}
+                        </Button>
                     </div>
                 </form>
             </div>
