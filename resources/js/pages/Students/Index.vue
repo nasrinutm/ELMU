@@ -20,7 +20,7 @@ const props = defineProps<{
 
 const breadcrumbs = [
     { title: 'Dashboard', href: route('dashboard') },
-    { title: 'Student Roster', href: route('students.index') },
+    { title: 'Student Progress', href: route('students.index') },
 ];
 
 const studentList = computed(() => {
@@ -47,7 +47,7 @@ const formatDate = (dateString: string | null) => {
 </script>
 
 <template>
-    <Head title="Student Roster" />
+    <Head title="Student Progress" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
         <div class="min-h-screen bg-slate-50 p-6 space-y-6">
@@ -56,7 +56,7 @@ const formatDate = (dateString: string | null) => {
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
                         <GraduationCap class="w-7 h-7 text-teal-600" />
-                        Student Roster
+                        Student Progress
                     </h1>
                     <p class="text-slate-500 mt-1 text-sm">
                         Manage all enrolled students and view their progress.

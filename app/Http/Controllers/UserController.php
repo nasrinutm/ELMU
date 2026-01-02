@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -43,7 +44,6 @@ class UserController extends Controller
             $request->input('sort') === 'oldest' ? 'asc' : 'desc'
         );
 
-        // Path is relative to resources/js/pages/
         return Inertia::render('Users/Index', [
             'users' => $query->paginate(15)->withQueryString(),
             'roles' => Role::all()->pluck('name'),
@@ -56,14 +56,13 @@ class UserController extends Controller
      */
     public function create()
     {
-        // CORRECTED: Pointing to resources/js/pages/Admin/Users/Add.vue
         return Inertia::render('Admin/Users/Add', [
             'roles' => Role::all()->pluck('name')
         ]);
     }
 
     /**
-     * Store a newly created user in storage with strict validation.
+     * Store a newly created user with success notification.
      */
     public function store(Request $request)
     {
@@ -88,7 +87,9 @@ class UserController extends Controller
 
         $user->assignRole($validated['role']);
 
-        return redirect()->route('users.index')->with('success', 'User created successfully!');
+        // Success notification with timestamp handshake
+        return redirect()->route('users.index')
+            ->with('success', 'New user ' . $user->name . ' has been successfully registered. [' . now()->timestamp . ']');
     }
 
     /**
@@ -96,7 +97,6 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        // Assuming Edit is in the same directory as Add
         return Inertia::render('Admin/Users/Edit', [
             'user' => [
                 'id' => $user->id,
@@ -110,7 +110,7 @@ class UserController extends Controller
     }
 
     /**
-     * Update the specified user in storage.
+     * Update the user with success notification.
      */
     public function update(Request $request, User $user)
     {
@@ -134,20 +134,26 @@ class UserController extends Controller
 
         $user->syncRoles($validated['role']);
 
-        return redirect()->route('users.index')->with('success', 'User updated successfully!');
+        // Success notification with timestamp handshake
+        return redirect()->route('users.index')
+            ->with('success', 'User profile for ' . $user->name . ' updated successfully. [' . now()->timestamp . ']');
     }
 
     /**
-     * Remove the specified user from storage.
+     * Remove the user with success notification.
      */
     public function destroy(User $user)
     {
-        if ($user->id === auth()->id()) {
-            return back()->with('error', 'You cannot delete your own account.');
+        // Prevent deleting self
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'Critical Error: You cannot delete your own administrative account.');
         }
 
+        $userName = $user->name;
         $user->delete();
 
-        return redirect()->route('users.index')->with('success', 'User deleted successfully.');
+        // Success notification with timestamp handshake
+        return redirect()->route('users.index')
+            ->with('success', 'User account ' . $userName . ' permanently removed. [' . now()->timestamp . ']');
     }
 }
