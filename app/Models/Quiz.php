@@ -1,23 +1,19 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Quiz extends Model
 {
-    use HasFactory;
+    protected $guarded = [];
 
-    protected $fillable = ['title', 'description'];
+    
+    protected $casts = [
+        'content' => 'array',
+    ];
 
-    /**
-     * The users that belong to the quiz.
-     */
-    public function users()
-{
-    return $this->belongsToMany(User::class)
-                ->withPivot('score', 'status', 'completed_at')
-                ->withTimestamps();
-}
+    public function attempts()
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
 }

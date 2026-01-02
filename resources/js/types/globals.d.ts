@@ -1,6 +1,5 @@
 import { AppPageProps } from '@/types/index';
-// Add this import:
-import { route as ziggyRoute } from 'ziggy-js'; 
+import { route as routeFn } from 'ziggy-js'; // Import the route function type
 
 declare module 'vite/client' {
     interface ImportMetaEnv {
@@ -23,7 +22,6 @@ declare module 'vue' {
         $inertia: typeof Router;
         $page: Page;
         $headManager: ReturnType<typeof createHeadManager>;
-        // Add this line to make `route` recognized globally in templates
-        route: typeof ziggyRoute;
+        route: typeof routeFn; // <--- ADD THIS LINE TO FIX THE ERROR
     }
 }

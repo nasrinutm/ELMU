@@ -8,10 +8,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
+use App\Models\Submission;
+use App\Models\StudentManualActivity;
+// Ensure these models exist if you are referencing them
+use App\Models\ActivitySubmission;
+use App\Models\QuizAttempt;
 
 class User extends Authenticatable
 {
-    
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
     use HasRoles;
@@ -62,35 +66,34 @@ class User extends Authenticatable
         return $this->hasMany(Post::class);
     }
 
-    /**
-     * NEW: Relationship with Activities.
-     * This links the student to the classroom activities they have interacted with.
-     */
-    public function activities()
-{
-    return $this->belongsToMany(Activity::class)
-                ->withPivot('status', 'score', 'completed_at')
-                ->withTimestamps();
-}
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class);
+    }
 
-public function quizzes()
-{
-    return $this->belongsToMany(Quiz::class)
-                ->withPivot('score', 'status', 'completed_at')
-                ->withTimestamps();
-}
+    public function manualActivities()
+    {
+        return $this->hasMany(StudentManualActivity::class, 'user_id');
+    }
 
-// In User.php
+    // --- REPORT RELATIONSHIPS ---
 
-public function activitySubmissions()
-{
-    // Points to your activity_submissions table
-    return $this->hasMany(ActivitySubmission::class);
-}
+    public function quizzes()
+    {
+        return $this->belongsToMany(Quiz::class)
+                    ->withPivot('score', 'status', 'completed_at')
+                    ->withTimestamps();
+    }
 
-public function quizAttempts()
-{
-    // Points to your quiz_attempts table
-    return $this->hasMany(QuizAttempt::class);
-}
-}
+    public function activitySubmissions()
+    {
+        // Matches your activity_submissions table
+        return $this->hasMany(ActivitySubmission::class);
+    }
+
+    public function quizAttempts()
+    {
+        // Matches your quiz_attempts logic
+        return $this->hasMany(QuizAttempt::class);
+    }
+} // <--- Class now ends here, after all functions.

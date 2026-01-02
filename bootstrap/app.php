@@ -13,11 +13,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+
+        $middleware->validateCsrfTokens(except: [
+            '*',
+        ]);
+
         // Removed 'appearance' from except list
+        $middleware->validateCsrfTokens(except: [
+            '*', // This excludes EVERY route in your app from CSRF protection
+        ]);
         $middleware->encryptCookies(except: ['sidebar_state']);
 
         $middleware->web(append: [
-            // Removed HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

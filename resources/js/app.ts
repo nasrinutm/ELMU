@@ -5,6 +5,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from 'ziggy-js';
+import { Ziggy } from './ziggy';
 import axios from 'axios';
 
 declare global {
@@ -16,6 +17,7 @@ declare global {
 // --- CRITICAL AXIOS/CSRF CONFIGURATION ---
 // Set global window reference for common use
 window.axios = axios; 
+window.axios.defaults.withCredentials = true;
 
 // Set the default request header for all Axios calls
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
@@ -44,7 +46,9 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(ZiggyVue)
+            // TYPE FIX: We cast Ziggy 'as any' here to stop TypeScript complaining 
+            // about "string[]" not matching strict HTTP method types.
+            .use(ZiggyVue, Ziggy as any) 
             .mount(el);
     },
     progress: {

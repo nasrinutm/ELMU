@@ -1,43 +1,94 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, useForm, Link, router} from '@inertiajs/vue3';
+import { Head, useForm, Link, router, usePage } from '@inertiajs/vue3';
 import { type BreadcrumbItem, type Post, type Reply as ReplyType } from '@/types';
 import { route } from 'ziggy-js';
-import Reply from '@/components/Reply.vue'; // <-- We will create this next
+import Reply from '@/components/Reply.vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { Trash2, Pencil, CheckCircle2, AlertCircle, X } from 'lucide-vue-next';
 
-// Props
 const props = defineProps<{
     post: Post & {
         user: { name: string, username: string };
-        replies: ReplyType[]; // Top-level replies
+        replies: ReplyType[];
+        content: string;
+        can_update: boolean; 
+        can_delete: boolean;
     };
 }>();
 
-// Breadcrumbs
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/' },
     { title: 'Forum', href: route('forum.index') },
-    { title: 'Post', href: '#' }, // Current page
+    { title: 'Post', href: '#' },
 ];
 
-// Form for adding a new (top-level) reply
+// --- NOTIFICATION & MODAL STATE ---
+const page = usePage();
+const showSuccessNotification = ref(false);
+const isDeleteModalOpen = ref(false);
+const isEditing = ref(false);
+
+// --- FORMS ---
 const replyForm = useForm({
     body: '',
     post_id: props.post.id,
-    parent_id: null as number | null, // null = top-level reply
+    parent_id: null as number | null,
 });
 
-const submitReply = () => {
-    replyForm.post(route('replies.store'), { // We need to add this route
+const editForm = useForm({
+    title: props.post.title,
+    content: props.post.content,
+});
+
+// --- IMPROVED FLASH WATCHER ---
+// Watches the flash object deeply so notifications trigger even if the message text is identical
+watch(
+    () => (page.props as any).flash,
+    (flash) => {
+        if (flash?.success) {
+            showSuccessNotification.value = false;
+            nextTick(() => {
+                showSuccessNotification.value = true;
+                setTimeout(() => { 
+                    showSuccessNotification.value = false; 
+                }, 5000);
+            });
+        }
+    },
+    { deep: true, immediate: true } // THIS IS THE KEY FIX
+);
+//
+
+// --- ACTIONS ---
+const startEditing = () => {
+    isEditing.value = true;
+};
+
+const cancelEditing = () => {
+    isEditing.value = false;
+    editForm.reset();
+};
+
+const submitUpdate = () => {
+    // Using .put() to match standard Laravel resource routes
+    editForm.put(route('forum.update', props.post.id), {
         preserveScroll: true,
-        onSuccess: () => replyForm.reset(),
+        onSuccess: () => {
+            isEditing.value = false;
+        },
     });
 };
 
-const deletePost = () => {
-    if (confirm('Are you sure you want to delete this post?')) {
-        router.delete(route('forum.destroy', props.post.id));
-    }
+const confirmDelete = () => {
+    isDeleteModalOpen.value = false;
+    router.delete(route('forum.destroy', props.post.id));
+};
+
+const submitReply = () => {
+    replyForm.post(route('replies.store'), {
+        preserveScroll: true,
+        onSuccess: () => replyForm.reset(),
+    });
 };
 </script>
 
@@ -45,78 +96,136 @@ const deletePost = () => {
     <Head :title="post.title" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="w-full mx-auto p-4 bg-transparent">
+        <div class="w-full mx-auto py-8 px-6 relative min-h-screen bg-white">
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-                <div class="p-6">
-                    <h1 class="text-3xl font-bold mb-2">{{ post.title }}</h1>
-                    <div class="flex justify-between items-center mb-4">
-                        <!-- Left Side: "Posted by" -->
-                        <div class="text-sm text-gray-600 dark:text-gray-400">
-                            Posted by @{{ post.user.username }}
-                        </div>
+            <transition name="toast">
+                <div v-if="showSuccessNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
+                    <div class="bg-emerald-500/20 p-2"><CheckCircle2 class="w-6 h-6 text-emerald-500" /></div>
+                    <div class="flex-grow">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">System Notification</p>
+                        <p class="text-sm font-medium">{{ (page.props as any).flash.success }}</p>
+                    </div>
+                    <button @click="showSuccessNotification = false" class="text-slate-500 hover:text-white transition"><X class="w-4 h-4" /></button>
+                </div>
+            </transition>
+
+            <div class="pb-8 mx-4 border-b border-slate-200 mb-8">
+                
+                <template v-if="!isEditing">
+                    <div class="flex justify-between items-start gap-6">
+                        <h1 class="text-4xl font-black text-slate-900 tracking-tighter break-words whitespace-pre-wrap min-w-0 flex-1 uppercase">
+                            {{ post.title }}
+                        </h1>
                         
-                        <!-- Right Side: "Edit/Delete" buttons -->
-                        <div v-if="post.can_update || post.can_delete" class="flex space-x-3 text-sm">
-                            <Link
-                                v-if="post.can_update"
-                                :href="route('forum.edit', post.id)"
-                                class="font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                                Edit
-                            </Link>
-                            <button
-                                v-if="post.can_delete"
-                                @click="deletePost"
-                                class="font-medium text-red-500 hover:underline"
-                            >
-                                Delete
+                        <div v-if="props.post.can_update || props.post.can_delete" class="flex items-center gap-1">
+                            <button v-if="props.post.can_update" @click="startEditing" class="p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                                <Pencil class="w-6 h-6" />
+                            </button>
+                            <button v-if="props.post.can_delete" @click="isDeleteModalOpen = true" class="p-2 text-slate-400 hover:text-red-600 transition-colors">
+                                <Trash2 class="w-6 h-6" />
                             </button>
                         </div>
                     </div>
-                    <div class="prose dark:prose-invert max-w-none">
-                        <p>{{ post.body }}</p>
+                    
+                    <div class="flex items-center text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-4">
+                        Authored by <span class="ml-2 text-slate-900">@{{ post.user.username }}</span>
                     </div>
-                </div>
-            </div>
 
-            <div class="mt-6">
-                <h2 class="text-xl font-bold mb-4">Replies</h2>
+                    <div class="mt-8 text-slate-700 leading-relaxed text-lg font-medium max-w-none">
+                        <p class="break-words whitespace-pre-wrap">{{ post.content }}</p>
+                    </div>
+                </template>
 
-                <div class="space-y-4">
-                    <Reply 
-                        v-for="reply in post.replies"
-                        :key="reply.id"
-                        :reply="reply"
-                        :post_id="post.id"
-                    />
-                </div>
+                <template v-else>
+                    <form @submit.prevent="submitUpdate" class="space-y-6">
+                        <div>
+                            <input 
+                                v-model="editForm.title"
+                                type="text"
+                                class="w-full text-4xl font-black text-slate-900 tracking-tighter uppercase border-b-2 border-slate-900 bg-transparent outline-none focus:border-teal-500 transition-colors py-2"
+                                placeholder="Edit Title..."
+                                required
+                            />
+                            <div v-if="editForm.errors.title" class="text-red-500 text-xs mt-1 uppercase font-bold">{{ editForm.errors.title }}</div>
+                        </div>
 
-                <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-                    <form @submit.prevent="submitReply">
-                        <label for="body" class="block mb-2 font-medium">Your Reply</label>
-                        <textarea
-                            id="body"
-                            v-model="replyForm.body"
-                            rows="5"
-                            class="w-full rounded border px-3 py-2"
-                            placeholder="Write your reply..."
-                        ></textarea>
-                        <p v-if="replyForm.errors.body" class="text-red-500 text-sm mt-1">
-                            {{ replyForm.errors.body }}
-                        </p>
-                        <div class="flex justify-end mt-4">
-                            <button
-                                type="submit"
-                                :disabled="replyForm.processing"
-                                class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
+                        <div>
+                            <textarea 
+                                v-model="editForm.content"
+                                rows="8"
+                                class="w-full text-lg font-medium text-slate-700 leading-relaxed border border-slate-200 p-4 focus:ring-1 focus:ring-slate-900 outline-none transition-all"
+                                placeholder="Edit content..."
+                                required
+                            ></textarea>
+                            <div v-if="editForm.errors.content" class="text-red-500 text-xs mt-1 uppercase font-bold">{{ editForm.errors.content }}</div>
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                            <button 
+                                type="submit" 
+                                :disabled="editForm.processing"
+                                class="px-8 py-3 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 transition shadow-lg disabled:opacity-50"
                             >
-                                Post Reply
+                                {{ editForm.processing ? 'Saving...' : 'Update Post' }}
+                            </button>
+                            <button 
+                                type="button" 
+                                @click="cancelEditing"
+                                class="px-8 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-slate-200 hover:bg-slate-50 transition"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </form>
+                </template>
+            </div>
+
+            <div v-if="!isEditing" class="bg-slate-50 rounded-none p-8 border border-slate-200 mx-4 shadow-sm">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6">Join the Discussion</h2>
+                <form @submit.prevent="submitReply">
+                    <textarea
+                        v-model="replyForm.body"
+                        rows="4"
+                        class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition-all placeholder:text-slate-300 shadow-inner"
+                        placeholder="Type your reply here..."
+                    ></textarea>            
+                    <div class="flex justify-end mt-6">
+                        <button type="submit" :disabled="replyForm.processing" class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 disabled:opacity-50 transition-all shadow-xl rounded-none">
+                            {{ replyForm.processing ? 'Sending...' : 'Post Reply' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="px-4 mt-12">
+                <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-3">
+                    Active Thread <span class="h-[1px] flex-1 bg-slate-100"></span> <span class="text-slate-900">{{ post.replies.length }} Replies</span>
+                </h2>
+                <div class="space-y-2">
+                    <Reply v-for="reply in post.replies" :key="reply.id" :reply="reply" :post_id="post.id" />
+                </div>
+            </div>
+        </div>
+        
+        <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div class="bg-white max-w-sm w-full p-8 border border-slate-200 rounded-none shadow-2xl">
+                <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2 flex items-center gap-2">
+                    <AlertCircle class="w-5 h-5 text-red-500" /> Remove Thread
+                </h3>
+                <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed italic">
+                    Are you sure? Deleting this post will permanently remove all associated replies and discussion data.
+                </p>
+                <div class="flex gap-3">
+                    <button @click="isDeleteModalOpen = false" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-slate-100 hover:bg-slate-50 transition">Cancel</button>
+                    <button @click="confirmDelete" class="flex-1 py-3 bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-700 shadow-lg transition">Delete Post</button>
                 </div>
             </div>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast-enter-from { transform: translateX(100%); opacity: 0; }
+.toast-leave-to { transform: translateY(-20px); opacity: 0; }
+</style>

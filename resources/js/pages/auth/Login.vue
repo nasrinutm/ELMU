@@ -1,109 +1,114 @@
 <script setup lang="ts">
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AuthBase from '@/layouts/auth/AuthCardLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 defineProps<{
+    canResetPassword?: boolean;
     status?: string;
-    canResetPassword: boolean;
-    canRegister: boolean;
+    canRegister?: boolean;
 }>();
 
+/**
+ * Initialize the login form with Inertia's useForm helper.
+ */
 const form = useForm({
     email: '',
     password: '',
     remember: false,
 });
 
+/**
+ * Handle form submission.
+ * This posts to the 'login' route defined in your Laravel backend.
+ */
 const submit = () => {
     form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onFinish: () => {
+            form.reset('password');
+        },
     });
 };
 </script>
 
 <template>
-    <AuthBase
-        title="Log in to your account"
-        description="Enter your email and password below to log in"
+    <Head title="Log in" />
+
+    <div
+        class="relative min-h-screen flex flex-col justify-center items-center p-4 bg-cover bg-center bg-no-repeat"
+        style="background-image: url('/bg-raw.jpg');"
     >
-        <Head title="Log in" />
+        <div class="absolute inset-0 bg-slate-900/20 z-0"></div>
 
-        <div
-            v-if="status"
-            class="mb-4 text-center text-sm font-medium text-green-400"
-        >
-            {{ status }}
-        </div>
+        <div class="relative z-10 w-full flex flex-col items-center">
 
-        <form @submit.prevent="submit" class="flex flex-col gap-6">
-            <div class="grid gap-6">
-                <div class="grid gap-2">
-                    <Label for="email" class="text-white">Email address</Label>
-                    <Input
-                        id="email"
-                        type="email"
-                        v-model="form.email"
-                        required
-                        autofocus
-                        :tabindex="1"
-                        autocomplete="email"
-                        placeholder="email@example.com"
-                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
-                    />
-                    <InputError :message="form.errors.email" class="text-red-300" />
-                </div>
-
-                <div class="grid gap-2">
-                    <div class="flex items-center justify-between">
-                        <Label for="password" class="text-white">Password</Label>
-                    </div>
-                    <Input
-                        id="password"
-                        type="password"
-                        v-model="form.password"
-                        required
-                        :tabindex="2"
-                        autocomplete="current-password"
-                        placeholder="Password"
-                        class="bg-white text-black border-transparent focus:ring-2 focus:ring-[#FFD900]"
-                    />
-                    <InputError :message="form.errors.password" class="text-red-300" />
-                </div>
-
-                <div class="flex items-center justify-between">
-                    <Label for="remember" class="flex items-center space-x-3 text-white">
-                        <Checkbox
-                            id="remember"
-                            :checked="form.remember"
-                            @update:checked="(val) => form.remember = val"
-                            :tabindex="3"
-                            class="border-white data-[state=checked]:bg-[#FFD900] data-[state=checked]:text-[#003366]"
-                        />
-                        <span>Remember me</span>
-                    </Label>
-                </div>
-
-                <Button
-                    type="submit"
-                    class="mt-4 w-full bg-[#FFD900] text-[#003366] hover:bg-[#e6c300] font-bold"
-                    :tabindex="4"
-                    :disabled="form.processing"
-                    data-test="login-button"
-                >
-                    <LoaderCircle
-                        v-if="form.processing"
-                        class="h-4 w-4 animate-spin mr-2"
-                    />
-                    Log in
-                </Button>
+            <div class="mb-8">
+                <Link href="/">
+                    <img src="/logo.png" alt="ELMU Logo" class="h-36 w-auto object-contain" />
+                </Link>
             </div>
-        </form>
-    </AuthBase>
+
+            <div class="w-full sm:max-w-md px-8 py-10 bg-white shadow-2xl rounded-2xl border border-gray-100">
+
+                <div class="mb-6 text-center">
+                    <h2 class="text-2xl font-bold tracking-tight text-gray-900">Welcome back</h2>
+                    <p class="text-sm text-gray-500 mt-2">Please enter your details to sign in.</p>
+                </div>
+
+                <div v-if="status" class="mb-4 font-medium text-sm text-green-600 bg-green-50 p-3 rounded-lg text-center">
+                    {{ status }}
+                </div>
+
+                <form @submit.prevent="submit" class="space-y-5">
+                    <div>
+                        <label for="email" class="block font-medium text-sm text-gray-700">Email Address</label>
+                        <input
+                            id="email"
+                            type="email"
+                            class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-2.5 text-sm focus:border-blue-600 focus:bg-white focus:ring-blue-600 transition shadow-sm outline-none"
+                            v-model="form.email"
+                            required
+                            autofocus
+                            autocomplete="username"
+                            placeholder="email@example.com"
+                        />
+                        <div v-if="form.errors.email" class="text-red-600 text-xs mt-1 italic">{{ form.errors.email }}</div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label for="password" class="block font-medium text-sm text-gray-700">Password</label>
+                        </div>
+                        <input
+                            id="password"
+                            type="password"
+                            class="mt-1 block w-full rounded-lg border-gray-300 bg-gray-50 px-4 py-2.5 text-sm focus:border-blue-600 focus:bg-white focus:ring-blue-600 transition shadow-sm outline-none"
+                            v-model="form.password"
+                            required
+                            autocomplete="current-password"
+                            placeholder="••••••••"
+                        />
+                        <div v-if="form.errors.password" class="text-red-600 text-xs mt-1 italic">{{ form.errors.password }}</div>
+                    </div>
+
+                    <div class="flex items-center">
+                    </div>
+
+                    <button
+                        type="submit"
+                        :disabled="form.processing"
+                        class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        <LoaderCircle v-if="form.processing" class="animate-spin -ml-1 mr-2 h-4 w-4" />
+                        {{ form.processing ? 'Signing in...' : 'Sign in' }}
+                    </button>
+                </form>
+
+            </div>
+
+            <div class="mt-8 text-center text-sm text-white">
+                &copy; {{ new Date().getFullYear() }} ELMU. All rights reserved.
+            </div>
+        </div>
+    </div>
 </template>

@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import AppLayout from '@/Layouts/AppLayout.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-
+import { route } from 'ziggy-js';
 defineProps<{ students: Array<{id: number, name: string}> }>();
-
 const form = useForm({
     student_id: '',
     subject: '',
     score: '',
     comments: ''
 });
-
 const submit = () => {
     form.post(route('reports.store'));
 };

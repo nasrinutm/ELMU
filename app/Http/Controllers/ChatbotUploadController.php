@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\GeminiFileSearch;
 use Illuminate\Support\Facades\Log;
+use App\Models\ChatbotMaterial;
+use App\Models\Setting;
+use Inertia\Inertia;
 
 class ChatbotUploadController extends Controller
 {
@@ -15,67 +18,123 @@ class ChatbotUploadController extends Controller
         $this->ragService = $ragService;
     }
 
+    /**
+     * Display the Knowledge Base list and system info.
+     */
+    public function index()
+    {
+        $files = $this->ragService->listFiles();
+
+        // Get the raw store ID from config
+        $rawStoreId = config('gemini.store_id', 'Not Configured');
+
+        // Remove the "fileSearchStores/" prefix if it exists for cleaner UI
+        $cleanStoreId = str_replace('fileSearchStores/', '', $rawStoreId);
+
+        $currentPrompt = Setting::where('key', 'ai_strict_instruction')
+            ->value('value') ?? "Answer in Malay. Provide a concise answer in a numbered list...";
+
+        return Inertia::render('Admin/ChatbotDetails', [
+            'files' => $files->toArray(),
+            'systemInfo' => [
+                'model' => config('gemini.model', 'gemini-1.5-flash'),
+                'store_id' => $cleanStoreId,
+                'api_status' => 'Active',
+                'current_prompt' => $currentPrompt,
+            ]
+        ]);
+    }
+
+    /**
+     * Show the upload form.
+     */
+    public function create()
+    {
+        // Ensure this string exactly matches: resources/js/Pages/Admin/UploadChatbotMaterial.vue
+        return Inertia::render('Admin/UploadChatbotMaterial');
+    }
+
+    /**
+     * Store and Index the new material.
+     */
     public function store(Request $request)
     {
-        // 1. Validate: Ensure it's a PDF/Text file and under 100MB
         $request->validate([
-            'file' => 'required|file|mimes:pdf,txt,csv,md|max:102400', // 100MB max
+            'file' => 'required|file|mimes:pdf,txt,csv,md|max:102400',
             'title' => 'required|string|max:255',
         ]);
 
         try {
             $file = $request->file('file');
-            
-            // 2. Get your Store ID from .env
-            $storeId = env('GEMINI_STORE_ID');
+            $title = $request->input('title');
+            $storeId = config('gemini.store_id');
 
-            if (!$storeId) {
-                return back()->withErrors(['file' => 'AI Knowledge Base ID is missing in .env settings.']);
-            }
-
-            // 3. Send to Google via our Service
-            $this->ragService->uploadAndIndexFile(
+            // 1. Upload to Gemini via RAG Service
+            $geminiResponse = $this->ragService->uploadAndIndexFile(
                 $storeId,
-                $file->getRealPath(), // Path to temp file
-                $file->getMimeType()  // e.g. application/pdf
+                $file->getRealPath(),
+                $file->getMimeType(),
+                $title
             );
 
-            return back()->with('success', 'File uploaded and indexed! The AI is learning from it now.');
+            // 2. Save to Local Database
+            ChatbotMaterial::create([
+                'file_content'         => file_get_contents($file->getRealPath()),
+                'display_name'         => $title,
+                'gemini_document_name' => $geminiResponse['gemini_document_name'],
+                'gemini_file_name'     => $geminiResponse['gemini_file_name'],
+                'mime_type'            => $file->getMimeType(),
+                'size_bytes'           => $geminiResponse['size_bytes'],
+                'gemini_state'         => 'STATE_ACTIVE',
+            ]);
 
+            // Redirect to index so the user can see the new file in the list immediately
+            return redirect()->route('chatbot.details')->with('success', 'File uploaded and indexed successfully!');
         } catch (\Exception $e) {
             Log::error("RAG Upload Error: " . $e->getMessage());
             return back()->withErrors(['file' => 'Upload failed: ' . $e->getMessage()]);
         }
     }
-    
-    // Just to render the view
-    public function create() {
-        return \Inertia\Inertia::render('Admin/UploadChatbotMaterial');
+
+    /**
+     * Remove material from AI memory and local DB.
+     */
+    public function destroy($geminiDocumentName)
+    {
+        try {
+            // 1. Delete from Gemini API
+            $this->ragService->deleteFile($geminiDocumentName);
+
+            // 2. Delete the record from local database
+            ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->delete();
+
+            return back()->with('success', 'File deleted from AI memory.');
+        } catch (\Exception $e) {
+            Log::error("RAG Deletion Error: " . $e->getMessage());
+            return back()->withErrors(['error' => 'Deletion failed: ' . $e->getMessage()]);
+        }
     }
 
-    public function index()
+        /**
+     * Update the display name of the chatbot material.
+     */
+    public function update(Request $request, $geminiDocumentName)
     {
-        // 1. Fetch files from Google
-        $files = $this->ragService->listFiles();
-
-        // 2. Get System Info
-        $systemInfo = [
-            'model' => 'gemini-2.5-flash',
-            'store_id' => env('GEMINI_STORE_ID', 'Not Configured'),
-            'api_status' => 'Active', // You could add real health check logic here
-        ];
-
-        return \Inertia\Inertia::render('Admin/ChatbotDetails', [
-            'files' => $files,
-            'systemInfo' => $systemInfo
+        $request->validate([
+            'display_name' => 'required|string|max:255',
         ]);
-    }
 
-    public function destroy($fileName)
-    {
-        // Remove "files/" prefix logic if needed, but usually API handles the full string
-        $this->ragService->deleteFile($fileName);
-        
-        return back()->with('success', 'File deleted from AI memory.');
+        try {
+            $material = ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->firstOrFail();
+            
+            $material->update([
+                'display_name' => $request->display_name
+            ]);
+
+            return back()->with('success', 'Document name updated successfully!');
+        } catch (\Exception $e) {
+            Log::error("RAG Update Error: " . $e->getMessage());
+            return back()->with('error', 'Failed to update document name.');
+        }
     }
 }
