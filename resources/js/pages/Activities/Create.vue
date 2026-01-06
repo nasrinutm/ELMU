@@ -82,14 +82,15 @@ const handleFileChange = (e: Event) => {
                         </div>
 
                         <div>
-                            <label for="due_date" class="block text-[#212121] font-bold mb-2">Due Date (Optional)</label>
+                            <label for="due_date" class="block text-gray-700 font-bold mb-2">Due Date (Optional)</label>
                             <input 
                                 id="due_date" 
                                 type="date" 
                                 v-model="form.due_date"
-                                class="w-full bg-[#ffffff] border border-gray-500/30 rounded-md px-4 py-3 text-[#212121] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent [color-scheme:dark]"
+                                :min="new Date().toISOString().split('T')[0]"
+                                class="w-full bg-white border border-gray-300 rounded-md px-4 py-3 text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition cursor-pointer"
                             />
-                            <p v-if="form.errors.due_date" class="text-red-400 text-sm mt-1">{{ form.errors.due_date }}</p>
+                            <p v-if="form.errors.due_date" class="text-red-600 text-sm mt-1">{{ form.errors.due_date }}</p>
                         </div>
 
                         <div>
