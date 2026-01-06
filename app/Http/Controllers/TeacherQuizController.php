@@ -10,23 +10,20 @@ use Illuminate\Support\Facades\DB;
 
 class TeacherQuizController extends Controller
 {
-    // 1. DASHBOARD: List all quizzes
+    // 1. DASHBOARD
     public function index()
     {
         $quizzes = Quiz::withCount('attempts')->latest()->get();
-
-        return Inertia::render('Teacher/Quiz/Index', [
-            'quizzes' => $quizzes
-        ]);
+        return Inertia::render('Teacher/Quiz/Index', ['quizzes' => $quizzes]);
     }
 
-    // 2. CREATE: Show form
+    // 2. CREATE
     public function create()
     {
         return Inertia::render('Teacher/Quiz/Create');
     }
 
-    // 3. STORE: Save new quiz
+    // 3. STORE
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -40,6 +37,13 @@ class TeacherQuizController extends Controller
             'questions.*.options' => 'required|array|min:2',
             'questions.*.options.*.text' => 'required|string',
             'questions.*.options.*.is_correct' => 'required|boolean',
+        ], [
+            'title.required' => 'This field is required.',
+            'questions.*.text.required' => 'This field is required.',
+            'questions.*.options.*.text.required' => 'This field is required.',
+            'duration.required' => 'This field is required.',
+            'difficulty.required' => 'This field is required.',
+            'questions.min' => 'You must add at least one question.',
         ]);
 
         $jsonContent = collect($data['questions'])->map(function ($q, $index) {
@@ -65,19 +69,21 @@ class TeacherQuizController extends Controller
             'content' => $jsonContent,
         ]);
 
-        return redirect()->route('teacher.quiz.index')->with('success', 'Quiz Created Successfully');
+        // Updated Message
+        return redirect()->route('teacher.quiz.index')->with('success', 'Quiz created successfully.');
     }
 
-    // 4. DELETE: Remove a quiz
+    // 4. DELETE
     public function destroy($id)
     {
         $quiz = Quiz::findOrFail($id);
         $quiz->delete(); 
-
-        return redirect()->back()->with('success', 'Quiz deleted');
+        
+        // Updated Message
+        return redirect()->back()->with('success', 'Quiz deleted successfully.');
     }
 
-  // 5. STUDENT PERFORMANCE: Dynamic Limit (3/4, 4/4 logic)
+    // 5. RESULTS
     public function results($id)
     {
         $quiz = Quiz::findOrFail($id);
@@ -89,42 +95,25 @@ class TeacherQuizController extends Controller
             ->get();
 
         $groupedAttempts = $attempts->groupBy('user_id')->map(function ($userAttempts, $userId) {
-            
-            // 1. Count how many attempts were granted (marked as revoked)
-            $grantedCount = $userAttempts->filter(function($att) {
-                $answers = $att->answers ?? []; 
-                return collect($answers)->contains('revoked_attempt', true);
-            })->count();
-
-            // 2. Calculate Dynamic Limit (Base 3 + Granted Extras)
+            $grantedCount = $userAttempts->filter(fn($att) => collect($att->answers ?? [])->contains('revoked_attempt', true))->count();
             $baseLimit = 3;
             $currentLimit = $baseLimit + $grantedCount;
-            
-            // 3. Count Total Attempts (Including the granted ones)
             $totalAttempts = $userAttempts->count();
 
             return [
                 'user_id' => $userId,
                 'user_name' => $userAttempts->first()->user_name,
                 'email' => $userAttempts->first()->email,
-                
-                // Show "3" (attempts taken)
                 'attempts_count' => $totalAttempts, 
-                
-                // Show "4" (if 1 granted)
                 'max_allowed' => $currentLimit, 
-                
-                // Locked if 3 >= 4 (False) or 4 >= 4 (True)
                 'is_locked' => $totalAttempts >= $currentLimit, 
-                
                 'history' => $userAttempts->map(function($att) {
-                    $isRevoked = collect($att->answers ?? [])->contains('revoked_attempt', true);
                     return [
                         'id' => $att->id,
                         'score' => $att->score,
                         'total_questions' => $att->total_questions,
                         'created_at' => $att->created_at,
-                        'is_revoked' => $isRevoked,
+                        'is_revoked' => collect($att->answers ?? [])->contains('revoked_attempt', true),
                     ];
                 })
             ];
@@ -135,13 +124,12 @@ class TeacherQuizController extends Controller
             'studentData' => $groupedAttempts
         ]);
     }
-    // 6. EDIT: Show edit form
+
+    // 6. EDIT
     public function edit($id)
     {
         $quiz = Quiz::findOrFail($id);
-        $rawQuestions = $quiz->content ?? []; 
-        $questions = is_array($rawQuestions) ? $rawQuestions : [];
-
+        $questions = $quiz->content ?? []; 
         return Inertia::render('Teacher/Quiz/Edit', [
             'quiz' => [
                 'id' => $quiz->id,
@@ -149,12 +137,12 @@ class TeacherQuizController extends Controller
                 'description' => $quiz->description,
                 'duration' => $quiz->duration,
                 'difficulty' => $quiz->difficulty,
-                'questions' => $questions
+                'questions' => is_array($questions) ? $questions : []
             ]
         ]);
     }
 
-    // 7. UPDATE: Save changes
+    // 7. UPDATE
     public function update(Request $request, $id)
     {
         $quiz = Quiz::findOrFail($id);
@@ -170,6 +158,13 @@ class TeacherQuizController extends Controller
             'questions.*.options' => 'required|array|min:2',
             'questions.*.options.*.text' => 'required|string',
             'questions.*.options.*.is_correct' => 'required|boolean',
+        ], [
+            'title.required' => 'This field is required.',
+            'questions.*.text.required' => 'This field is required.',
+            'questions.*.options.*.text.required' => 'This field is required.',
+            'duration.required' => 'This field is required.',
+            'difficulty.required' => 'This field is required.',
+            'questions.min' => 'You must add at least one question.',
         ]);
 
         $jsonContent = collect($data['questions'])->map(function ($q, $index) {
@@ -195,88 +190,57 @@ class TeacherQuizController extends Controller
             'content' => $jsonContent,
         ]);
 
-        return redirect()->route('teacher.quiz.index')->with('success', 'Quiz Updated Successfully');
+        // Matches your screenshot text exactly
+        return redirect()->route('teacher.quiz.index')->with('success', 'Changes saved successfully.');
     }
 
- // 8. GRANT ATTEMPT: (Smart Update: Keeps history, but allows retake)
+    // 8. GRANT ATTEMPT
     public function grantAttempt($quizId, $userId)
     {
         $qId = is_object($quizId) ? $quizId->id : $quizId;
         $uId = is_object($userId) ? $userId->id : $userId;
 
-        // Find the LATEST attempt
-        $attempt = QuizAttempt::where('quiz_id', $qId)
-            ->where('user_id', $uId)
-            ->latest()
-            ->first();
+        $attempt = QuizAttempt::where('quiz_id', $qId)->where('user_id', $uId)->latest()->first();
 
         if ($attempt) {
-            // Get existing answers
             $answers = $attempt->answers ?? [];
-
-            // Check if we already granted this one (avoid double flagging)
-            $isAlreadyRevoked = collect($answers)->contains('revoked_attempt', true);
-
-            if (!$isAlreadyRevoked) {
-                // Add a special hidden flag to the answers list
+            if (!collect($answers)->contains('revoked_attempt', true)) {
                 $answers[] = ['revoked_attempt' => true];
-                
-                // Save it back
                 $attempt->answers = $answers;
                 $attempt->save();
-
-                return redirect()->back()->with('success', 'Attempt granted! The student can now retake the quiz.');
+                return redirect()->back()->with('success', 'Attempt granted!');
             }
-            
-            return redirect()->back()->with('warning', 'This attempt was already granted.');
+            return redirect()->back()->with('warning', 'Already granted.');
         }
-
-        return redirect()->back()->with('error', 'Student has no attempts to grant.');
+        return redirect()->back()->with('error', 'No attempts to grant.');
     }
 
-    
-    
-
-   // --- NEW: SHOW ATTEMPT (Robust Matching Fix) ---
+    // 9. SHOW ATTEMPT
     public function showAttempt($attemptId)
     {
         $attempt = QuizAttempt::with(['user', 'quiz'])->findOrFail($attemptId);
-
         $quizContent = $attempt->quiz->content ?? []; 
         $studentAnswers = $attempt->answers ?? []; 
 
         $detailedQuestions = collect($quizContent)->map(function ($q, $qIndex) use ($studentAnswers) {
-            
             if (!is_array($q)) return null;
-
-            // Generate stable Question ID
             $qId = $q['id'] ?? ($qIndex + 1);
-
-            // 1. Prepare Options with IDs
-            $options = $q['options'] ?? [];
-            $mappedOptions = collect($options)->map(function($o, $optIndex) {
+            
+            $options = collect($q['options'] ?? [])->map(function($o, $optIndex) {
                 return [
-                    // Priority: Text -> ID -> Index
-                    // We use TEXT as the ID because that is what your DB seems to rely on
                     'id' => $o['text'] ?? $o['id'] ?? $optIndex,
                     'text' => $o['text'] ?? 'Option text missing',
                     'is_correct' => (bool)($o['is_correct'] ?? false)
                 ];
             })->toArray();
 
-            // 2. Find Student's Answer
             $studentSelection = null;
             if (is_array($studentAnswers)) {
                 foreach ($studentAnswers as $ans) {
-                    // Match Question ID
                     if (isset($ans['question_id']) && $ans['question_id'] == $qId) {
-                        
-                        // TRY 1: Use the saved option_id
                         $studentSelection = $ans['option_id'] ?? null;
-
-                        // TRY 2: If ID is null, try to match by User Text
                         if (!$studentSelection && isset($ans['user_text'])) {
-                            foreach ($mappedOptions as $opt) {
+                            foreach ($options as $opt) {
                                 if (trim((string)$opt['text']) == trim((string)$ans['user_text'])) {
                                     $studentSelection = $opt['id'];
                                     break;
@@ -290,40 +254,30 @@ class TeacherQuizController extends Controller
 
             return [
                 'id' => $qId,
-                'text' => $q['question'] ?? $q['text'] ?? 'Error: Question text missing',
+                'text' => $q['question'] ?? $q['text'] ?? 'Error',
                 'explanation' => $q['explanation'] ?? '',
-                
                 'student_selected_option_id' => $studentSelection,
-                
-                // Check if correct
-                'is_correct' => collect($mappedOptions)
-                                ->where('id', $studentSelection)
-                                ->where('is_correct', true)
-                                ->isNotEmpty(),
-                                
-                'options' => $mappedOptions
+                'is_correct' => collect($options)->where('id', $studentSelection)->where('is_correct', true)->isNotEmpty(),
+                'options' => $options
             ];
         })->filter()->values();
 
         return Inertia::render('Teacher/Quiz/ReviewAttempt', [
             'attempt' => [
                 'id' => $attempt->id,
-                'score' => $attempt->score ?? 0,
+                'score' => $attempt->score,
                 'total' => count($quizContent),
                 'percentage' => count($quizContent) > 0 ? round(($attempt->score / count($quizContent)) * 100) : 0,
                 'date' => $attempt->created_at->format('d M Y, h:i A'),
-                'student_name' => $attempt->user->name ?? 'Unknown Student',
+                'student_name' => $attempt->user->name ?? 'Student',
             ],
-            'quiz_title' => $attempt->quiz->title ?? 'Untitled Quiz',
+            'quiz_title' => $attempt->quiz->title ?? 'Quiz',
             'questions' => $detailedQuestions
         ]);
     }
 
-    // --- NEW: DESTROY ATTEMPT (Trash Button) ---
-    public function destroyAttempt($id)
-    {
-        $attempt = QuizAttempt::findOrFail($id);
-        $attempt->delete();
-        return back()->with('success', 'Attempt record deleted successfully.');
+    public function destroyAttempt($id) {
+        QuizAttempt::findOrFail($id)->delete();
+        return back()->with('success', 'Deleted successfully.');
     }
 }
