@@ -111,19 +111,23 @@ class ActivityController extends Controller
      */
     public function submit(Request $request, Activity $activity)
     {
+        // Ensure 'file' is required and is a valid file type
         $request->validate([
-            'file' => 'required|file|max:10240',
+            'file' => [
+                'required', 
+                'file', 
+                'mimes:pdf,docx,pptx,zip', // Specify allowed types for better security
+                'max:10240'
+            ],
+        ], [
+            'file.required' => 'You must upload a file to complete this submission.'
         ]);
 
         $file = $request->file('file');
         $path = $file->store('submissions', 'public');
 
-        // This triggers the change from "Pending" to "Completed" in your views
         ActivitySubmission::updateOrCreate(
-            [
-                'user_id' => Auth::id(),
-                'activity_id' => $activity->id
-            ],
+            ['user_id' => Auth::id(), 'activity_id' => $activity->id],
             [
                 'file_path' => $path,
                 'file_name' => $file->getClientOriginalName(),

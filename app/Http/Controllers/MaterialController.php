@@ -10,21 +10,23 @@ use Inertia\Inertia;
 
 class MaterialController extends Controller
 {
-    // 1. INDEX: Handles List, Search, and Filters
+    /**
+     * 1. INDEX: Handles List, Search (Case-Insensitive), and Filters
+     */
     public function index(Request $request)
     {
         $query = Material::query()->with('user:id,name');
 
-        // FIX: Search Logic (Matches Vue 'search' prop)
+        // Case-Insensitive Search using LOWER()
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = strtolower($request->search);
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('subject', 'like', '%' . $search . '%');
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                  ->orWhereRaw('LOWER(subject) LIKE ?', ["%{$search}%"]);
             });
         }
 
-        // FIX: File Type Filter (Matches Vue 'type' prop)
+        // File Type Filter
         if ($request->filled('type')) {
             $query->where('file_type', 'like', '%' . $request->type . '%');
         }
@@ -36,30 +38,32 @@ class MaterialController extends Controller
         } elseif ($sort === 'a-z') {
             $query->orderBy('name', 'asc');
         } else {
-            $query->latest(); // Default
+            $query->latest();
         }
 
         return Inertia::render('Materials/Index', [
             'materials' => $query->paginate(10)->withQueryString(),
             'filters' => $request->only(['search', 'type', 'sort']),
             'can' => [
-                // Safe check for roles (handles different role packages/setups)
-                'manage_materials' => Auth::user()->roles->contains('name', 'teacher')
-                                   || Auth::user()->roles->contains('name', 'admin'),
+                // Allows Teachers and Admins to see "Upload" buttons
+                'manage_materials' => Auth::user()->hasRole('teacher') || Auth::user()->hasRole('admin'),
             ]
         ]);
     }
 
-    // 2. CREATE: Shows the Upload Form
+    /**
+     * 2. CREATE: Shows the Upload Form
+     */
     public function create()
     {
         return Inertia::render('Materials/Create');
     }
 
-    // 3. STORE: Handles the Single File Upload
+    /**
+     * 3. STORE: Handles the Single File Upload
+     */
     public function store(Request $request)
     {
-        // FIX: Updated validation to match the Single File form in Vue
         $request->validate([
             'name' => 'required|string|max:255',
             'subject' => 'required|string|max:255',
@@ -69,11 +73,7 @@ class MaterialController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-
-            // Store file
             $path = $file->store('materials', 'public');
-
-            // Get clean extension
             $extension = strtolower($file->getClientOriginalExtension());
 
             Material::create([
@@ -86,31 +86,41 @@ class MaterialController extends Controller
                 'file_type' => $extension,
             ]);
 
-            return redirect()->route('materials.index')->with('success', 'Material uploaded successfully.');
+            return redirect()->route('materials.index')
+                ->with('success', 'New material has been successfully deployed. [' . now()->timestamp . ']');
         }
 
-        return back()->with('error', 'File upload failed.');
+        return back()->with('error', 'File upload failed. Please try again.');
     }
 
-    // 4. DOWNLOAD: Forces file download
+    /**
+     * 4. DOWNLOAD: Forces file download
+     * OPEN ACCESS: All authenticated users (Students/Teachers/Admins) can download.
+     */
     public function download(Material $material)
     {
+        // Check if the physical file exists on the disk
         if (Storage::disk('public')->exists($material->file_path)) {
-            // Returns download with original filename
             return Storage::disk('public')->download(
                 $material->file_path,
                 $material->file_name ?? ($material->name . '.' . $material->file_type)
             );
         }
-        return back()->with('error', 'File not found.');
+
+        // Return a specific error if the record exists but the file is missing from storage
+        return back()->with('error', 'The requested file could not be found on the server storage. [' . now()->timestamp . ']');
     }
 
-    // 5. EDIT: Show Edit Form
+    /**
+     * 5. EDIT: Show Edit Form
+     * RESTRICTED: Only the original uploader or an Admin can edit.
+     */
     public function edit(Material $material)
     {
-        // Authorization Check
-        if (Auth::id() !== $material->user_id) {
-             abort(403, 'Unauthorized');
+        // Ownership Check
+        if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
+             return redirect()->route('materials.index')
+                ->with('error', 'Restricted access: Only the original instructor can edit this material. [' . now()->timestamp . ']');
         }
 
         return Inertia::render('Materials/Edit', [
@@ -118,10 +128,17 @@ class MaterialController extends Controller
         ]);
     }
 
-    // 6. UPDATE: Handle Changes
+    /**
+     * 6. UPDATE: Handle Changes
+     * RESTRICTED: Only the original uploader or an Admin can update.
+     */
     public function update(Request $request, Material $material)
     {
-        if (Auth::id() !== $material->user_id) abort(403);
+        // Security Check
+        if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
+            return redirect()->route('materials.index')
+                ->with('error', 'Unauthorized: You cannot modify another instructor\'s material.');
+        }
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -132,14 +149,12 @@ class MaterialController extends Controller
 
         $data = $request->only(['name', 'subject', 'description']);
 
-        // Handle File Replacement
         if ($request->hasFile('file')) {
-            // Delete old file
+            // Delete old file if a new one is uploaded
             if (Storage::disk('public')->exists($material->file_path)) {
                 Storage::disk('public')->delete($material->file_path);
             }
 
-            // Upload new file
             $file = $request->file('file');
             $data['file_path'] = $file->store('materials', 'public');
             $data['file_name'] = $file->getClientOriginalName();
@@ -148,26 +163,29 @@ class MaterialController extends Controller
 
         $material->update($data);
 
-        return redirect()->route('materials.index')->with('success', 'Material updated successfully.');
+        return redirect()->route('materials.index')
+            ->with('success', 'Changes saved successfully.');
     }
 
-    // 7. DESTROY: Delete File & Record
+    /**
+     * 7. DESTROY: Delete File & Record
+     * RESTRICTED: Only the original uploader or an Admin can delete.
+     */
     public function destroy(Material $material)
     {
-        // Authorization Check (Owner or Admin)
-        $isAdmin = Auth::user()->roles->contains('name', 'admin');
-        if (Auth::id() !== $material->user_id && !$isAdmin) {
-             abort(403);
+        // Security Check
+        if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
+             return redirect()->route('materials.index')
+                ->with('error', 'Delete Failed: You do not have permission to remove this resource.');
         }
 
-        // Delete from Storage
         if (Storage::disk('public')->exists($material->file_path)) {
             Storage::disk('public')->delete($material->file_path);
         }
 
-        // Delete from DB
         $material->delete();
 
-        return redirect()->back()->with('success', 'Material deleted successfully.');
+        return redirect()->route('materials.index')
+            ->with('success', 'Material permanently removed from system.');
     }
 }

@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Laravel\Fortify\Features;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Gemini\Laravel\Facades\Gemini;
@@ -11,6 +10,7 @@ use Gemini\Laravel\Facades\Gemini;
 use App\Models\User;
 use App\Models\Material;
 use App\Models\Quiz;
+use App\Models\Activity;
 
 // --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
@@ -19,8 +19,6 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotUploadController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\ActivityController;
-use App\Http\Controllers\Settings\PasswordController;
-use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\TeacherQuizController;
 use App\Http\Controllers\StudentController;
@@ -53,15 +51,14 @@ Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 1. DASHBOARD
+    // 1. DASHBOARD - Now uses the StudentController method for all roles
     Route::get('/dashboard', [StudentController::class, 'dashboardStats'])->name('dashboard');
 
     // 2. CHATBOT INTERACTION
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN ROUTES (Prefix applied for cleaner URL structure)
+    // 3. ADMIN ROUTES
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
-        // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -69,15 +66,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // AI Knowledge Base Management
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
         Route::post('/chatbot/upload', [ChatbotUploadController::class, 'store'])->name('upload.store');
         Route::delete('/chatbot/{fileName}', [ChatbotUploadController::class, 'destroy'])
             ->where('fileName', '.*')
             ->name('upload.delete');
+        Route::put('/chatbot/upload/{geminiDocumentName}', [ChatbotUploadController::class, 'update'])
+            ->name('upload.update')
+            ->where('geminiDocumentName', '.*'); // Important to allow slashes in the Gemini ID
 
-        // System Prompt Management
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
     });
@@ -90,16 +88,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
     Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
-
     Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. MATERIALS (General Study Materials)
+    // 5. MATERIALS
+    // These routes are accessible to EVERYONE (Students, Teachers, Admins)
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    Route::middleware(['role:teacher'])->prefix('materials')->group(function () {
+    // These routes are restricted to Teachers/Admins for general access,
+    // and the Controller will further check if the user is the owner.
+    Route::middleware(['role:teacher|admin'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');
         Route::get('/{material}/edit', [MaterialController::class, 'edit'])->name('materials.edit');
@@ -115,9 +115,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // 7. STUDENT SUBMISSIONS
     Route::post('/activities/{activity}/submit', [ActivityController::class, 'submit'])->name('activities.submit');
-    Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
-
     Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])->name('activities.downloadSubmission');
+    Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
     // 8. QUIZZES
@@ -149,7 +148,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 11. REPORTS
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])->name('reports.student.detail');
-
     Route::middleware(['role:teacher|admin'])->group(function () {
         Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');

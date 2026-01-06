@@ -114,4 +114,27 @@ class ChatbotUploadController extends Controller
             return back()->withErrors(['error' => 'Deletion failed: ' . $e->getMessage()]);
         }
     }
+
+        /**
+     * Update the display name of the chatbot material.
+     */
+    public function update(Request $request, $geminiDocumentName)
+    {
+        $request->validate([
+            'display_name' => 'required|string|max:255',
+        ]);
+
+        try {
+            $material = ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->firstOrFail();
+            
+            $material->update([
+                'display_name' => $request->display_name
+            ]);
+
+            return back()->with('success', 'Document name updated successfully!');
+        } catch (\Exception $e) {
+            Log::error("RAG Update Error: " . $e->getMessage());
+            return back()->with('error', 'Failed to update document name.');
+        }
+    }
 }

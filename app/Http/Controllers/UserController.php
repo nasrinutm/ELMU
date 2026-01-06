@@ -2,26 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
-use Illuminate\Validation\Rule;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
+use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    /**
+     * Display a listing of the users with search, role filtering, and sorting.
+     */
     public function index(Request $request)
     {
         $query = User::query()->with('roles');
 
-        // 1. SEARCH FILTER (Name or Email)
+        // 1. SEARCH FILTER (Name, Email, or Username)
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->input('search') . '%')
-                  ->orWhere('email', 'like', '%' . $request->input('search') . '%')
-                  ->orWhere('username', 'like', '%' . $request->input('search') . '%');
+                $search = $request->input('search');
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%");
             });
         }
 
@@ -32,26 +38,22 @@ class UserController extends Controller
             });
         }
 
-        // 3. SORTING
+        // 3. SORTING (Latest vs Oldest)
         $query->orderBy(
             'created_at',
             $request->input('sort') === 'oldest' ? 'asc' : 'desc'
         );
 
-        // 4. PAGINATION
-        $users = $query->paginate(15)->withQueryString();
-
-        return Inertia::render('Users/Index', [ // Ensure path matches your file structure
-            'users' => $users,
+        return Inertia::render('Users/Index', [
+            'users' => $query->paginate(15)->withQueryString(),
             'roles' => Role::all()->pluck('name'),
-            'filters' => [
-                'search' => $request->input('search', ''), // Pass search back to frontend
-                'role' => $request->input('role', ''),
-                'sort' => $request->input('sort', 'latest'),
-            ]
+            'filters' => $request->only(['search', 'role', 'sort']),
         ]);
     }
 
+    /**
+     * Show the form for creating a new user.
+     */
     public function create()
     {
         return Inertia::render('Admin/Users/Add', [
@@ -59,28 +61,40 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created user with success notification.
+     */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+            'username' => 'required|string|alpha_dash|max:255|unique:users,username',
+            'email' => 'required|email:rfc,dns|max:255|unique:users,email',
             'role' => 'required|string|exists:roles,name',
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)->letters()->numbers()
+            ],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
         ]);
 
-        $user->assignRole($request->role);
+        $user->assignRole($validated['role']);
 
-        return redirect()->route('users.index')->with('success', 'User created successfully!');
+        // Success notification with timestamp handshake
+        return redirect()->route('users.index')
+            ->with('success', 'New user ' . $user->name . ' has been successfully registered. [' . now()->timestamp . ']');
     }
 
+    /**
+     * Show the form for editing the specified user.
+     */
     public function edit(User $user)
     {
         return Inertia::render('Admin/Users/Edit', [
@@ -95,47 +109,51 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Update the user with success notification.
+     */
     public function update(Request $request, User $user)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'username' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('users')->ignore($user->id),
-            ],
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('users')->ignore($user->id),
-            ],
-            'password' => 'nullable|string|min:8|confirmed',
+            'username' => ['required', 'string', 'alpha_dash', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'email' => ['required', 'email:rfc,dns', 'max:255', Rule::unique('users')->ignore($user->id)],
             'role' => 'required|string|exists:roles,name',
+            'password' => [
+                'nullable',
+                'confirmed',
+                Password::min(8)->letters()->numbers()
+            ],
         ]);
 
-        $data = $request->only('name', 'username', 'email', 'role');
+        $user->update(Arr::only($validated, ['name', 'username', 'email']));
 
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
+        if (!empty($validated['password'])) {
+            $user->update(['password' => Hash::make($validated['password'])]);
         }
 
-        $user->update(Arr::except($data, ['role']));
-        $user->syncRoles($data['role']);
+        $user->syncRoles($validated['role']);
 
-        return redirect()->route('users.index')->with('success', 'User updated successfully!');
+        // Success notification with timestamp handshake
+        return redirect()->route('users.index')
+            ->with('success', 'User profile for ' . $user->name . ' updated successfully. [' . now()->timestamp . ']');
     }
 
+    /**
+     * Remove the user with success notification.
+     */
     public function destroy(User $user)
     {
-        if ($user->id === auth()->id()) {
-            return redirect()->back()
-                ->with('error', 'You cannot delete your own account.');
+        // Prevent deleting self
+        if ($user->id === Auth::id()) {
+            return back()->with('error', 'Critical Error: You cannot delete your own administrative account.');
         }
 
+        $userName = $user->name;
         $user->delete();
 
+        // Success notification with timestamp handshake
         return redirect()->route('users.index')
-            ->with('success', 'User deleted successfully.');
+            ->with('success', 'User account ' . $userName . ' permanently removed. [' . now()->timestamp . ']');
     }
 }
