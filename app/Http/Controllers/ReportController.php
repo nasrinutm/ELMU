@@ -14,51 +14,50 @@ use Inertia\Inertia;
 class ReportController extends Controller
 {
     public function index()
-{
-    // 1. Get the total count of activities that are specifically 'submission' type
-    $totalSubmissionActivities = \App\Models\Activity::where('type', 'Submission')->count();
-    
-    // 2. Get the total count of all quizzes
-    $totalQuizzes = \App\Models\Quiz::count();
-    
-    // Combined total of (Submission-type Activities + All Quizzes)
-    $systemTotal = $totalSubmissionActivities + $totalQuizzes;
+    {
+        // 1. Get the total count of activities that are specifically 'submission' type
+        $totalSubmissionActivities = Activity::where('type', 'Submission')->count();
 
-    $students = User::role('student')->get()->map(function ($student) use ($systemTotal) {
-        
-        // 3. Count unique activity completions ONLY for 'submission' type activities
-        $uniqueSubmissions = \DB::table('activity_submissions')
-            ->join('activities', 'activity_submissions.activity_id', '=', 'activities.id')
-            ->where('activity_submissions.user_id', $student->id)
-            ->where('activities.type', 'Submission')
-            ->distinct('activity_submissions.activity_id')
-            ->count();
+        // 2. Get the total count of all quizzes
+        $totalQuizzes = Quiz::count();
 
-        // 4. Count unique quizzes attempted
-        $uniqueQuizzes = \DB::table('quiz_attempts')
-            ->where('user_id', $student->id)
-            ->distinct('quiz_id')
-            ->count();
+        // Combined total of (Submission-type Activities + All Quizzes)
+        $systemTotal = $totalSubmissionActivities + $totalQuizzes;
 
-        return [
-            'id' => $student->id,
-            'name' => $student->name,
-            'email' => $student->email,
-            // Sum of unique submission activities and unique quiz attempts
-            'completed_count' => $uniqueSubmissions + $uniqueQuizzes,
-            'total_activities' => $systemTotal ?: 1, // Combined denominator
-        ];
-    });
+        $students = User::role('student')->get()->map(function ($student) use ($systemTotal) {
 
-    return Inertia::render('Reports/Index', ['students' => $students]);
-}
+            // 3. Count unique activity completions ONLY for 'submission' type activities
+            $uniqueSubmissions = DB::table('activity_submissions')
+                ->join('activities', 'activity_submissions.activity_id', '=', 'activities.id')
+                ->where('activity_submissions.user_id', $student->id)
+                ->where('activities.type', 'Submission')
+                ->distinct('activity_submissions.activity_id')
+                ->count();
+
+            // 4. FIX: Count unique quizzes attempted (ignores multiple retries)
+            $uniqueQuizzes = DB::table('quiz_attempts')
+                ->where('user_id', $student->id)
+                ->distinct('quiz_id')
+                ->count('quiz_id');
+
+            return [
+                'id' => $student->id,
+                'name' => $student->name,
+                'email' => $student->email,
+                'completed_count' => $uniqueSubmissions + $uniqueQuizzes,
+                'total_activities' => $systemTotal ?: 1,
+            ];
+        });
+
+        return Inertia::render('Reports/Index', ['students' => $students]);
+    }
 
     /**
-     * Display detailed performance with joined quiz titles.
+     * Display detailed performance with unique counts and best attempts.
      */
     public function showStudentPerformance(User $student)
     {
-        // 1. Fetch activities with a join to get real titles
+        // 1. Fetch activities (Unique check is handled by count in stats below)
         $completedActivities = DB::table('activity_submissions')
             ->join('activities', 'activity_submissions.activity_id', '=', 'activities.id')
             ->where('activity_submissions.user_id', $student->id)
@@ -66,17 +65,20 @@ class ReportController extends Controller
             ->orderBy('activity_submissions.created_at', 'desc')
             ->get();
 
-        // 2. Fetch quizzes by JOINING the quizzes table to get the real TITLE
+        // 2. FIX: Fetch quizzes grouped by ID to show only the BEST ATTEMPT for each unique quiz
+        // This ensures the table below only shows unique quizzes
         $completedQuizzes = DB::table('quiz_attempts')
-            ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id') // This link gets the title
+            ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
             ->where('quiz_attempts.user_id', $student->id)
             ->select(
-                'quizzes.title as title', // Get the name from quizzes table
-                'quiz_attempts.score',
-                'quiz_attempts.total_questions',
-                'quiz_attempts.created_at as completed_at'
+                'quizzes.title as title',
+                'quiz_attempts.quiz_id',
+                DB::raw('MAX(quiz_attempts.score) as score'), // Get highest score
+                DB::raw('MAX(quiz_attempts.total_questions) as total_questions'),
+                DB::raw('MAX(quiz_attempts.created_at) as completed_at')
             )
-            ->orderBy('quiz_attempts.created_at', 'desc')
+            ->groupBy('quiz_attempts.quiz_id', 'quizzes.title')
+            ->orderBy('completed_at', 'desc')
             ->get()
             ->map(function ($quiz) {
                 $percentage = ($quiz->total_questions > 0)
@@ -90,17 +92,22 @@ class ReportController extends Controller
                 ];
             });
 
-        // 3. Stats for cards
+        // 3. FIX: Stats for cards using DISTINCT logic
+        $quizzesTakenUnique = DB::table('quiz_attempts')
+            ->where('user_id', $student->id)
+            ->distinct('quiz_id')
+            ->count('quiz_id');
+
         $stats = [
             'quiz_avg' => $completedQuizzes->count() > 0 ? round($completedQuizzes->avg('score')) : 0,
-            'activities_completed' => $completedActivities->count()
+            'activities_completed' => $completedActivities->unique('title')->count(),
+            'quizzes_taken' => $quizzesTakenUnique // This will now show 3 instead of 4 if one was a retry
         ];
 
         $existingReport = Report::where('student_id', $student->id)
             ->where('subject', 'Overall Performance')
             ->first();
 
-        // Render to the specific StudentDetail view
         return Inertia::render('Reports/StudentDetail', [
             'student' => $student->only(['id', 'name', 'email', 'username']),
             'activities' => $completedActivities,

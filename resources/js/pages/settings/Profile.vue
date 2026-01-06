@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
-import SettingsLayout from '@/layouts/settings/SettingsLayout.vue';
+import SettingsLayout from '@/layouts/settings/Layout.vue';
 
 // Define the User interface to fix type errors
 interface User {
