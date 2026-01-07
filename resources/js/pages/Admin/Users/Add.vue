@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
-import { Head, useForm, usePage, Link } from '@inertiajs/vue3'; // Added Link
+import { Head, useForm, usePage, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
@@ -10,7 +10,7 @@ import {
     HelpCircle,
     ArrowLeft,
     ChevronDown
-} from 'lucide-vue-next'; // Added ArrowLeft and ChevronDown
+} from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -39,10 +39,23 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('users.store'), {
-        onSuccess: () => form.reset(),
-        onFinish: () => form.reset('password', 'password_confirmation'),
-    });
+    // 1. Clear previous errors
+    form.clearErrors();
+
+    // 2. Client-side validation for mandatory fields
+    if (!form.name) form.setError('name', 'Please input full name');
+    if (!form.username) form.setError('username', 'Please input username');
+    if (!form.email) form.setError('email', 'Please input email address');
+    if (!form.role) form.setError('role', 'Please select a system role');
+    if (!form.password) form.setError('password', 'Please input password');
+
+    // 3. Only submit if no errors exist
+    if (!form.hasErrors) {
+        form.post(route('users.store'), {
+            onSuccess: () => form.reset(),
+            onFinish: () => form.reset('password', 'password_confirmation'),
+        });
+    }
 };
 </script>
 
@@ -90,7 +103,7 @@ const submit = () => {
                                 id="name"
                                 v-model="form.name"
                                 type="text"
-                                required
+                                @input="form.clearErrors('name')"
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-all focus:outline-none focus:ring-1 focus:ring-action focus:border-action placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.name}"
                                 placeholder="e.g. Ahmad Albab"
@@ -108,7 +121,7 @@ const submit = () => {
                                 id="username"
                                 v-model="form.username"
                                 type="text"
-                                required
+                                @input="form.clearErrors('username')"
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.username}"
                                 placeholder="e.g. ahmad123"
@@ -138,7 +151,7 @@ const submit = () => {
                                 id="email"
                                 v-model="form.email"
                                 type="email"
-                                required
+                                @input="form.clearErrors('email')"
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.email}"
                                 placeholder="e.g. ahmad@example.com"
@@ -156,7 +169,7 @@ const submit = () => {
                                 <select
                                     id="role"
                                     v-model="form.role"
-                                    required
+                                    @change="form.clearErrors('role')"
                                     class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all appearance-none cursor-pointer pr-10"
                                     :class="{'border-red-500 ring-1 ring-red-500': form.errors.role}"
                                 >
@@ -198,7 +211,7 @@ const submit = () => {
                                 id="password"
                                 v-model="form.password"
                                 type="password"
-                                required
+                                @input="form.clearErrors('password')"
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.password}"
                                 placeholder="Enter secure password"
@@ -216,7 +229,6 @@ const submit = () => {
                                 id="password_confirmation"
                                 v-model="form.password_confirmation"
                                 type="password"
-                                required
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                 placeholder="Re-enter password"
                             />
