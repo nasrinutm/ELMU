@@ -42,7 +42,7 @@ const submit = () => {
     // 1. Clear previous errors
     form.clearErrors();
 
-    // 2. Client-side validation for mandatory fields
+    // 2. Client-side manual validation for notification below boxes
     if (!form.name) form.setError('name', 'Please input full name');
     if (!form.username) form.setError('username', 'Please input username');
     if (!form.email) form.setError('email', 'Please input email address');
@@ -240,7 +240,7 @@ const submit = () => {
                         <Button
                             type="submit"
                             :disabled="form.processing"
-                            class="bg-action hover:opacity-90 text-white font-bold text-[10px] uppercase tracking-[0.3em] px-12 py-5 rounded-none shadow-md transition-all disabled:opacity-50 h-auto"
+                            class="bg-action hover:bg-action hover:opacity-90 text-white font-bold text-[10px] uppercase tracking-[0.3em] px-12 py-5 rounded-none shadow-md transition-all disabled:opacity-50 h-auto"
                         >
                             {{ form.processing ? 'Saving...' : 'Add User' }}
                         </Button>
