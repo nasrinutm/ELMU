@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage, Link } from '@inertiajs/vue3'; // Added Link
 import { computed } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
-import { AlertCircle, UserPlus, HelpCircle } from 'lucide-vue-next';
+import {
+    AlertCircle,
+    UserPlus,
+    HelpCircle,
+    ArrowLeft,
+    ChevronDown
+} from 'lucide-vue-next'; // Added ArrowLeft and ChevronDown
 import { Button } from '@/components/ui/button';
-// Import Tooltip Components
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const page = usePage();
@@ -45,7 +50,22 @@ const submit = () => {
     <Head title="Add User" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="max-w-4xl mx-auto p-6 space-y-6 font-sans antialiased text-slate-900">
+        <div class="max-w-5xl mx-auto p-6 space-y-6 font-sans antialiased text-slate-900">
+
+            <div class="flex items-center justify-between border-b border-slate-100 pb-6">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-slate-100 rounded-lg text-slate-600 border border-slate-200 shadow-sm">
+                        <UserPlus class="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold tracking-tight uppercase">Add New User</h1>
+                        <p class="text-sm text-slate-500 font-medium">Create a new student, teacher, or admin account.</p>
+                    </div>
+                </div>
+                <Link :href="route('users.index')" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-action transition-all group">
+                    <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to List
+                </Link>
+            </div>
 
             <transition
                 enter-active-class="transform transition ease-out duration-300"
@@ -57,24 +77,15 @@ const submit = () => {
                 </div>
             </transition>
 
-            <div class="mb-6 flex items-center gap-4 border-b border-slate-100 pb-6">
-                <div class="p-3 bg-slate-100 rounded-lg text-slate-600 border border-slate-200 shadow-sm">
-                    <UserPlus class="w-6 h-6" />
-                </div>
-                <div>
-                    <h1 class="text-3xl font-bold tracking-tight uppercase">Add New User</h1>
-                    <p class="text-sm text-slate-500 font-medium">Create a new student, teacher, or admin account.</p>
-                </div>
-            </div>
-
-            <div class="bg-white border border-slate-200 rounded-none shadow-sm p-8 sm:p-12">
+            <div class="bg-white border border-slate-200 rounded-none shadow-sm p-8 sm:p-10">
                 <form @submit.prevent="submit" class="space-y-8">
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Full Name <span class="text-red-500">*</span>
-                        </label>
-                        <div class="md:col-span-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+
+                        <div class="space-y-2">
+                            <label for="name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                Full Name <span class="text-red-500">*</span>
+                            </label>
                             <input
                                 id="name"
                                 v-model="form.name"
@@ -88,13 +99,11 @@ const submit = () => {
                                 <AlertCircle class="w-3 h-3" /> {{ form.errors.name }}
                             </p>
                         </div>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="username" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Username <span class="text-red-500">*</span>
-                        </label>
-                        <div class="md:col-span-3">
+                        <div class="space-y-2">
+                            <label for="username" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                Username <span class="text-red-500">*</span>
+                            </label>
                             <input
                                 id="username"
                                 v-model="form.username"
@@ -108,25 +117,23 @@ const submit = () => {
                                 <AlertCircle class="w-3 h-3" /> {{ form.errors.username }}
                             </p>
                         </div>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <div class="flex items-center gap-2">
-                            <label for="email" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                                Email Address <span class="text-red-500">*</span>
-                            </label>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger as-child>
-                                        <HelpCircle class="h-3.5 w-3.5 text-slate-300 cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent class="bg-slate-900 text-white border-none text-[10px] uppercase tracking-widest p-2">
-                                        <p>Must be a valid email format (e.g., name@gmail.com)</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
-                        <div class="md:col-span-3">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <label for="email" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
+                                            <HelpCircle class="h-3.5 w-3.5 text-slate-300 cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent class="bg-slate-900 text-white border-none text-[10px] uppercase tracking-widest p-2">
+                                            <p>Must be a valid email (e.g., name@gmail.com)</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
                             <input
                                 id="email"
                                 v-model="form.email"
@@ -140,33 +147,32 @@ const submit = () => {
                                 <AlertCircle class="w-3 h-3" /> {{ form.errors.email }}
                             </p>
                         </div>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="role" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            System Role <span class="text-red-500">*</span>
-                        </label>
-                        <div class="md:col-span-3">
-                            <select
-                                id="role"
-                                v-model="form.role"
-                                required
-                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all appearance-none cursor-pointer"
-                                :class="{'border-red-500 ring-1 ring-red-500': form.errors.role}"
-                            >
-                                <option value="" disabled>Select a role</option>
-                                <option v-for="roleName in roles" :key="roleName" :value="roleName">
-                                    {{ roleName.toUpperCase() }}
-                                </option>
-                            </select>
+                        <div class="space-y-2">
+                            <label for="role" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                System Role <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <select
+                                    id="role"
+                                    v-model="form.role"
+                                    required
+                                    class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all appearance-none cursor-pointer pr-10"
+                                    :class="{'border-red-500 ring-1 ring-red-500': form.errors.role}"
+                                >
+                                    <option value="" disabled>Select a role</option>
+                                    <option v-for="roleName in roles" :key="roleName" :value="roleName">
+                                        {{ roleName.toUpperCase() }}
+                                    </option>
+                                </select>
+                                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                            </div>
                             <p v-if="form.errors.role" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
                                 <AlertCircle class="w-3 h-3" /> {{ form.errors.role }}
                             </p>
                         </div>
-                    </div>
 
-                    <div class="pt-6 border-t border-slate-100 border-dashed space-y-8">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <div class="space-y-2">
                             <div class="flex items-center gap-2">
                                 <label for="password" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                                     Password <span class="text-red-500">*</span>
@@ -188,37 +194,34 @@ const submit = () => {
                                     </Tooltip>
                                 </TooltipProvider>
                             </div>
-                            <div class="md:col-span-3">
-                                <input
-                                    id="password"
-                                    v-model="form.password"
-                                    type="password"
-                                    required
-                                    class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
-                                    :class="{'border-red-500 ring-1 ring-red-500': form.errors.password}"
-                                    placeholder="Enter secure password"
-                                />
-                                <p v-if="form.errors.password" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
-                                    <AlertCircle class="w-3 h-3" /> {{ form.errors.password }}
-                                </p>
-                            </div>
+                            <input
+                                id="password"
+                                v-model="form.password"
+                                type="password"
+                                required
+                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
+                                :class="{'border-red-500 ring-1 ring-red-500': form.errors.password}"
+                                placeholder="Enter secure password"
+                            />
+                            <p v-if="form.errors.password" class="text-red-600 text-[10px] font-bold uppercase mt-2 italic flex items-center gap-1">
+                                <AlertCircle class="w-3 h-3" /> {{ form.errors.password }}
+                            </p>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        <div class="space-y-2">
                             <label for="password_confirmation" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                                 Confirm <span class="text-red-500">*</span>
                             </label>
-                            <div class="md:col-span-3">
-                                <input
-                                    id="password_confirmation"
-                                    v-model="form.password_confirmation"
-                                    type="password"
-                                    required
-                                    class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
-                                    placeholder="Re-enter password"
-                                />
-                            </div>
+                            <input
+                                id="password_confirmation"
+                                v-model="form.password_confirmation"
+                                type="password"
+                                required
+                                class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
+                                placeholder="Re-enter password"
+                            />
                         </div>
+
                     </div>
 
                     <div class="pt-8 flex justify-end border-t border-slate-50">
