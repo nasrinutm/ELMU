@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue'; // Correct Layout
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,14 +45,6 @@ const setCorrectOption = (qIndex: number, oIndex: number) => {
 };
 
 const submit = () => {
-    for (let i = 0; i < form.questions.length; i++) {
-        const question = form.questions[i];
-        const hasCorrectAnswer = question.options.some(opt => opt.is_correct);
-        if (!hasCorrectAnswer) {
-            alert(`⚠️ Warning: Question ${i + 1} does not have a correct answer selected.`);
-            return;
-        }
-    }
     form.post(route('teacher.quiz.store')); 
 };
 </script>
@@ -84,14 +76,28 @@ const submit = () => {
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="p-8 grid gap-6">
+                        
                         <div class="grid gap-2">
-                            <Label class="text-slate-700 font-bold ml-1">Quiz Title</Label>
-                            <Input v-model="form.title" placeholder="e.g. Advanced Laravel Security" required 
-                                class="h-12 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:ring-teal-500 font-medium" />
+                            <Label class="text-slate-700 font-bold ml-1">
+                                Quiz Title <span class="text-red-500">*</span>
+                            </Label>
+                            <Input 
+                                v-model="form.title" 
+                                placeholder="Title..."
+                                class="h-12 bg-slate-50 rounded-xl font-medium focus:bg-white transition-all"
+                                :class="{ 
+                                    'border-red-500 focus:ring-red-500': form.errors.title, 
+                                    'border-slate-200 focus:ring-teal-500': !form.errors.title 
+                                }"
+                            />
+                            <p v-if="form.errors.title" class="text-red-500 text-sm ml-1">
+                                {{ form.errors.title }}
+                            </p>
                         </div>
+
                         <div class="grid gap-2">
                             <Label class="text-slate-700 font-bold ml-1">Description</Label>
-                            <Textarea v-model="form.description" placeholder="Brief summary for students..." rows="3"
+                            <Textarea v-model="form.description" placeholder="Description..." rows="3"
                                 class="bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:ring-teal-500 font-medium px-4 py-3" />
                         </div>
                         <div class="grid grid-cols-2 gap-6">
@@ -133,24 +139,48 @@ const submit = () => {
                             </div>
                         </CardHeader>
                         <CardContent class="p-8 space-y-8">
+                            
                             <div class="grid gap-3">
                                 <Label class="text-slate-700 font-bold ml-1">Question Text</Label>
-                                <Input v-model="question.text" placeholder="What is the result of...?" required 
-                                    class="h-12 bg-slate-50 border-slate-200 rounded-xl focus:bg-white font-bold" />
+                                <Input 
+                                    v-model="question.text" 
+                                    placeholder="Question Text..."
+                                    class="h-12 bg-slate-50 rounded-xl focus:bg-white font-bold transition-all"
+                                    :class="{ 
+                                        'border-red-500 focus:ring-red-500': form.errors[`questions.${qIndex}.text`], 
+                                        'border-slate-200': !form.errors[`questions.${qIndex}.text`] 
+                                    }"
+                                />
+                                <p v-if="form.errors[`questions.${qIndex}.text`]" class="text-red-500 text-sm ml-1">
+                                    {{ form.errors[`questions.${qIndex}.text`] }}
+                                </p>
                             </div>
                             
                             <div class="space-y-4">
                                 <Label class="text-xs uppercase text-slate-400 font-black tracking-widest ml-1">Answer Options</Label>
                                 <div class="grid gap-3">
                                     <div v-for="(option, oIndex) in question.options" :key="oIndex" class="flex items-center gap-3 group/opt">
+                                        
                                         <div @click="setCorrectOption(qIndex, oIndex)" 
                                             class="cursor-pointer h-8 w-8 rounded-xl border-2 flex items-center justify-center transition-all shrink-0"
                                             :class="option.is_correct ? 'border-emerald-500 bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'border-slate-200 hover:border-emerald-400'">
                                             <div v-if="option.is_correct" class="h-2 w-2 bg-white rounded-full"></div>
                                         </div>
                                         
-                                        <Input v-model="option.text" placeholder="Option text" required
-                                            class="h-12 bg-slate-50 border-slate-200 rounded-xl focus:bg-white font-medium flex-1" />
+                                        <div class="flex-1">
+                                            <Input 
+                                                v-model="option.text" 
+                                                placeholder="Option Text..."
+                                                class="h-12 bg-slate-50 rounded-xl focus:bg-white font-medium transition-all"
+                                                :class="{ 
+                                                    'border-red-500 focus:ring-red-500': form.errors[`questions.${qIndex}.options.${oIndex}.text`], 
+                                                    'border-slate-200': !form.errors[`questions.${qIndex}.options.${oIndex}.text`] 
+                                                }"
+                                            />
+                                             <p v-if="form.errors[`questions.${qIndex}.options.${oIndex}.text`]" class="text-red-500 text-sm mt-1">
+                                                {{ form.errors[`questions.${qIndex}.options.${oIndex}.text`] }}
+                                            </p>
+                                        </div>
                                         
                                         <Button type="button" variant="ghost" size="icon" class="h-10 w-10 text-slate-300 hover:text-rose-500 rounded-xl"
                                             @click="question.options.splice(oIndex, 1)" v-if="question.options.length > 2">
@@ -165,7 +195,7 @@ const submit = () => {
 
                             <div class="grid gap-3 pt-4 border-t border-slate-50">
                                 <Label class="text-slate-700 font-bold ml-1">Feedback / Explanation (Optional)</Label>
-                                <Textarea v-model="question.explanation" placeholder="Why is this answer correct?" rows="2" 
+                                <Textarea v-model="question.explanation" placeholder="Explanation..." rows="2" 
                                     class="bg-slate-50 border-slate-200 rounded-xl font-medium" />
                             </div>
                         </CardContent>
