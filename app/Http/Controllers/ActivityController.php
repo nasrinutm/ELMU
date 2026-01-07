@@ -7,6 +7,7 @@ use App\Models\ActivitySubmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ActivityController extends Controller
@@ -77,7 +78,7 @@ class ActivityController extends Controller
         Activity::create($data);
 
         return redirect()->route('activities.index')
-            ->with('success', 'Activity and Submission slot created successfully.');
+            ->with('success', 'Activity created successfully.');
     }
 
     public function show(Activity $activity)
@@ -200,7 +201,6 @@ class ActivityController extends Controller
         if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
             Storage::disk('public')->delete($activity->file_path);
         }
-
         $activity->delete();
 
         return redirect()->route('activities.index')
