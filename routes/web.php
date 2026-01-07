@@ -120,23 +120,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
-    // 8. QUIZZES
+    // 8. QUIZZES (Student Facing)
     Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quizzes.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quizzes.submit');
     Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quizzes.history');
 
-    // 9. TEACHER QUIZ MANAGEMENT
+    // 9. TEACHER QUIZ MANAGEMENT (UPDATED SECTION)
     Route::middleware(['role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
+        
+        // Standard Quiz CRUD
         Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
         Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
         Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
         Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
         Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
         Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+        
+        // Results & Attempts Management
         Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
         Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
-        Route::delete('/attempts/{id}/unlock', [TeacherQuizController::class, 'unlockAttempt'])->name('attempt.unlock');
+        
+        // NEW ROUTES FOR DETAILED REVIEW & DELETE
+        Route::get('/attempts/{id}/review', [TeacherQuizController::class, 'showAttempt'])->name('attempt.review');
+        Route::delete('/attempts/{id}', [TeacherQuizController::class, 'destroyAttempt'])->name('attempt.destroy');
     });
 
     // 10. STUDENTS ROSTER

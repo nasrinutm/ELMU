@@ -32,8 +32,6 @@ defineProps<Props>();
             href="/logout"
             method="post"
             as="button"
-            @click="handleLogout"
-            data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
             Log out

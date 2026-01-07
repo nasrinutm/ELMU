@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue';
-import { Bot, X, Send, User, ShieldCheck } from 'lucide-vue-next';
+import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue';
+import { Bot, X, Send, User } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3';
 import { route } from 'ziggy-js';
 import axios from 'axios';
@@ -15,15 +15,45 @@ const messages = ref<{ from: 'user' | 'ai'; text: string; isError?: boolean }[]>
 ]);
 const messagesContainer = ref<HTMLElement | null>(null);
 
-// --- ROLE LOGIC ---
-const roles = computed(() => (page.props as any).auth?.roles || []);
+// --- RESIZE STATE ---
+// We start with pixels, but we will use CSS constraints to handle the zoom automatically
+const width = ref(384);  
+const height = ref(600); 
 
-// Dynamic icon based on user role
-const dynamicIcon = computed(() => {
-    return Bot; // This forces the Bot icon to show for everyone
-});
+const dynamicIcon = computed(() => Bot);
 
-// --- LOGIC ---
+// --- RESIZE LOGIC (FIREFOX OPTIMIZED) ---
+const initResize = (e: MouseEvent) => {
+    e.preventDefault();
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = width.value;
+    const startHeight = height.value;
+
+    const doResize = (moveEvent: MouseEvent) => {
+        // Calculate the delta movement
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
+
+        // Since the box is fixed to bottom-right, moving mouse LEFT increases width
+        // and moving mouse UP increases height.
+        width.value = Math.max(320, startWidth - deltaX);
+        height.value = Math.max(400, startHeight - deltaY);
+    };
+
+    const stopResize = () => {
+        window.removeEventListener('mousemove', doResize);
+        window.removeEventListener('mouseup', stopResize);
+        document.body.style.cursor = 'default';
+    };
+
+    window.addEventListener('mousemove', doResize);
+    window.addEventListener('mouseup', stopResize);
+    document.body.style.cursor = 'nwse-resize';
+};
+
+// --- CHAT LOGIC ---
 const toggleChat = () => {
     isOpen.value = !isOpen.value;
     if (isOpen.value) scrollToBottom();
@@ -32,7 +62,10 @@ const toggleChat = () => {
 const scrollToBottom = async () => {
     await nextTick();
     if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+        messagesContainer.value.scrollTo({
+            top: messagesContainer.value.scrollHeight,
+            behavior: 'smooth'
+        });
     }
 };
 
@@ -47,32 +80,19 @@ const sendMessage = async () => {
 
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-        const response = await axios.post(route('chat.send'), {
-            message: text
-        }, {
+        const response = await axios.post(route('chat.send'), { message: text }, {
             withCredentials: true,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {})
             }
         });
-
         messages.value.push({ from: 'ai', text: response.data.reply });
-
     } catch (error: any) {
         console.error('Chat error:', error);
         let errorMessage = 'Maaf, sesuatu yang tidak kena berlaku. Sila cuba lagi.';
-
-        if (error.response && error.response.status === 419) {
-            errorMessage = 'Sesi telah tamat. Sila muat semula halaman.';
-        }
-
-        messages.value.push({
-            from: 'ai',
-            text: errorMessage,
-            isError: true
-        });
+        if (error.response?.status === 419) errorMessage = 'Sesi telah tamat. Sila muat semula halaman.';
+        messages.value.push({ from: 'ai', text: errorMessage, isError: true });
     } finally {
         isLoading.value = false;
         scrollToBottom();
@@ -93,10 +113,22 @@ const sendMessage = async () => {
         >
             <div
                 v-if="isOpen"
-                class="w-[384px] md:w-[350px] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
+                :style="{ 
+                    width: width + 'px', 
+                    height: height + 'px' 
+                }"
+                class="relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 
+                       max-w-[calc(100vw-3rem)] max-h-[calc(100vh-8rem)] min-w-[320px] min-h-[400px]"
             >
+                <div 
+                    class="absolute top-0 left-0 w-8 h-8 cursor-nwse-resize z-50 flex items-center justify-center group"
+                    @mousedown="initResize"
+                >
+                    <div class="w-3 h-3 border-t-2 border-l-2 border-gray-400 group-hover:border-action transition-colors rounded-tl-sm"></div>
+                </div>
+
                 <div class="bg-action text-white p-4 flex justify-between items-center shadow-sm shrink-0">
-                    <div class="flex items-center space-x-2 text-white">
+                    <div class="flex items-center space-x-2 text-white ml-2">
                         <component :is="dynamicIcon" class="w-6 h-6" />
                         <h3 class="font-bold text-lg tracking-tight uppercase">ELMU-Bot</h3>
                     </div>
@@ -116,37 +148,33 @@ const sendMessage = async () => {
                         :class="msg.from === 'user' ? 'flex-row-reverse' : ''"
                     >
                         <div
-                            class="w-8 h-8 flex items-center justify-center shrink-0 shadow-sm border"
+                            class="w-8 h-8 flex items-center justify-center shrink-0 shadow-sm border rounded-full"
                             :class="[
                                 msg.from === 'user'
                                     ? 'bg-action/10 text-action border-action/20'
                                     : 'bg-white text-emerald-600 border-gray-200',
                                 msg.isError ? '!bg-red-100 !text-red-600 !border-red-200' : ''
                             ]"
-                            style="border-radius: 9999px !important;"
                         >
                             <User v-if="msg.from === 'user'" class="w-4 h-4" />
                             <component :is="dynamicIcon" v-else class="w-4 h-4" />
                         </div>
 
                         <div
-                            class="px-4 py-2.5 rounded-2xl text-sm max-w-[85%] shadow-sm leading-relaxed"
+                            class="px-4 py-2.5 rounded-2xl text-sm max-w-[85%] shadow-sm leading-relaxed whitespace-pre-wrap"
                             :class="[
                                 msg.from === 'user'
                                     ? 'bg-action text-white rounded-tr-none'
                                     : 'bg-white border border-gray-100 rounded-tl-none text-slate-700',
                                 msg.isError ? '!bg-red-50 !text-red-600 !border-red-200' : ''
                             ]"
+                            v-html="msg.text"
                         >
-                            {{ msg.text }}
                         </div>
                     </div>
 
                     <div v-if="isLoading" class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 bg-white border border-gray-200 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm"
-                            style="border-radius: 9999px !important;"
-                        >
+                        <div class="w-8 h-8 bg-white border border-gray-200 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm rounded-full">
                             <component :is="dynamicIcon" class="w-4 h-4" />
                         </div>
                         <div class="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm flex space-x-1.5 text-slate-700">
@@ -180,10 +208,19 @@ const sendMessage = async () => {
 
         <button
             @click="toggleChat"
-            class="w-14 h-14 bg-action hover:brightness-110 text-white flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95 border-2 border-white focus:outline-none ring-offset-2 focus:ring-2 focus:ring-action"
-            style="border-radius: 9999px !important;"
+            class="w-14 h-14 bg-action hover:brightness-110 text-white flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95 border-2 border-white rounded-full focus:outline-none ring-offset-2 focus:ring-2 focus:ring-action"
         >
             <component :is="isOpen ? X : dynamicIcon" class="w-7 h-7 text-white" />
         </button>
     </div>
 </template>
+
+<style scoped>
+.cursor-nwse-resize {
+    user-select: none;
+}
+/* Ensure the transition doesn't jitter during resize */
+.transition {
+    transition-property: opacity, transform;
+}
+</style>

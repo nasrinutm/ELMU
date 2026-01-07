@@ -1,3 +1,4 @@
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { AppPageProps } from '@/types/index';
 import { route as routeFn } from 'ziggy-js'; // Import the route function type
 
@@ -15,6 +16,12 @@ declare module 'vite/client' {
 
 declare module '@inertiajs/core' {
     interface PageProps extends InertiaPageProps, AppPageProps {}
+}
+
+// Define Global Ziggy/Route functions
+declare global {
+    var route: typeof ziggyRoute;
+    var Ziggy: ZiggyConfig;
 }
 
 declare module 'vue' {

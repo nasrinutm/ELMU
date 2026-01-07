@@ -9,16 +9,21 @@ class QuizAttempt extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'quiz_id',
-        'quiz_title',
-        'score',
-        'total_questions',
-    ];
-    
-    // Helper to get formatted date
+    // --- FIX: Use guarded = [] to allow ALL columns (including 'answers') to be saved ---
+    protected $guarded = [];
+
     protected $casts = [
         'created_at' => 'datetime',
+        'answers' => 'array', // Automatically handles JSON
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function quiz()
+    {
+        return $this->belongsTo(Quiz::class);
+    }
 }
