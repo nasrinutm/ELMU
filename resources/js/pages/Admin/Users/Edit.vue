@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage, Link } from '@inertiajs/vue3'; // FIXED: Added Link
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import InputError from '@/components/InputError.vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
+// FIXED: Added Tooltip Imports
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     User,
     Save,
@@ -15,7 +17,8 @@ import {
     CheckCircle2,
     X,
     AlertCircle,
-    ArrowLeft
+    ArrowLeft,
+    HelpCircle // FIXED: Added HelpCircle
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -113,26 +116,46 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-2">
-                                <Label for="name" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Full Name</Label>
+                                <Label for="name" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                    Full Name <span class="text-red-500">*</span>
+                                </Label>
                                 <Input id="name" type="text" class="rounded-none border-slate-200 focus:ring-indigo-600" v-model="form.name" required />
                                 <InputError :message="form.errors.name" />
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="username" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Username</Label>
+                                <Label for="username" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                    Username <span class="text-red-500">*</span>
+                                </Label>
                                 <Input id="username" type="text" class="rounded-none border-slate-200 focus:ring-indigo-600" v-model="form.username" required />
                                 <InputError :message="form.errors.username" />
                             </div>
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="email" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Email Address</Label>
+                            <div class="flex items-center gap-2">
+                                <Label for="email" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                    Email Address <span class="text-red-500">*</span>
+                                </Label>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
+                                            <HelpCircle class="h-3.5 w-3.5 text-slate-300 cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent class="bg-slate-900 text-white border-none text-[10px] uppercase tracking-widest p-2">
+                                            <p>Must be a valid email (e.g., user@gmail.com)</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
                             <Input id="email" type="email" class="rounded-none border-slate-200 focus:ring-indigo-600" v-model="form.email" required />
                             <InputError :message="form.errors.email" />
                         </div>
 
                         <div class="space-y-2">
-                            <Label for="role" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Access Level (Role)</Label>
+                            <Label for="role" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                Access Level (Role) <span class="text-red-500">*</span>
+                            </Label>
                             <select
                                 id="role"
                                 class="w-full h-10 px-3 rounded-none border border-slate-200 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-600 appearance-none"
@@ -153,9 +176,27 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="space-y-2">
-                                    <Label for="password" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">New Password</Label>
+                                    <div class="flex items-center gap-2">
+                                        <Label for="password" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">New Password</Label>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger as-child>
+                                                    <HelpCircle class="h-3.5 w-3.5 text-slate-300 cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent class="bg-slate-900 text-white border-none p-3 shadow-xl max-w-[200px]">
+                                                    <div class="space-y-1">
+                                                        <p class="font-bold text-[10px] uppercase tracking-wider border-b border-slate-700 pb-1 mb-1">Requirements:</p>
+                                                        <ul class="text-[9px] uppercase tracking-widest list-disc pl-3 space-y-1">
+                                                            <li>At least 8 characters</li>
+                                                            <li>Alphanumeric format</li>
+                                                        </ul>
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
                                     <Input id="password" type="password" class="rounded-none border-slate-200" v-model="form.password" placeholder="••••••••" />
-                                    <p class="text-[9px] text-slate-400 font-medium">Leave blank to keep current password.</p>
+                                    <p class="text-[9px] text-slate-400 font-medium italic">Leave blank to keep current password.</p>
                                     <InputError :message="form.errors.password" />
                                 </div>
 

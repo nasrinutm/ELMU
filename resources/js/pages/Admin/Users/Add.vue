@@ -4,8 +4,10 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { type BreadcrumbItem } from '@/types';
 import { route } from 'ziggy-js';
-import { AlertCircle, UserPlus } from 'lucide-vue-next';
+import { AlertCircle, UserPlus, HelpCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
+// Import Tooltip Components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const page = usePage();
 const successMessage = computed(() => page.props.flash?.success);
@@ -69,12 +71,15 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-8">
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Full Name</label>
+                        <label for="name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Full Name <span class="text-red-500">*</span>
+                        </label>
                         <div class="md:col-span-3">
                             <input
                                 id="name"
                                 v-model="form.name"
                                 type="text"
+                                required
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-all focus:outline-none focus:ring-1 focus:ring-action focus:border-action placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.name}"
                                 placeholder="e.g. Ahmad Albab"
@@ -86,12 +91,15 @@ const submit = () => {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="username" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Username</label>
+                        <label for="username" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Username <span class="text-red-500">*</span>
+                        </label>
                         <div class="md:col-span-3">
                             <input
                                 id="username"
                                 v-model="form.username"
                                 type="text"
+                                required
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.username}"
                                 placeholder="e.g. ahmad123"
@@ -103,12 +111,27 @@ const submit = () => {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="email" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Email Address</label>
+                        <div class="flex items-center gap-2">
+                            <label for="email" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                Email Address <span class="text-red-500">*</span>
+                            </label>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                        <HelpCircle class="h-3.5 w-3.5 text-slate-300 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent class="bg-slate-900 text-white border-none text-[10px] uppercase tracking-widest p-2">
+                                        <p>Must be a valid email format (e.g., name@gmail.com)</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                         <div class="md:col-span-3">
                             <input
                                 id="email"
                                 v-model="form.email"
                                 type="email"
+                                required
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.email}"
                                 placeholder="e.g. ahmad@example.com"
@@ -120,11 +143,14 @@ const submit = () => {
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        <label for="role" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">System Role</label>
+                        <label for="role" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            System Role <span class="text-red-500">*</span>
+                        </label>
                         <div class="md:col-span-3">
                             <select
                                 id="role"
                                 v-model="form.role"
+                                required
                                 class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all appearance-none cursor-pointer"
                                 :class="{'border-red-500 ring-1 ring-red-500': form.errors.role}"
                             >
@@ -141,12 +167,33 @@ const submit = () => {
 
                     <div class="pt-6 border-t border-slate-100 border-dashed space-y-8">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                            <label for="password" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Password</label>
+                            <div class="flex items-center gap-2">
+                                <label for="password" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                    Password <span class="text-red-500">*</span>
+                                </label>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
+                                            <HelpCircle class="h-3.5 w-3.5 text-slate-300 cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent class="bg-slate-900 text-white border-none p-3 shadow-xl">
+                                            <div class="space-y-1">
+                                                <p class="font-bold text-[10px] uppercase tracking-wider border-b border-slate-700 pb-1 mb-1">Requirements:</p>
+                                                <ul class="text-[9px] uppercase tracking-widest list-disc pl-3 space-y-1">
+                                                    <li>At least 8 characters long</li>
+                                                    <li>Must be alphanumeric</li>
+                                                </ul>
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
                             <div class="md:col-span-3">
                                 <input
                                     id="password"
                                     v-model="form.password"
                                     type="password"
+                                    required
                                     class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                     :class="{'border-red-500 ring-1 ring-red-500': form.errors.password}"
                                     placeholder="Enter secure password"
@@ -158,12 +205,15 @@ const submit = () => {
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                            <label for="password_confirmation" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Confirm</label>
+                            <label for="password_confirmation" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                Confirm <span class="text-red-500">*</span>
+                            </label>
                             <div class="md:col-span-3">
                                 <input
                                     id="password_confirmation"
                                     v-model="form.password_confirmation"
                                     type="password"
+                                    required
                                     class="flex h-12 w-full rounded-none border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-action focus:border-action transition-all placeholder:text-slate-300"
                                     placeholder="Re-enter password"
                                 />
