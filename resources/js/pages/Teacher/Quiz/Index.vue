@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-// Use the sidebar layout as seen in the navigation examples
+import { ref, computed, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,22 +14,72 @@ import {
     Eye,
     Users,
     FileQuestion,
-    ChevronRight
+    ChevronRight,
+    AlertTriangle,
+    Clock,
+    CheckCircle, // Added for Notification
+    X // Added for Notification
 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
+// Define Interface
+interface Quiz {
+    id: number;
+    title: string;
+    description: string;
+    attempts_count: number;
+    difficulty: string;
+    created_at: string;
+}
+
 const props = defineProps<{
-    quizzes: Array<{
-        id: number;
-        title: string;
-        description: string;
-        attempts_count: number;
-        difficulty: string;
-        created_at: string;
-    }>;
+    quizzes: Quiz[];
 }>();
 
 const searchQuery = ref('');
+
+// --- NOTIFICATION STATE & LOGIC ---
+const page = usePage();
+const showNotification = ref(false);
+const notificationMessage = ref('');
+
+// Watch for flash messages from Laravel (e.g., ->with('success', '...'))
+watch(() => page.props.flash?.success, (msg) => {
+    if (msg) {
+        notificationMessage.value = String(msg);
+        showNotification.value = true;
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            showNotification.value = false;
+        }, 3000);
+    }
+}, { immediate: true });
+
+const closeNotification = () => {
+    showNotification.value = false;
+};
+// ----------------------------------
+
+// --- DELETE MODAL STATE ---
+const showDeleteModal = ref(false);
+const quizIdToDelete = ref<number | null>(null);
+
+const confirmDelete = (id: number) => {
+    quizIdToDelete.value = id;
+    showDeleteModal.value = true;
+};
+
+const executeDelete = () => {
+    if (quizIdToDelete.value !== null) {
+        router.delete(route('teacher.quiz.destroy', quizIdToDelete.value), {
+            onSuccess: () => {
+                showDeleteModal.value = false;
+                quizIdToDelete.value = null;
+            }
+        });
+    }
+};
+// --------------------------
 
 const breadcrumbs = [
     { title: 'Dashboard', href: route('dashboard') },
@@ -49,12 +98,6 @@ const filteredQuizzes = computed(() => {
     return data;
 });
 
-const deleteQuiz = (id: number) => {
-    if (confirm('Are you sure? This will delete all student results for this quiz too.')) {
-        router.delete(route('teacher.quiz.destroy', id));
-    }
-};
-
 const getDifficultyColor = (difficulty: string) => {
     const d = (difficulty || '').toLowerCase();
     if (d === 'easy') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
@@ -72,6 +115,58 @@ const formatDate = (dateString: string) => {
     <Head title="Quiz Management" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        
+        <Transition
+            enter-active-class="transform ease-out duration-300 transition"
+            enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
+            enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+            leave-active-class="transition ease-in duration-100"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="showNotification" class="fixed top-6 right-6 z-[100] max-w-sm w-full bg-slate-900 shadow-2xl rounded-xl border-l-4 border-emerald-500 overflow-hidden pointer-events-auto flex items-start p-4 gap-4">
+                <div class="shrink-0">
+                    <CheckCircle class="h-6 w-6 text-emerald-500" />
+                </div>
+                <div class="flex-1 pt-0.5">
+                    <h3 class="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-0.5">
+                        Success
+                    </h3>
+                    <p class="text-sm font-medium text-white leading-relaxed">
+                        {{ notificationMessage }}
+                    </p>
+                </div>
+                <button @click="closeNotification" class="shrink-0 text-slate-500 hover:text-white transition-colors">
+                    <X class="h-5 w-5" />
+                </button>
+            </div>
+        </Transition>
+        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div class="fixed inset-0 transform transition-all cursor-pointer" @click="showDeleteModal = false">
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+            </div>
+            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none z-50 relative flex flex-col items-center text-center">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-red-50">
+                    <AlertTriangle class="w-8 h-8 stroke-2 text-red-500" />
+                </div>
+                <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2">
+                    Confirm Deletion
+                </h3>
+                <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
+                    Are you sure you want to remove this resource permanently? This action cannot be undone.
+                </p>
+                <div class="flex gap-4 w-full">
+                    <button @click="showDeleteModal = false" type="button" 
+                        class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-slate-100 hover:bg-slate-50 transition focus:outline-none">
+                        No, Cancel
+                    </button>
+                    <button @click="executeDelete" type="button" 
+                        class="flex-1 py-4 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg transition focus:outline-none bg-red-600 hover:bg-red-700">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="min-h-screen bg-slate-50 p-6 space-y-6">
 
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -165,7 +260,7 @@ const formatDate = (dateString: string) => {
                                 variant="ghost"
                                 size="icon"
                                 class="h-10 w-10 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
-                                @click="deleteQuiz(quiz.id)"
+                                @click="confirmDelete(quiz.id)"
                             >
                                 <Trash2 class="w-5 h-5" />
                             </Button>

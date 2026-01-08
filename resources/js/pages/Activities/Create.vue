@@ -37,9 +37,9 @@ const handleFileChange = (e: Event) => {
     <AppLayout :breadcrumbs="[{ title: 'Activities', href: route('activities.index') }, { title: 'Create', href: '#' }]">
         <div class="py-12">
             <div class="w-full sm:px-6 lg:px-8">
-                
+
                 <div class="w-full bg-[#ffffff] rounded-lg shadow-2xl overflow-hidden border border-white">
-                    
+
                     <div class="p-6 border-b border-gray-800">
                         <h1 class="text-2xl font-bold text-[#212121]">Create New Activity</h1>
                         <p class="text-gray-800 text-sm mt-1">Fill in the details below to create a new classroom activity.</p>
@@ -49,9 +49,9 @@ const handleFileChange = (e: Event) => {
 
                         <div>
                             <label for="title" class="block text-[#212121] font-bold mb-2">Activity Title</label>
-                            <input 
-                                id="title" 
-                                type="text" 
+                            <input
+                                id="title"
+                                type="text"
                                 v-model="form.title"
                                 placeholder="e.g. Chapter 1 Review"
                                 class="w-full bg-[#ffffff] border border-gray-500/30 rounded-md px-4 py-3 text-[#212121] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
@@ -61,8 +61,8 @@ const handleFileChange = (e: Event) => {
 
                         <div>
                             <label for="description" class="block text-[#212121] font-bold mb-2">Instructions / Description</label>
-                            <textarea 
-                                id="description" 
+                            <textarea
+                                id="description"
                                 v-model="form.description"
                                 rows="5"
                                 autocomplete="off"
@@ -110,15 +110,15 @@ const handleFileChange = (e: Event) => {
                         </div>
 
                         <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-800">
-                            <Link 
+                            <Link
                                 :href="route('activities.index')"
                                 class="bg-white text-[#003366] font-bold py-2 px-6 rounded-md hover:bg-gray-100 transition shadow-sm border border-transparent"
                             >
                                 Cancel
                             </Link>
 
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 :disabled="form.processing"
                                 class="bg-[#0060df] hover:bg-[#164485] text-[#ffffff] font-bold py-2 px-6 rounded-md shadow-md transition flex items-center border border-blue-400/50"
                             >

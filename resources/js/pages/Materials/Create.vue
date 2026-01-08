@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Upload, FileUp, X, Loader2 } from 'lucide-vue-next';
+import { ArrowLeft, FileUp, Loader2, FolderPlus, AlertCircle, FileCheck } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 const breadcrumbs = [
@@ -25,11 +25,20 @@ const handleFileChange = (e: Event) => {
     const target = e.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
         form.file = target.files[0];
+        // Clear error when user selects a file
+        form.clearErrors('file');
     }
 };
 
 const submit = () => {
-    form.post(route('materials.store'));
+    // Optional: Manual client-side check before sending to Laravel
+    if (!form.file) form.setError('file', 'Please upload a document file');
+    if (!form.name) form.setError('name', 'Please input document name');
+    if (!form.subject) form.setError('subject', 'Please input subject/topic');
+
+    if (!form.hasErrors) {
+        form.post(route('materials.store'));
+    }
 };
 </script>
 
@@ -37,105 +46,133 @@ const submit = () => {
     <Head title="Upload Material" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 p-4 sm:p-6 flex justify-center">
+        <div class="max-w-6xl mx-auto p-6 space-y-6 font-sans antialiased text-slate-900">
 
-            <div class="w-full max-w-2xl">
-                <div class="mb-6">
-                    <Link :href="route('materials.index')" class="text-sm text-slate-500 hover:text-teal-600 flex items-center gap-1 mb-2 transition-colors">
-                        <ArrowLeft class="w-4 h-4" /> Back to Materials
-                    </Link>
-                    <h1 class="text-2xl font-bold text-slate-900">Upload New Material</h1>
-                    <p class="text-slate-500 mt-1">Share documents, assignments, or notes with your students.</p>
+            <div class="flex items-center justify-between border-b border-slate-100 pb-6">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-slate-100 rounded-lg text-slate-600 border border-slate-200 shadow-sm">
+                        <FolderPlus class="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold tracking-tight uppercase">Upload Material</h1>
+                        <p class="text-sm text-slate-500 font-medium">Add new resources to the learning library.</p>
+                    </div>
                 </div>
+                <Link :href="route('materials.index')" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all group">
+                    <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back to Materials
+                </Link>
+            </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <form @submit.prevent="submit" class="p-6 sm:p-8 space-y-6">
+            <div class="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
+                <form @submit.prevent="submit">
+                    <div class="flex flex-col lg:flex-row">
 
-                        <div class="space-y-2">
-                            <Label class="text-slate-700 font-medium">Document File</Label>
+                        <div class="lg:w-2/5 p-8 bg-slate-50/50 border-r border-slate-100 flex flex-col justify-center">
+                            <Label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4 text-center lg:text-left">
+                                Document File <span class="text-red-500">*</span>
+                            </Label>
+
                             <div
-                                class="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 hover:border-teal-400 transition-colors cursor-pointer relative"
+                                class="h-full min-h-[250px] border-2 border-dashed rounded-none flex flex-col items-center justify-center text-center hover:bg-white hover:border-teal-500 transition-all cursor-pointer relative bg-white shadow-inner"
+                                :class="[
+                                    form.file ? 'border-teal-500 ring-2 ring-teal-500/10' : 'border-slate-200',
+                                    form.errors.file ? 'border-red-500 bg-red-50/30' : ''
+                                ]"
                             >
                                 <input
                                     type="file"
                                     @change="handleFileChange"
-                                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    required
+                                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                 />
 
-                                <div v-if="!form.file" class="flex flex-col items-center pointer-events-none">
-                                    <div class="h-12 w-12 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center mb-3">
-                                        <FileUp class="w-6 h-6" />
+                                <div v-if="!form.file" class="flex flex-col items-center p-6 pointer-events-none">
+                                    <div class="h-16 w-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+                                        <FileUp class="w-8 h-8" />
                                     </div>
-                                    <p class="text-sm font-medium text-slate-900">Click to upload or drag and drop</p>
-                                    <p class="text-xs text-slate-500 mt-1">PDF, DOCX, PPTX (Max 10MB)</p>
+                                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-600">Click to Browse</p>
+                                    <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-2">PDF, DOCX, PPTX (MAX 10MB)</p>
                                 </div>
 
-                                <div v-else class="flex flex-col items-center pointer-events-none">
-                                    <div class="h-12 w-12 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center mb-3">
-                                        <FileUp class="w-6 h-6" />
+                                <div v-else class="flex flex-col items-center p-6 pointer-events-none text-teal-700">
+                                    <div class="h-16 w-16 bg-teal-50 rounded-full flex items-center justify-center mb-4 border border-teal-100">
+                                        <FileCheck class="w-8 h-8" />
                                     </div>
-                                    <p class="text-sm font-medium text-teal-700">{{ form.file.name }}</p>
-                                    <p class="text-xs text-teal-600 mt-1">Click to change file</p>
+                                    <p class="text-sm font-bold uppercase tracking-tight break-all max-w-[200px]">{{ form.file.name }}</p>
+                                    <p class="text-[9px] font-black uppercase tracking-widest mt-2 bg-teal-600 text-white px-2 py-1 rounded-none">Ready to Upload</p>
                                 </div>
                             </div>
-                            <div v-if="form.errors.file" class="text-sm text-red-600">{{ form.errors.file }}</div>
+                            <p v-if="form.errors.file" class="text-red-600 text-[10px] font-bold uppercase mt-3 italic flex items-center justify-center gap-1">
+                                <AlertCircle class="w-3 h-3" /> {{ form.errors.file }}
+                            </p>
                         </div>
 
-                        <div class="grid gap-6 sm:grid-cols-2">
+                        <div class="lg:w-3/5 p-8 sm:p-10 space-y-6">
+
                             <div class="space-y-2">
-                                <Label for="name" class="text-slate-700">Document Name</Label>
+                                <Label for="name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                    Document Name <span class="text-red-500">*</span>
+                                </Label>
                                 <Input
                                     id="name"
                                     v-model="form.name"
+                                    @input="form.clearErrors('name')"
                                     placeholder="e.g. Chapter 1 Notes"
-                                    class="border-slate-200 focus:border-teal-500 focus:ring-teal-500"
-                                    required
+                                    class="h-12 rounded-none border-slate-200 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 placeholder:text-slate-300 font-medium"
+                                    :class="{'border-red-500 ring-1 ring-red-500': form.errors.name}"
                                 />
-                                <div v-if="form.errors.name" class="text-sm text-red-600">{{ form.errors.name }}</div>
+                                <p v-if="form.errors.name" class="text-red-600 text-[10px] font-bold uppercase mt-1 italic flex items-center gap-1">
+                                    <AlertCircle class="w-3 h-3" /> {{ form.errors.name }}
+                                </p>
                             </div>
 
                             <div class="space-y-2">
-                                <Label for="subject" class="text-slate-700">Subject / Topic</Label>
+                                <Label for="subject" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                    Subject / Topic <span class="text-red-500">*</span>
+                                </Label>
                                 <Input
                                     id="subject"
                                     v-model="form.subject"
+                                    @input="form.clearErrors('subject')"
                                     placeholder="e.g. Mathematics"
-                                    class="border-slate-200 focus:border-teal-500 focus:ring-teal-500"
-                                    required
+                                    class="h-12 rounded-none border-slate-200 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 placeholder:text-slate-300 font-medium"
+                                    :class="{'border-red-500 ring-1 ring-red-500': form.errors.subject}"
                                 />
-                                <div v-if="form.errors.subject" class="text-sm text-red-600">{{ form.errors.subject }}</div>
+                                <p v-if="form.errors.subject" class="text-red-600 text-[10px] font-bold uppercase mt-1 italic flex items-center gap-1">
+                                    <AlertCircle class="w-3 h-3" /> {{ form.errors.subject }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-2">
+                                <Label for="description" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                    Description (Optional)
+                                </Label>
+                                <Textarea
+                                    id="description"
+                                    v-model="form.description"
+                                    placeholder="Briefly describe what this material covers..."
+                                    class="rounded-none border-slate-200 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-h-[140px] placeholder:text-slate-300 font-medium"
+                                />
+                            </div>
+
+                            <div class="pt-6 flex justify-end gap-3 border-t border-slate-50">
+                                <Link :href="route('materials.index')">
+                                    <Button type="button" variant="outline" class="rounded-none border-slate-200 text-[10px] font-bold uppercase tracking-[0.2em] px-8 py-5 h-auto hover:bg-slate-50 transition-colors">
+                                        Cancel
+                                    </Button>
+                                </Link>
+
+                                <Button
+                                    type="submit"
+                                    :disabled="form.processing"
+                                    class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[10px] uppercase tracking-[0.3em] px-12 py-5 rounded-none shadow-md transition-all disabled:opacity-50 h-auto"
+                                >
+                                    <Loader2 v-if="form.processing" class="w-4 h-4 mr-2 animate-spin" />
+                                    {{ form.processing ? 'Uploading...' : 'Upload File' }}
+                                </Button>
                             </div>
                         </div>
-
-                        <div class="space-y-2">
-                            <Label for="description" class="text-slate-700">Description (Optional)</Label>
-                            <Textarea
-                                id="description"
-                                v-model="form.description"
-                                placeholder="Briefly describe what this material covers..."
-                                class="border-slate-200 focus:border-teal-500 focus:ring-teal-500 min-h-[100px]"
-                            />
-                        </div>
-
-                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                            <Link :href="route('materials.index')">
-                                <Button type="button" variant="outline" class="border-slate-200 text-slate-700 hover:bg-slate-50">
-                                    Cancel
-                                </Button>
-                            </Link>
-
-                            <Button
-                                type="submit"
-                                :disabled="form.processing"
-                                class="bg-teal-600 hover:bg-teal-700 text-white min-w-[120px]"
-                            >
-                                <Loader2 v-if="form.processing" class="w-4 h-4 mr-2 animate-spin" />
-                                {{ form.processing ? 'Uploading...' : 'Upload File' }}
-                            </Button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </AppSidebarLayout>
