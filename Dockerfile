@@ -1,24 +1,25 @@
-# Using a pre-built image that includes Nginx and PHP-FPM
 FROM richarvey/nginx-php-fpm:latest
 
-COPY conf/nginx/nginx-site.conf /etc/nginx/sites-available/default.conf
-# Set the web root to Laravel's public folder
+# 1. Install Node.js (Required to build Vue/Vite assets)
+RUN apk add --no-cache nodejs npm
+
+# 2. Set Environment Variables
 ENV WEBROOT /var/www/html/public
 ENV APP_ENV production
-
-# Allow composer to run as root (needed for some Docker environments)
+ENV RUN_SCRIPTS 1
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Copy your project files into the container
+# 3. Copy project files
 COPY . .
 
-# 1. FIX PERMISSIONS (Crucial for Laravel)
-# Sets ownership to the web server user so it can write logs and cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
-    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# 2. Install dependencies
+# 4. Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# 3. Tell the image to run your custom deploy script on startup
-ENV RUN_SCRIPTS 1
+# 5. Build Vue/Vite Assets
+# This creates the 'public/build/manifest.json' that was missing
+RUN npm install
+RUN npm run build
+
+# 6. Set Permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
