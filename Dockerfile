@@ -1,7 +1,8 @@
+# Using a pre-built image that includes Nginx and PHP-FPM
 FROM richarvey/nginx-php-fpm:latest
 
-# 1. Install Node.js (Required to build Vue/Vite assets)
-RUN apk add --no-cache nodejs npm
+# 1. INSTALL LATEST NODE & NPM (Updated to nodejs-current for Prisma 7 support)
+RUN apk add --no-cache nodejs-current npm
 
 # 2. Set Environment Variables
 ENV WEBROOT /var/www/html/public
@@ -16,10 +17,13 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 # 5. Build Vue/Vite Assets
-# This creates the 'public/build/manifest.json' that was missing
+# We run 'npm install' then 'npm run build' to generate the manifest.json
 RUN npm install
 RUN npm run build
 
-# 6. Set Permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
+# 6. FIX PERMISSIONS
+RUN mkdir -p /var/www/html/storage/framework/sessions \
+             /var/www/html/storage/framework/views \
+             /var/www/html/storage/framework/cache && \
+    chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
     chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
