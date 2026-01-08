@@ -29,10 +29,10 @@ class AppServiceProvider extends ServiceProvider
             // This matches the logic you used in your RoleMiddleware
             if (method_exists($user, 'hasRole')) {
                 return $user->hasRole('teacher');
-            } 
+            }
             return $user->roles->contains('name', 'teacher');
         });
-        
+
         Fortify::authenticateUsing(function ($request) {
             // Check for a user by email OR username
             $user = User::where('email', $request->email)
@@ -45,8 +45,8 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        if (env('APP_ENV') == 'production') {
-            $url->forceScheme('https');
-        }
+        // if (env('APP_ENV') == 'production') {
+        //     $url->forceScheme('https');
+        // }
     }
 }
