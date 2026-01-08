@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Gate;
 use Laravel\Fortify\Fortify; // 👈 1. Import Fortify
 use App\Models\User;         // 👈 2. Import User
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Routing\UrlGenerator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(UrlGenerator $url): void
     {
         Gate::define('manage activities', function (User $user) {
             // Check if the user's role is 'teacher' (or 'admin')
@@ -43,5 +44,9 @@ class AppServiceProvider extends ServiceProvider
                 return $user;
             }
         });
+
+        if (env('APP_ENV') == 'production') {
+            $url->forceScheme('https');
+        }
     }
 }
