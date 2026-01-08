@@ -9,7 +9,7 @@ import {
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import SystemNotification from '@/Components/SystemNotification.vue';
+import SystemNotification from '@/components/SystemNotification.vue';
 
 const props = defineProps<{
     student: { id: number; name: string; email: string; username: string };
