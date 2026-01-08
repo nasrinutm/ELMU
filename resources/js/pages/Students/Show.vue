@@ -466,6 +466,7 @@ const isOverdue = (activity: any) => {
                 </div>
             </div>
         </div>
+        
 
         <div v-if="showDeleteModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
             <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
