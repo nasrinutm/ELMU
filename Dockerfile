@@ -1,10 +1,10 @@
 FROM richarvey/nginx-php-fpm:latest
 
-# 1. Upgrade system and install Node.js 20+ 
-# We use the community repo to get a stable, modern Node version
+# 1. Force the upgrade of Node.js to version 20 or 22
+# We use --force-overwrite because the base image has a "locked" node 18 version
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache nodejs npm
+    apk add --no-cache --force-overwrite nodejs npm
 
 # 2. Environment Setup
 ENV WEBROOT /var/www/html/public
@@ -15,11 +15,11 @@ ENV COMPOSER_ALLOW_SUPERUSER 1
 # 3. Copy files
 COPY . .
 
-# 4. PHP Build
+# 4. PHP Build (Laravel dependencies)
 RUN composer install --no-dev --optimize-autoloader
 
-# 5. Build Vue/Vite Assets
-# The 'apk upgrade' ensures the system has the libraries Node needs to run
+# 5. Frontend Build
+# This step will now see Node 20+ and crypto.hash will work
 RUN npm install
 RUN npm run build
 
