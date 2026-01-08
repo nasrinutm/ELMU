@@ -1,6 +1,7 @@
 # Using a pre-built image that includes Nginx and PHP-FPM
 FROM richarvey/nginx-php-fpm:latest
 
+COPY conf/nginx/nginx-site.conf /etc/nginx/sites-available/default.conf
 # Set the web root to Laravel's public folder
 ENV WEBROOT /var/www/html/public
 ENV APP_ENV production
