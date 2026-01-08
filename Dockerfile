@@ -1,7 +1,10 @@
 FROM richarvey/nginx-php-fpm:latest
 
-# 1. Install Node.js from Alpine Edge (This guarantees v22+)
-RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main/ nodejs npm
+# 1. Upgrade system and install Node.js 20+ 
+# We use the community repo to get a stable, modern Node version
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache nodejs npm
 
 # 2. Environment Setup
 ENV WEBROOT /var/www/html/public
@@ -16,7 +19,7 @@ COPY . .
 RUN composer install --no-dev --optimize-autoloader
 
 # 5. Build Vue/Vite Assets
-# With Node v22, crypto.hash will finally be available
+# The 'apk upgrade' ensures the system has the libraries Node needs to run
 RUN npm install
 RUN npm run build
 
