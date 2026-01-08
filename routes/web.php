@@ -106,6 +106,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{material}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
     });
+});
 
     // 6. ACTIVITIES
     Route::resource('activities', ActivityController::class);
@@ -160,6 +161,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
 
-});
+
 
 require __DIR__.'/settings.php';
