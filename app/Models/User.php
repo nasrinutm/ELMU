@@ -10,7 +10,9 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\Submission;
 use App\Models\StudentManualActivity;
-
+// Ensure these models exist if you are referencing them
+use App\Models\ActivitySubmission;
+use App\Models\QuizAttempt;
 
 class User extends Authenticatable
 {
@@ -56,6 +58,9 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Relationship with Forum Posts.
+     */
     public function posts()
     {
         return $this->hasMany(Post::class);
@@ -70,4 +75,25 @@ class User extends Authenticatable
     {
         return $this->hasMany(StudentManualActivity::class, 'user_id');
     }
-}
+
+    // --- REPORT RELATIONSHIPS ---
+
+    public function quizzes()
+    {
+        return $this->belongsToMany(Quiz::class)
+                    ->withPivot('score', 'status', 'completed_at')
+                    ->withTimestamps();
+    }
+
+    public function activitySubmissions()
+    {
+        // Matches your activity_submissions table
+        return $this->hasMany(ActivitySubmission::class);
+    }
+
+    public function quizAttempts()
+    {
+        // Matches your quiz_attempts logic
+        return $this->hasMany(QuizAttempt::class);
+    }
+} // <--- Class now ends here, after all functions.

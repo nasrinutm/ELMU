@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 
 withDefaults(
     defineProps<{
@@ -85,8 +86,8 @@ withDefaults(
                                 >
                                     <span>Documentation</span>
                                     <svg
-                                        width="{10}"
-                                        height="{11}"
+                                        width="10"
+                                        height="11"
                                         viewBox="0 0 10 11"
                                         fill="none"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -124,8 +125,8 @@ withDefaults(
                                 >
                                     <span>Laracasts</span>
                                     <svg
-                                        width="{10}"
-                                        height="{11}"
+                                        width="10"
+                                        height="11"
                                         viewBox="0 0 10 11"
                                         fill="none"
                                         xmlns="http://www.w3.org/2000/svg"

@@ -13,6 +13,9 @@ use Inertia\Inertia;
 
 class ReportController extends Controller
 {
+    /**
+     * Display the main student directory for reports.
+     */
     public function index()
     {
         // 1. Get the total count of activities that are specifically 'submission' type
@@ -34,7 +37,7 @@ class ReportController extends Controller
                 ->distinct('activity_submissions.activity_id')
                 ->count();
 
-            // 4. FIX: Count unique quizzes attempted (ignores multiple retries)
+            // 4. Count unique quizzes attempted (ignores multiple retries)
             $uniqueQuizzes = DB::table('quiz_attempts')
                 ->where('user_id', $student->id)
                 ->distinct('quiz_id')
@@ -57,23 +60,24 @@ class ReportController extends Controller
      */
     public function showStudentPerformance(User $student)
     {
-        // 1. Fetch activities (Unique check is handled by count in stats below)
+        // 1. Fetch activities (Shows only the latest submission per activity title)
         $completedActivities = DB::table('activity_submissions')
             ->join('activities', 'activity_submissions.activity_id', '=', 'activities.id')
             ->where('activity_submissions.user_id', $student->id)
             ->select('activities.title as title', 'activity_submissions.created_at as completed_at')
             ->orderBy('activity_submissions.created_at', 'desc')
-            ->get();
+            ->get()
+            ->unique('title')
+            ->values();
 
-        // 2. FIX: Fetch quizzes grouped by ID to show only the BEST ATTEMPT for each unique quiz
-        // This ensures the table below only shows unique quizzes
+        // 2. Fetch quizzes showing only the BEST ATTEMPT for each unique quiz
         $completedQuizzes = DB::table('quiz_attempts')
             ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
             ->where('quiz_attempts.user_id', $student->id)
             ->select(
                 'quizzes.title as title',
                 'quiz_attempts.quiz_id',
-                DB::raw('MAX(quiz_attempts.score) as score'), // Get highest score
+                DB::raw('MAX(quiz_attempts.score) as score'), 
                 DB::raw('MAX(quiz_attempts.total_questions) as total_questions'),
                 DB::raw('MAX(quiz_attempts.created_at) as completed_at')
             )
@@ -92,7 +96,7 @@ class ReportController extends Controller
                 ];
             });
 
-        // 3. FIX: Stats for cards using DISTINCT logic
+        // 3. Stats for cards using DISTINCT logic
         $quizzesTakenUnique = DB::table('quiz_attempts')
             ->where('user_id', $student->id)
             ->distinct('quiz_id')
@@ -100,8 +104,8 @@ class ReportController extends Controller
 
         $stats = [
             'quiz_avg' => $completedQuizzes->count() > 0 ? round($completedQuizzes->avg('score')) : 0,
-            'activities_completed' => $completedActivities->unique('title')->count(),
-            'quizzes_taken' => $quizzesTakenUnique // This will now show 3 instead of 4 if one was a retry
+            'activities_completed' => $completedActivities->count(),
+            'quizzes_taken' => $quizzesTakenUnique 
         ];
 
         $existingReport = Report::where('student_id', $student->id)
@@ -117,11 +121,17 @@ class ReportController extends Controller
         ]);
     }
 
+    /**
+     * Handle saving or updating the remark with custom validation message.
+     */
     public function saveRemark(Request $request)
     {
         $validated = $request->validate([
             'student_id' => 'required|exists:users,id',
             'comments' => 'required|string',
+        ], [
+            // Custom validation message as requested
+            'comments.required' => 'Evaluation is required.',
         ]);
 
         Report::updateOrCreate(
@@ -132,6 +142,9 @@ class ReportController extends Controller
         return back()->with('success', 'Evaluation saved successfully!');
     }
 
+    /**
+     * Delete the official remark.
+     */
     public function deleteRemark(Report $report)
     {
         $report->delete();
