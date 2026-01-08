@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # --- STAGE 2: Run Application (Matching your PHP 8.5) ---
-FROM php:8.5-fpm-alpine
+FROM php:8.4-fpm-alpine
 WORKDIR /var/www/html
 
 # 1. Install System Dependencies (Added postgresql-dev for Supabase compatibility)
