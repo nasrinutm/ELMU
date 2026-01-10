@@ -78,6 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
+        Route::get('/chatbot/download/{id}', [ChatbotUploadController::class, 'download'])->name('chatbot.download');
     });
 
     // 4. FORUM
