@@ -60,8 +60,11 @@ class ChatbotUploadController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            // Added 'unique:chatbot_materials,display_name' to prevent duplicates
             'file' => 'required|file|mimes:pdf,txt,csv,md|max:102400',
-            'title' => 'required|string|max:255',
+            'title' => 'required|string|max:255|unique:chatbot_materials,display_name',
+        ], [
+            'title.unique' => 'A document with this title already exists in the Knowledge Base.'
         ]);
 
         try {
@@ -119,9 +122,11 @@ class ChatbotUploadController extends Controller
      * Update the display name of the chatbot material.
      */
     public function update(Request $request, $geminiDocumentName)
-    {
+    {               
+        $material = ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->firstOrFail();
+
         $request->validate([
-            'display_name' => 'required|string|max:255',
+            'display_name' => 'required|string|max:255|unique:chatbot_materials,display_name,' . $material->id,
         ]);
 
         try {

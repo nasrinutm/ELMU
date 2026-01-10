@@ -298,7 +298,7 @@ const formatBytes = (bytes: number) => {
                             v-model="editNameForm.display_name" 
                             type="text" 
                             maxlength="100"
-                            class="w-full text-3xl font-black text-slate-900 tracking-tight uppercase border-b-2 bg-transparent outline-none transition-all py-3 placeholder:text-slate-100" 
+                            class="w-full text-3xl font-black text-slate-900 tracking-normal border-b-2 bg-transparent outline-none transition-all py-3 placeholder:text-slate-100" 
                             :class="editNameForm.errors.display_name ? 'border-red-500' : 'border-slate-200 focus:border-slate-900'"
                             placeholder="ENTER NEW NAME..."
                             required 

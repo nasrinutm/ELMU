@@ -120,7 +120,7 @@ const submit = () => {
                                     v-model="form.title" 
                                     type="text"
                                     :maxlength="limits.title"
-                                    class="w-full text-2xl font-black text-slate-900 tracking-tighter uppercase border-b-2 bg-transparent outline-none transition-all py-2 placeholder:text-slate-100"
+                                    class="w-full text-2xl font-black text-slate-900 tracking-normal border-b-2 bg-transparent outline-none transition-all py-2 placeholder:text-slate-100"
                                     :class="form.errors.title ? 'border-red-500' : 'border-slate-200 focus:border-slate-900'"
                                     placeholder="e.g., Physics Chapter 1"
                                 />

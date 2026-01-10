@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('gemini_file_name', 255)->nullable()->comment('The full resource name for the File resource.');
             
             // 3. FILE METADATA
-            $table->string('display_name', 255)->comment('The human-readable file name.');
+            $table->string('display_name', 255)->unique()->comment('The human-readable file name.');            
             $table->string('mime_type', 100)->nullable();
             $table->unsignedBigInteger('size_bytes')->default(0);
 
