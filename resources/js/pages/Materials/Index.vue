@@ -33,7 +33,7 @@ const props = defineProps<{
             created_at: string;
             user_id: number;
             user: { name: string };
-        }>;
+         }>;
         links: Array<any>;
     };
     filters: {
@@ -50,7 +50,7 @@ const props = defineProps<{
 const page = usePage();
 const authUser = computed(() => (page.props as any).auth.user);
 
-// Dynamic Theme Colors based on Role
+// Dynamic Theme Colors based on Role (Teal for Teacher, Indigo for Admin)
 const themeClasses = computed(() => {
     if (authUser.value?.role === 'teacher') return 'bg-teal-600 hover:bg-teal-700 text-white border-teal-500';
     if (authUser.value?.role === 'admin') return 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-500';
@@ -58,9 +58,15 @@ const themeClasses = computed(() => {
 });
 
 const themeTextClass = computed(() => {
-    if (authUser.value?.role === 'teacher') return 'text-teal-600';
-    if (authUser.value?.role === 'admin') return 'text-indigo-600';
-    return 'text-slate-900';
+    if (authUser.value?.role === 'teacher') return 'group-hover:text-teal-600';
+    if (authUser.value?.role === 'admin') return 'group-hover:text-indigo-600';
+    return 'group-hover:text-slate-900';
+});
+
+const downloadHoverClass = computed(() => {
+    if (authUser.value?.role === 'teacher') return 'hover:text-teal-600';
+    if (authUser.value?.role === 'admin') return 'hover:text-indigo-600';
+    return 'hover:text-emerald-600';
 });
 
 // FLASH HANDLERS
@@ -72,9 +78,8 @@ const showErrorNotification = ref(false);
 const showDeleteModal = ref(false);
 const materialToDelete = ref<number | null>(null);
 
-// Ownership Logic
+// Ownership Logic (Checks if user is owner or admin)
 const canModify = (materialUserId: number) => {
-    // Only uploader or admin can modify/delete
     return authUser.value.id === materialUserId || authUser.value.role === 'admin';
 };
 
@@ -84,9 +89,7 @@ watch(flashSuccess, async (newVal) => {
         showSuccessNotification.value = false;
         await nextTick();
         showSuccessNotification.value = true;
-        setTimeout(() => {
-            showSuccessNotification.value = false;
-        }, 5000);
+        setTimeout(() => { showSuccessNotification.value = false; }, 5000);
     }
 }, { immediate: true });
 
@@ -95,9 +98,7 @@ watch(flashError, async (newVal) => {
         showErrorNotification.value = false;
         await nextTick();
         showErrorNotification.value = true;
-        setTimeout(() => {
-            showErrorNotification.value = false;
-        }, 5000);
+        setTimeout(() => { showErrorNotification.value = false; }, 5000);
     }
 }, { immediate: true });
 
@@ -145,7 +146,7 @@ const getFileIcon = (type: string) => {
     const t = (type || '').toLowerCase();
     if (t.includes('pdf')) return { icon: FileText, class: 'text-red-600 bg-red-50 border-red-100' };
     if (t.includes('doc') || t.includes('word')) return { icon: FileType, class: 'text-blue-600 bg-blue-50 border-blue-100' };
-    if (t.includes('xls') || t.includes('sheet') || t.includes('csv')) return { icon: FileJson, class: 'text-green-600 bg-green-50 border-green-100' };
+    if (t.includes('xls') || t.includes('sheet')) return { icon: FileJson, class: 'text-green-600 bg-green-50 border-green-100' };
     if (t.includes('ppt')) return { icon: File, class: 'text-orange-600 bg-orange-50 border-orange-100' };
     return { icon: File, class: 'text-slate-500 bg-slate-50 border-slate-100' };
 };
@@ -178,7 +179,7 @@ const formatDate = (dateString: string) => {
                 <div v-if="showErrorNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-red-500 min-w-[350px]">
                     <div class="bg-red-500/20 p-2"><AlertCircle class="w-6 h-6 text-red-500" /></div>
                     <div class="flex-grow font-sans">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-red-500">Restricted</p>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-red-500">Error</p>
                         <p class="text-sm font-medium">{{ flashError }}</p>
                     </div>
                     <button @click="showErrorNotification = false" class="text-slate-500 hover:text-white transition"><X class="w-4 h-4" /></button>
@@ -188,7 +189,7 @@ const formatDate = (dateString: string) => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold tracking-tight text-slate-900 uppercase">Learning Materials</h1>
-                    <p class="text-sm text-slate-500 mt-1 italic font-medium">Download course documents and study guides.</p>
+                    <p class="text-sm text-slate-500 mt-1 italic font-medium">Access and download secure learning resources.</p>
                 </div>
 
                 <Link v-if="can.manage_materials" :href="route('materials.create')">
@@ -204,7 +205,7 @@ const formatDate = (dateString: string) => {
             <div class="bg-white p-4 rounded-none border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 font-sans">
                 <div class="relative flex-1">
                     <Search class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input v-model="search" placeholder="Search materials..." class="pl-9 bg-slate-50 border-slate-200 rounded-none h-10 transition-all focus:ring-slate-900" />
+                    <Input v-model="search" placeholder="Search by name or subject..." class="pl-9 bg-slate-50 border-slate-200 rounded-none h-10 transition-all focus:ring-slate-900" />
                 </div>
 
                 <div class="flex gap-4">
@@ -212,10 +213,12 @@ const formatDate = (dateString: string) => {
                         <option value="">All Types</option>
                         <option value="pdf">PDF</option>
                         <option value="docx">Word</option>
+                        <option value="pptx">PowerPoint</option>
                     </select>
                     <select v-model="sortOrder" class="h-10 px-4 rounded-none border border-slate-200 bg-slate-50 text-sm text-slate-700 cursor-pointer outline-none focus:ring-1 focus:ring-slate-900 appearance-none min-w-[140px]">
                         <option value="latest">Newest First</option>
                         <option value="a-z">A-Z</option>
+                        <option value="oldest">Oldest First</option>
                     </select>
                 </div>
             </div>
@@ -231,7 +234,7 @@ const formatDate = (dateString: string) => {
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <tr v-if="materials.data.length === 0">
-                            <td colspan="3" class="px-6 py-12 text-center text-slate-400 italic">No materials found.</td>
+                            <td colspan="3" class="px-6 py-12 text-center text-slate-400 italic">No materials found matching your search.</td>
                         </tr>
                         <tr v-for="material in materials.data" :key="material.id" class="group hover:bg-slate-50 transition-colors border-l-2 border-transparent">
                             <td class="px-6 py-4 font-sans">
@@ -254,7 +257,14 @@ const formatDate = (dateString: string) => {
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-1">
-                                    <a :href="route('materials.download', material.id)" class="p-2 text-slate-400 hover:text-teal-600 transition" title="Download">
+
+                                    <a
+                                        target="_blank"
+                                        :href="route('materials.download', material.id)"
+                                        class="p-2 text-slate-400 transition"
+                                        :class="downloadHoverClass"
+                                        title="Download securely"
+                                    >
                                         <Download class="w-4 h-4" />
                                     </a>
 
@@ -268,7 +278,7 @@ const formatDate = (dateString: string) => {
                                     </template>
 
                                     <template v-else-if="can.manage_materials">
-                                        <div class="p-2 text-slate-200 cursor-not-allowed" title="Unauthorized: Only the uploader can edit">
+                                        <div class="p-2 text-slate-200 cursor-not-allowed" title="Unauthorized">
                                             <Lock class="w-4 h-4" />
                                         </div>
                                     </template>
@@ -286,9 +296,9 @@ const formatDate = (dateString: string) => {
                     <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
                         <AlertTriangle class="w-8 h-8 text-red-500" />
                     </div>
-                    <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2">Confirm Deletion</h3>
+                    <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2">Confirm Removal</h3>
                     <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-                        Are you sure you want to remove this resource permanently? This action cannot be undone.
+                        Are you sure you want to permanently remove this resource from the system? This action is irreversible.
                     </p>
                     <div class="flex gap-4">
                         <button @click="showDeleteModal = false" class="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-slate-100 hover:bg-slate-50 transition">
