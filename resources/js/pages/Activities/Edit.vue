@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { route } from 'ziggy-js';
-import { ArrowLeft, Save, Upload, FileText } from 'lucide-vue-next';
+import { ArrowLeft, Save, Upload, FileText, Calendar } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
     activity: {
@@ -12,9 +14,24 @@ const props = defineProps<{
         description: string;
         type: string;
         due_date: string | null;
-        file_path: string | null; 
+        file_path: string | null;
+        file_name: string | null;
     };
 }>();
+
+// --- ROLE-BASED THEME LOGIC ---
+const page = usePage();
+const authUser = computed(() => (page.props as any).auth.user);
+
+const themeActionClass = computed(() => {
+    // Uses your CSS variables: --action-color and --action-hover
+    return 'bg-[var(--action-color)] hover:bg-[var(--action-hover)] text-white border-none shadow-lg transition-all font-bold uppercase text-[10px] tracking-widest px-8 py-6 rounded-none flex items-center gap-2';
+});
+
+const breadcrumbs = [
+    { title: 'Classroom Activities', href: route('activities.index') },
+    { title: 'Edit Activity', href: '#' },
+];
 
 // Helper to format date for input (YYYY-MM-DD)
 const formatDateForInput = (dateString: string | null) => {
@@ -23,19 +40,20 @@ const formatDateForInput = (dateString: string | null) => {
 };
 
 const form = useForm({
-    _method: 'PUT', 
+    _method: 'PUT',
     title: props.activity.title,
     description: props.activity.description,
-    type: props.activity.type,
+    type: 'Submission', // Forced to submission to support "Auto-Pilot" logic
     due_date: formatDateForInput(props.activity.due_date),
     file: null as File | null,
 });
 
 const submit = () => {
-    // We use .post() because HTML forms can't natively send PUT with files.
-    // Laravel's '_method: PUT' field handles the spoofing.
     form.post(route('activities.update', props.activity.id), {
         forceFormData: true,
+        onError: (errors) => {
+            console.error('Update Failed:', errors);
+        }
     });
 };
 
@@ -50,127 +68,131 @@ const handleFileChange = (e: Event) => {
 <template>
     <Head title="Edit Activity" />
 
-    <AppLayout :breadcrumbs="[
-        { title: 'Activities', href: route('activities.index') }, 
-        { title: 'Edit', href: '#' }
-    ]">
-        <div class="py-12">
-            <div class="w-full sm:px-6 lg:px-8">
-                
-                <div class="w-full bg-[#ffffff] rounded-lg shadow-2xl overflow-hidden border border-white">
-                    
-                    <div class="p-6 border-b border-gray-800 flex justify-between items-center">
-                        <div>
-                            <h1 class="text-2xl font-bold text-[#212121]">Edit Activity</h1>
-                            <p class="text-gray-800 text-sm mt-1">Update the details for "{{ activity.title }}"</p>
-                        </div>
-                        <Link :href="route('activities.index')">
-                            <Button variant="outline" class="border-gray-300 text-gray-700 hover:bg-gray-100">
-                                <ArrowLeft class="w-4 h-4 mr-2" />
-                                Back
-                            </Button>
-                        </Link>
+    <AppSidebarLayout :breadcrumbs="breadcrumbs">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6 max-w-5xl mx-auto">
+
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight text-slate-900 uppercase">Edit Activity</h1>
+                    <p class="text-slate-500 mt-1 text-sm italic font-medium">Update assignment details in the cloud vault.</p>
+                </div>
+                <Link :href="route('activities.index')">
+                    <Button variant="outline" class="rounded-none border-slate-200 text-slate-600 hover:bg-slate-100 uppercase text-[10px] font-bold tracking-widest">
+                        <ArrowLeft class="w-4 h-4 mr-2" /> Back
+                    </Button>
+                </Link>
+            </div>
+
+            <div class="bg-white border border-slate-200 shadow-sm max-w-4xl mx-auto rounded-none w-full">
+                <form @submit.prevent="submit" class="p-10 space-y-8">
+
+                    <div class="space-y-2">
+                        <label for="title" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-900 flex items-center gap-1">
+                            Activity Title <span class="text-red-500">*</span>
+                        </label>
+                        <Input
+                            id="title"
+                            type="text"
+                            v-model="form.title"
+                            class="rounded-none border-slate-200 h-12 focus:ring-slate-900 bg-slate-50/50"
+                        />
+                        <p v-if="form.errors.title" class="text-red-500 text-[10px] font-bold uppercase tracking-tight">{{ form.errors.title }}</p>
                     </div>
 
-                    <form @submit.prevent="submit" class="p-6 space-y-6">
+                    <div class="space-y-2">
+                        <label for="description" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">
+                            Instructions / Description <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            id="description"
+                            v-model="form.description"
+                            rows="6"
+                            class="w-full bg-slate-50/50 border border-slate-200 rounded-none px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
+                        ></textarea>
+                        <p v-if="form.errors.description" class="text-red-500 text-[10px] font-bold uppercase tracking-tight">{{ form.errors.description }}</p>
+                    </div>
 
-                        <div>
-                            <label for="title" class="block text-[#212121] font-bold mb-2">Activity Title</label>
-                            <input 
-                                id="title" 
-                                type="text" 
-                                v-model="form.title"
-                                class="w-full bg-[#ffffff] border border-gray-500/30 rounded-md px-4 py-3 text-[#212121] focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            />
-                            <p v-if="form.errors.title" class="text-red-400 text-sm mt-1">{{ form.errors.title }}</p>
-                        </div>
-
-                        <div>
-                            <label for="description" class="block text-[#212121] font-bold mb-2">Instructions / Description</label>
-                            <textarea 
-                                id="description" 
-                                v-model="form.description"
-                                rows="5"
-                                class="w-full bg-[#ffffff] border border-gray-500/30 rounded-md px-4 py-3 text-[#212121] focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            ></textarea>
-                            <p v-if="form.errors.description" class="text-red-400 text-sm mt-1">{{ form.errors.description }}</p>
-                        </div>
-
-                        <div>
-                            <div class="p-4 bg-[#ffffff] rounded-md border border-gray-500/30 flex items-start gap-3">
-                                <div class="flex items-center h-6">
-                                    <input 
-                                        id="edit_enable_submission" 
-                                        type="checkbox" 
-                                        v-model="form.type"
-                                        true-value="Submission"
-                                        false-value="Assignment"
-                                        class="w-5 h-5 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                                    />
-                                </div>
-                                <label for="edit_enable_submission" class="text-[#212121] cursor-pointer select-none">
-                                    <span class="block font-bold text-base">Enable Student Submission</span>
-                                    <span class="block text-sm text-gray-400 mt-1">Check to allow student uploads for this activity.</span>
-                                </label>
+                    <div class="space-y-2">
+                        <label for="due_date" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">
+                            Due Date <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Calendar class="h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                             </div>
-                        </div>
-
-                        <div>
-                            <label for="due_date" class="block text-[#212121] font-bold mb-2">Due Date</label>
-                            <input 
-                                id="due_date" 
-                                type="date" 
+                            <input
+                                id="due_date"
+                                type="date"
                                 v-model="form.due_date"
-                                class="w-full bg-[#ffffff] border border-gray-500/30 rounded-md px-4 py-3 text-[#212121] focus:outline-none focus:ring-2 focus:ring-blue-400 [color-scheme:light]"
+                                class="w-full bg-slate-50/50 border border-slate-200 rounded-none pl-10 pr-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all cursor-pointer"
                             />
-                            <p v-if="form.errors.due_date" class="text-red-400 text-sm mt-1">{{ form.errors.due_date }}</p>
+                        </div>
+                        <p v-if="form.errors.due_date" class="text-red-500 text-[10px] font-bold uppercase tracking-tight">{{ form.errors.due_date }}</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold uppercase tracking-[0.2em] text-slate-900">
+                            Attached Resource
+                        </label>
+
+                        <div v-if="props.activity.file_name && !form.file" class="p-4 bg-slate-50 border border-slate-200 flex items-center justify-between group mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-white border border-slate-200">
+                                    <FileText class="w-5 h-5 text-slate-400" />
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current File</p>
+                                    <p class="text-xs font-bold text-slate-700">{{ props.activity.file_name }}</p>
+                                </div>
+                            </div>
+                            <span class="text-[9px] font-bold uppercase text-slate-400 italic">Cloud Stored</span>
                         </div>
 
-                        <div>
-                            <label class="block text-[#212121] font-bold mb-2">Attached Resource</label>
-                            
-                            <div v-if="props.activity.file_path && !form.file" class="mb-3 flex items-center p-3 bg-gray-50 rounded border border-gray-500/30">
-                                <FileText class="w-5 h-5 text-gray-500 mr-2" />
-                                <span class="text-gray-700 text-sm">
-                                    Current file: <strong>{{ props.activity.file_path.split('/').pop() }}</strong>
-                                </span>
-                            </div>
-
-                            <div class="flex items-center justify-center w-full">
-                                <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-500/30 border-dashed rounded-lg cursor-pointer bg-[#ffffff] hover:bg-gray-100 transition">
-                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <Upload class="w-8 h-8 mb-3 text-gray-400" />
-                                        <p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Click to replace file</span> or drag and drop</p>
-                                        <p class="text-xs text-gray-400" v-if="!form.file">Leave empty to keep the current file</p>
-                                        <p class="text-sm font-bold text-green-600 mt-2" v-else>New file selected: {{ form.file.name }}</p>
+                        <div class="flex items-center justify-center w-full">
+                            <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-40 border-2 border-slate-200 border-dashed rounded-none cursor-pointer bg-slate-50/50 hover:bg-slate-100 transition-colors group">
+                                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <Upload class="w-8 h-8 mb-3 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                                    <p class="mb-2 text-xs text-slate-500 tracking-wider font-medium"><span class="font-bold uppercase">Click to replace file</span> or drag and drop</p>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest" v-if="!form.file">Leave empty to keep current file</p>
+                                    <div v-else class="flex items-center gap-2 mt-2 px-4 py-2 bg-emerald-50 border border-emerald-200">
+                                        <FileText class="w-4 h-4 text-emerald-600" />
+                                        <p class="text-[10px] font-bold text-emerald-700 uppercase">{{ form.file.name }}</p>
                                     </div>
-                                    <input id="dropzone-file" type="file" class="hidden" @change="handleFileChange" />
-                                </label>
-                            </div>
-                            <p v-if="form.errors.file" class="text-red-400 text-sm mt-1">{{ form.errors.file }}</p>
+                                </div>
+                                <input id="dropzone-file" type="file" class="hidden" @change="handleFileChange" />
+                            </label>
                         </div>
+                        <p v-if="form.errors.file" class="text-red-500 text-[10px] font-bold uppercase tracking-tight">{{ form.errors.file }}</p>
+                    </div>
 
-                        <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-800">
-                            <Link 
-                                :href="route('activities.index')"
-                                class="bg-white text-[#003366] font-bold py-2 px-6 rounded-md hover:bg-gray-100 transition shadow-sm border border-transparent"
-                            >
-                                Cancel
-                            </Link>
+                    <div class="flex items-center justify-end space-x-4 pt-8 border-t border-slate-100">
+                        <Link :href="route('activities.index')" class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">
+                            Cancel
+                        </Link>
+                        <Button
+                            type="submit"
+                            :disabled="form.processing"
+                            :class="themeActionClass"
+                        >
+                            <Save v-if="!form.processing" class="w-4 h-4" />
+                            {{ form.processing ? 'Saving...' : 'Save Changes' }}
+                        </Button>
+                    </div>
 
-                            <button 
-                                type="submit" 
-                                :disabled="form.processing"
-                                class="bg-[#0060df] hover:bg-[#164485] text-[#ffffff] font-bold py-2 px-6 rounded-md shadow-md transition flex items-center border border-blue-400/50"
-                            >
-                                <Save class="w-4 h-4 mr-2" />
-                                {{ form.processing ? 'Saving...' : 'Save Changes' }}
-                            </button>
-                        </div>
-
-                    </form>
-                </div>
+                </form>
             </div>
         </div>
-    </AppLayout>
+    </AppSidebarLayout>
 </template>
+
+<style scoped>
+/* Custom styling for date input */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+</style>

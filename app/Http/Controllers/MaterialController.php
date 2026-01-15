@@ -11,13 +11,12 @@ use Inertia\Inertia;
 class MaterialController extends Controller
 {
     /**
-     * 1. INDEX: Handles List, Search (Case-Insensitive), and Filters
+     * 1. INDEX: Handles List, Search, and Filters
      */
     public function index(Request $request)
     {
         $query = Material::query()->with('user:id,name');
 
-        // Case-Insensitive Search using LOWER()
         if ($request->filled('search')) {
             $search = strtolower($request->search);
             $query->where(function($q) use ($search) {
@@ -26,12 +25,10 @@ class MaterialController extends Controller
             });
         }
 
-        // File Type Filter
         if ($request->filled('type')) {
             $query->where('file_type', 'like', '%' . $request->type . '%');
         }
 
-        // Sort Logic
         $sort = $request->input('sort', 'latest');
         if ($sort === 'oldest') {
             $query->oldest();
@@ -45,7 +42,6 @@ class MaterialController extends Controller
             'materials' => $query->paginate(10)->withQueryString(),
             'filters' => $request->only(['search', 'type', 'sort']),
             'can' => [
-                // Allows Teachers and Admins to see "Upload" buttons
                 'manage_materials' => Auth::user()->hasRole('teacher') || Auth::user()->hasRole('admin'),
             ]
         ]);
@@ -60,7 +56,7 @@ class MaterialController extends Controller
     }
 
     /**
-     * 3. STORE: Handles the Single File Upload
+     * 3. STORE: Handles Upload to Supabase (Add-on)
      */
     public function store(Request $request)
     {
@@ -73,7 +69,9 @@ class MaterialController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->store('materials', 'public');
+
+            // Save specifically to your materials folder on Supabase
+            $path = $file->store('materials', 'supabase');
             $extension = strtolower($file->getClientOriginalExtension());
 
             Material::create([
@@ -87,40 +85,39 @@ class MaterialController extends Controller
             ]);
 
             return redirect()->route('materials.index')
-                ->with('success', 'New material has been successfully deployed. [' . now()->timestamp . ']');
+                ->with('success', 'Material successfully deployed to Cloud Storage.');
         }
 
-        return back()->with('error', 'File upload failed. Please try again.');
+        return back()->with('error', 'File upload failed.');
     }
 
     /**
-     * 4. DOWNLOAD: Forces file download
-     * OPEN ACCESS: All authenticated users (Students/Teachers/Admins) can download.
+     * 4. DOWNLOAD: "Friend Method" for Private Buckets
+     * This generates a signed URL just like his chatbot download does.
      */
     public function download(Material $material)
     {
-        // Check if the physical file exists on the disk
-        if (Storage::disk('public')->exists($material->file_path)) {
-            return Storage::disk('public')->download(
-                $material->file_path,
-                $material->file_name ?? ($material->name . '.' . $material->file_type)
-            );
+        if (!$material->file_path) {
+            return back()->with('error', 'File not found.');
         }
 
-        // Return a specific error if the record exists but the file is missing from storage
-        return back()->with('error', 'The requested file could not be found on the server storage. [' . now()->timestamp . ']');
+        // Friend Method: Simple Temporary URL
+        $url = Storage::disk('supabase')->temporaryUrl(
+            $material->file_path,
+            now()->addMinutes(5)
+        );
+
+        return redirect($url);
     }
 
     /**
      * 5. EDIT: Show Edit Form
-     * RESTRICTED: Only the original uploader or an Admin can edit.
      */
     public function edit(Material $material)
     {
-        // Ownership Check
         if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
              return redirect()->route('materials.index')
-                ->with('error', 'Restricted access: Only the original instructor can edit this material. [' . now()->timestamp . ']');
+                ->with('error', 'Restricted access: Unauthorized edit attempt.');
         }
 
         return Inertia::render('Materials/Edit', [
@@ -129,15 +126,12 @@ class MaterialController extends Controller
     }
 
     /**
-     * 6. UPDATE: Handle Changes
-     * RESTRICTED: Only the original uploader or an Admin can update.
+     * 6. UPDATE: Handle Changes in Supabase
      */
     public function update(Request $request, Material $material)
     {
-        // Security Check
         if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
-            return redirect()->route('materials.index')
-                ->with('error', 'Unauthorized: You cannot modify another instructor\'s material.');
+            return redirect()->route('materials.index')->with('error', 'Unauthorized access.');
         }
 
         $request->validate([
@@ -150,42 +144,36 @@ class MaterialController extends Controller
         $data = $request->only(['name', 'subject', 'description']);
 
         if ($request->hasFile('file')) {
-            // Delete old file if a new one is uploaded
-            if (Storage::disk('public')->exists($material->file_path)) {
-                Storage::disk('public')->delete($material->file_path);
+            if (Storage::disk('supabase')->exists($material->file_path)) {
+                Storage::disk('supabase')->delete($material->file_path);
             }
 
             $file = $request->file('file');
-            $data['file_path'] = $file->store('materials', 'public');
+            $data['file_path'] = $file->store('materials', 'supabase');
             $data['file_name'] = $file->getClientOriginalName();
             $data['file_type'] = strtolower($file->getClientOriginalExtension());
         }
 
         $material->update($data);
 
-        return redirect()->route('materials.index')
-            ->with('success', 'Changes saved successfully.');
+        return redirect()->route('materials.index')->with('success', 'Changes saved successfully.');
     }
 
     /**
-     * 7. DESTROY: Delete File & Record
-     * RESTRICTED: Only the original uploader or an Admin can delete.
+     * 7. DESTROY: Delete from Supabase & DB
      */
     public function destroy(Material $material)
     {
-        // Security Check
         if (Auth::id() !== $material->user_id && !Auth::user()->hasRole('admin')) {
-             return redirect()->route('materials.index')
-                ->with('error', 'Delete Failed: You do not have permission to remove this resource.');
+             return redirect()->route('materials.index')->with('error', 'Delete Failed: Unauthorized.');
         }
 
-        if (Storage::disk('public')->exists($material->file_path)) {
-            Storage::disk('public')->delete($material->file_path);
+        if (Storage::disk('supabase')->exists($material->file_path)) {
+            Storage::disk('supabase')->delete($material->file_path);
         }
 
         $material->delete();
 
-        return redirect()->route('materials.index')
-            ->with('success', 'Material permanently removed from system.');
+        return redirect()->route('materials.index')->with('success', 'Material removed from cloud.');
     }
 }

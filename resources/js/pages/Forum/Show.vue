@@ -5,7 +5,7 @@ import { type BreadcrumbItem, type Post, type Reply as ReplyType } from '@/types
 import { route } from 'ziggy-js';
 import Reply from '@/components/Reply.vue';
 import { ref, computed, watch, nextTick } from 'vue';
-import { Trash2, Pencil, CheckCircle2, AlertCircle, X } from 'lucide-vue-next';
+import { Trash2, Pencil, CheckCircle2, AlertCircle, X, Send } from 'lucide-vue-next';
 
 const props = defineProps<{
     post: Post & {
@@ -28,6 +28,13 @@ const showSuccessNotification = ref(false);
 const isDeleteModalOpen = ref(false);
 const isEditing = ref(false);
 
+// --- VALIDATION LIMITS ---
+const limits = {
+    title: 255,
+    minContent: 10,
+    maxContent: 5000
+};
+
 // --- FORMS ---
 const replyForm = useForm({
     body: '',
@@ -40,8 +47,14 @@ const editForm = useForm({
     content: props.post.content,
 });
 
-// --- IMPROVED FLASH WATCHER ---
-// Watches the flash object deeply so notifications trigger even if the message text is identical
+// --- VALIDATION LOGIC ---
+const isEditValid = computed(() => {
+    const titleValid = editForm.title.trim().length > 0 && editForm.title.length <= limits.title;
+    const contentValid = editForm.content.trim().length >= limits.minContent && editForm.content.length <= limits.maxContent;
+    return titleValid && contentValid;
+});
+
+// --- FLASH WATCHER ---
 watch(
     () => (page.props as any).flash,
     (flash) => {
@@ -55,9 +68,8 @@ watch(
             });
         }
     },
-    { deep: true, immediate: true } // THIS IS THE KEY FIX
+    { deep: true, immediate: true }
 );
-//
 
 // --- ACTIONS ---
 const startEditing = () => {
@@ -70,12 +82,19 @@ const cancelEditing = () => {
 };
 
 const submitUpdate = () => {
-    // Using .put() to match standard Laravel resource routes
+    if (!isEditValid.value) return;
+
     editForm.put(route('forum.update', props.post.id), {
         preserveScroll: true,
         onSuccess: () => {
             isEditing.value = false;
         },
+        onError: () => {
+            nextTick(() => {
+                const firstError = document.querySelector('.text-red-500');
+                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
     });
 };
 
@@ -137,41 +156,81 @@ const submitReply = () => {
                 </template>
 
                 <template v-else>
-                    <form @submit.prevent="submitUpdate" class="space-y-6">
-                        <div>
-                            <input 
-                                v-model="editForm.title"
-                                type="text"
-                                class="w-full text-4xl font-black text-slate-900 tracking-tighter uppercase border-b-2 border-slate-900 bg-transparent outline-none focus:border-teal-500 transition-colors py-2"
-                                placeholder="Edit Title..."
-                                required
-                            />
-                            <div v-if="editForm.errors.title" class="text-red-500 text-xs mt-1 uppercase font-bold">{{ editForm.errors.title }}</div>
+                    <form @submit.prevent="submitUpdate" class="space-y-10">
+                        <div class="flex justify-end">
+                            <div class="inline-flex items-center bg-slate-50 px-3 py-1 border border-slate-100">
+                                <span class="text-red-500 font-bold mr-2">*</span>
+                                <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500 italic">Indicates required field</span>
+                            </div>
                         </div>
 
-                        <div>
+                        <div class="group">
+                            <div class="flex justify-between items-end mb-2">
+                                <label for="edit-title" class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                                    Discussion Title <span class="text-red-500">*</span>
+                                </label>
+                                <span :class="[editForm.title.length > limits.title ? 'text-red-500' : 'text-slate-300']" class="text-[9px] font-mono font-bold">
+                                    {{ editForm.title.length }} / {{ limits.title }}
+                                </span>
+                            </div>
+                            <input 
+                                id="edit-title"
+                                v-model="editForm.title"
+                                type="text"
+                                :maxlength="limits.title"
+                                class="w-full text-4xl font-black text-slate-900 tracking-tighter uppercase border-b-2 bg-transparent outline-none transition-colors py-2"
+                                :class="editForm.errors.title ? 'border-red-500' : 'border-slate-900 focus:border-teal-500'"
+                                placeholder="Edit Title..."
+                            />
+                            <div v-if="editForm.errors.title" class="flex items-center gap-2 mt-2 text-red-500">
+                                <AlertCircle class="w-3 h-3" />
+                                <p class="text-[10px] font-bold uppercase tracking-widest">{{ editForm.errors.title }}</p>
+                            </div>
+                        </div>
+
+                        <div class="group">
+                            <div class="flex justify-between items-end mb-4">
+                                <label for="edit-content" class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                                    Content <span class="text-red-500">*</span>
+                                    <span v-if="editForm.content.length > 0 && editForm.content.length < limits.minContent" class="text-amber-600 font-medium italic lowercase tracking-normal ml-2">
+                                        (Minimum {{ limits.minContent }} characters required)
+                                    </span>
+                                </label>
+                                <span :class="[
+                                    editForm.content.length === 0 ? 'text-slate-300' :
+                                    editForm.content.length < limits.minContent ? 'text-amber-500' : 
+                                    editForm.content.length > limits.maxContent ? 'text-red-500' : 'text-emerald-500'
+                                ]" class="text-[9px] font-mono font-bold transition-colors">
+                                    {{ editForm.content.length }} / {{ limits.maxContent }}
+                                </span>
+                            </div>
                             <textarea 
+                                id="edit-content"
                                 v-model="editForm.content"
                                 rows="8"
-                                class="w-full text-lg font-medium text-slate-700 leading-relaxed border border-slate-200 p-4 focus:ring-1 focus:ring-slate-900 outline-none transition-all"
+                                :maxlength="limits.maxContent"
+                                class="w-full text-lg font-medium text-slate-700 leading-relaxed border p-6 focus:ring-1 focus:ring-slate-900 outline-none transition-all shadow-inner placeholder:text-slate-300"
+                                :class="editForm.errors.content ? 'border-red-500 bg-red-50/30' : 'border-slate-200 bg-slate-50'"
                                 placeholder="Edit content..."
-                                required
                             ></textarea>
-                            <div v-if="editForm.errors.content" class="text-red-500 text-xs mt-1 uppercase font-bold">{{ editForm.errors.content }}</div>
+                            <div v-if="editForm.errors.content" class="flex items-center gap-2 mt-2 text-red-500">
+                                <AlertCircle class="w-3 h-3" />
+                                <p class="text-[10px] font-bold uppercase tracking-widest">{{ editForm.errors.content }}</p>
+                            </div>
                         </div>
 
                         <div class="flex items-center gap-4">
                             <button 
                                 type="submit" 
-                                :disabled="editForm.processing"
-                                class="px-8 py-3 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 transition shadow-lg disabled:opacity-50"
+                                :disabled="editForm.processing || !isEditValid"
+                                class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 transition shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                                 {{ editForm.processing ? 'Saving...' : 'Update Post' }}
                             </button>
                             <button 
                                 type="button" 
                                 @click="cancelEditing"
-                                class="px-8 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-slate-200 hover:bg-slate-50 transition"
+                                class="px-8 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 border border-slate-200 hover:bg-slate-50 transition"
                             >
                                 Cancel
                             </button>
@@ -190,7 +249,7 @@ const submitReply = () => {
                         placeholder="Type your reply here..."
                     ></textarea>            
                     <div class="flex justify-end mt-6">
-                        <button type="submit" :disabled="replyForm.processing" class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 disabled:opacity-50 transition-all shadow-xl rounded-none">
+                        <button type="submit" :disabled="replyForm.processing || !replyForm.body.trim()" class="px-10 py-4 text-[10px] font-bold uppercase tracking-widest text-white bg-slate-900 hover:bg-teal-700 disabled:opacity-50 transition-all shadow-xl rounded-none">
                             {{ replyForm.processing ? 'Sending...' : 'Post Reply' }}
                         </button>
                     </div>
@@ -228,4 +287,9 @@ const submitReply = () => {
 .toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .toast-enter-from { transform: translateX(100%); opacity: 0; }
 .toast-leave-to { transform: translateY(-20px); opacity: 0; }
+
+textarea::-webkit-scrollbar { width: 4px; }
+textarea::-webkit-scrollbar-track { background: transparent; }
+textarea::-webkit-scrollbar-thumb { background: #e2e8f0; }
+textarea:focus::-webkit-scrollbar-thumb { background: #0f172a; }
 </style>

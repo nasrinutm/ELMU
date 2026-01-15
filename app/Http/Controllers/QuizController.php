@@ -10,9 +10,32 @@ use Inertia\Inertia;
 
 class QuizController extends Controller
 {
-    /**
-     * 1. Fetch Quizzes for Dashboard
-     */
+    // --- NEW HELPER: Calculates Limits Dynamically ---
+    private function calculateLimits($quizId, $userId)
+    {
+        $attempts = QuizAttempt::where('user_id', $userId)
+            ->where('quiz_id', $quizId)
+            ->get();
+
+        // Count how many times teacher clicked "Grant Attempt"
+        $grantedCount = $attempts->filter(function ($attempt) {
+            $answers = $attempt->answers ?? [];
+            return collect($answers)->contains('revoked_attempt', true);
+        })->count();
+
+        $totalTaken = $attempts->count();
+        $baseLimit = 3;
+        $maxLimit = $baseLimit + $grantedCount; // e.g. 3 + 1 = 4
+
+        return [
+            'taken' => $totalTaken,
+            'max' => $maxLimit,
+            'remaining' => max(0, $maxLimit - $totalTaken),
+            'is_locked' => $totalTaken >= $maxLimit
+        ];
+    }
+
+    // 1. Fetch Quizzes
     public function index(Request $request)
     {
         $query = Quiz::query();
@@ -26,8 +49,10 @@ class QuizController extends Controller
         }
 
         $quizzes = $query->get()->map(function ($quiz) {
-            $attempts = QuizAttempt::where('user_id', Auth::id())->where('quiz_id', $quiz->id)->count();
-            $limit = 3;
+            
+            // Use Helper Logic
+            $status = $this->calculateLimits($quiz->id, Auth::id());
+            
             $questionCount = is_array($quiz->content) ? count($quiz->content) : 0;
 
             return [
@@ -37,10 +62,12 @@ class QuizController extends Controller
                 'questions_count' => $questionCount,
                 'time_limit' => floor($quiz->duration / 60) . ' mins',
                 'difficulty' => $quiz->difficulty,
-                'attempts_taken' => $attempts,
-                'attempts_max' => $limit,
-                'attempts_left' => max(0, $limit - $attempts),
-                'is_locked' => $attempts >= $limit,
+                
+                // Dynamic Data
+                'attempts_taken' => $status['taken'],
+                'attempts_max' => $status['max'],
+                'attempts_left' => $status['remaining'],
+                'is_locked' => $status['is_locked'],
             ];
         })->values();
 
@@ -50,25 +77,27 @@ class QuizController extends Controller
         ]);
     }
 
-    /**
-     * 2. Take Quiz: Prepare JSON
-     */
+    // 2. Take Quiz
     public function show($id)
     {
         $quizModel = Quiz::findOrFail($id);
-        $attempts = QuizAttempt::where('user_id', Auth::id())->where('quiz_id', $id)->count();
+        
+        // Check dynamic lock
+        $status = $this->calculateLimits($id, Auth::id());
 
-        if ($attempts >= 3) {
+        if ($status['is_locked']) {
             return redirect()->route('quizzes.index')->with('error', "Maximum attempts reached.");
         }
 
         $rawQuestions = $quizModel->content ?? [];
-        $formattedQuestions = collect($rawQuestions)->map(function($q) {
+        
+        $formattedQuestions = collect($rawQuestions)->map(function($q, $i) {
             $correctOptionId = null;
+            $qId = $q['id'] ?? ($i + 1);
+
             if (isset($q['options']) && is_array($q['options'])) {
                 foreach ($q['options'] as $index => $opt) {
                     if (isset($opt['is_correct']) && $opt['is_correct'] === true) {
-                        // Use text or id specifically
                         $correctOptionId = $opt['text'] ?? $opt['id'] ?? $index;
                         break;
                     }
@@ -76,12 +105,12 @@ class QuizController extends Controller
             }
 
             return [
-                'id' => $q['id'] ?? rand(1000, 9999),
+                'id' => $qId,
                 'text' => $q['question'] ?? $q['text'] ?? 'No text',
                 'explanation' => $q['explanation'] ?? '',
                 'correct_option_id' => $correctOptionId,
                 'options' => collect($q['options'] ?? [])->map(fn($opt, $idx) => [
-                    'id' => $opt['text'] ?? $opt['id'] ?? $idx,
+                    'id' => $opt['text'] ?? $opt['id'] ?? $idx, 
                     'text' => $opt['text'] ?? '',
                 ]),
             ];
@@ -97,9 +126,7 @@ class QuizController extends Controller
         ]);
     }
 
-    /**
-     * 3. SUBMIT: Secure Score & Strictly Enforce Limits
-     */
+    // 3. Submit Quiz
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -108,37 +135,54 @@ class QuizController extends Controller
         ]);
 
         $quiz = Quiz::findOrFail($validated['quiz_id']);
+        
+        // Double check lock before saving
+        $status = $this->calculateLimits($quiz->id, Auth::id());
 
-        // FIX: STRICT ATTEMPT LIMIT CHECK inside Store method
-        $attemptsCount = QuizAttempt::where('user_id', Auth::id())
-            ->where('quiz_id', $quiz->id)
-            ->count();
-
-        if ($attemptsCount >= 3) {
+        if ($status['is_locked']) {
             return response()->json(['error' => 'Max attempts reached.'], 403);
         }
 
-        // FIX: SECURE SERVER-SIDE SCORE CALCULATION
-        $content = $quiz->content;
+        $content = $quiz->content ?? [];
         $score = 0;
-        $totalQuestions = is_array($content) ? count($content) : 0;
+        $totalQuestions = count($content);
+        $savedAnswers = [];
 
-        foreach ($content as $q) {
-            $qId = $q['id'];
+        foreach ($content as $i => $q) {
+            $qId = $q['id'] ?? ($i + 1);
             $correctValue = null;
-
-            // Find correct value from the original DB content
-            foreach ($q['options'] as $opt) {
-                if (isset($opt['is_correct']) && $opt['is_correct'] === true) {
-                    $correctValue = $opt['text'];
-                    break;
+            
+            if (isset($q['options']) && is_array($q['options'])) {
+                foreach ($q['options'] as $opt) {
+                    if (isset($opt['is_correct']) && $opt['is_correct'] === true) {
+                        $correctValue = $opt['text'];
+                        break;
+                    }
                 }
             }
 
-            // Compare with user submission (using loose equality for safety)
-            if (isset($validated['answers'][$qId]) && $validated['answers'][$qId] == $correctValue) {
+            $userAnswer = $validated['answers'][$qId] ?? null;
+
+            if (trim((string)$userAnswer) == trim((string)$correctValue)) {
                 $score++;
             }
+
+            $selectedOptionId = null;
+            if (isset($q['options']) && is_array($q['options'])) {
+                foreach ($q['options'] as $idx => $opt) {
+                    if (trim((string)($opt['text'] ?? '')) == trim((string)$userAnswer)) {
+                        $selectedOptionId = $opt['text'] ?? $opt['id'] ?? $idx;
+                        break;
+                    }
+                }
+            }
+
+            $savedAnswers[] = [
+                'question_id' => $qId,
+                'option_id' => $selectedOptionId,
+                'user_text' => $userAnswer,
+                'is_correct' => (trim((string)$userAnswer) == trim((string)$correctValue))
+            ];
         }
 
         QuizAttempt::create([
@@ -146,14 +190,13 @@ class QuizController extends Controller
             'quiz_id' => $quiz->id,
             'score' => $score,
             'total_questions' => $totalQuestions,
+            'answers' => $savedAnswers,
         ]);
 
         return back()->with('success', 'Evaluation submitted successfully.');
     }
 
-    /**
-     * 4. HISTORY: Accurate Statistics Calculation
-     */
+    // 4. History
     public function history($id)
     {
         $quiz = Quiz::findOrFail($id);
@@ -163,7 +206,6 @@ class QuizController extends Controller
             ->latest()
             ->get()
             ->map(function ($attempt) {
-                // Ensure floating point math for percentage
                 $pct = $attempt->total_questions > 0
                     ? ($attempt->score / $attempt->total_questions) * 100
                     : 0;
@@ -177,7 +219,6 @@ class QuizController extends Controller
                 ];
             });
 
-        // FIX: Accurate Collection-based Stats
         $count = $attempts->count();
         $average = $count > 0 ? round($attempts->avg('percentage')) : 0;
         $best = $count > 0 ? $attempts->max('percentage') : 0;

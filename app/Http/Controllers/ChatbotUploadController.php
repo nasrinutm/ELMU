@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\ChatbotMaterial;
 use App\Models\Setting;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
 
 class ChatbotUploadController extends Controller
 {
@@ -23,19 +24,26 @@ class ChatbotUploadController extends Controller
      */
     public function index()
     {
-        $files = $this->ragService->listFiles();
+        $materials = ChatbotMaterial::all()->map(function ($item) {
+            return [
+                'id'           => $item->id,
+                'name'         => $item->gemini_document_name,
+                'display_name' => $item->display_name,
+                'size_bytes'   => $item->size_bytes,
+                'mime_type'    => $item->mime_type,
+                'state'        => $item->gemini_state ?? 'STATE_ACTIVE',
+                'created_at'   => $item->created_at->toDateTimeString(),
+            ];
+        });
 
-        // Get the raw store ID from config
         $rawStoreId = config('gemini.store_id', 'Not Configured');
-
-        // Remove the "fileSearchStores/" prefix if it exists for cleaner UI
         $cleanStoreId = str_replace('fileSearchStores/', '', $rawStoreId);
 
         $currentPrompt = Setting::where('key', 'ai_strict_instruction')
             ->value('value') ?? "Answer in Malay. Provide a concise answer in a numbered list...";
 
         return Inertia::render('Admin/ChatbotDetails', [
-            'files' => $files->toArray(),
+            'files' => $materials->toArray(),
             'systemInfo' => [
                 'model' => config('gemini.model', 'gemini-1.5-flash'),
                 'store_id' => $cleanStoreId,
@@ -50,7 +58,6 @@ class ChatbotUploadController extends Controller
      */
     public function create()
     {
-        // Ensure this string exactly matches: resources/js/Pages/Admin/UploadChatbotMaterial.vue
         return Inertia::render('Admin/UploadChatbotMaterial');
     }
 
@@ -61,15 +68,26 @@ class ChatbotUploadController extends Controller
     {
         $request->validate([
             'file' => 'required|file|mimes:pdf,txt,csv,md|max:102400',
-            'title' => 'required|string|max:255',
+            'title' => 'required|string|max:255|unique:chatbot_materials,display_name',
+        ], [
+            'title.unique' => 'A document with this title already exists in the Knowledge Base.'
         ]);
+
+        $supabasePath = null;
 
         try {
             $file = $request->file('file');
             $title = $request->input('title');
             $storeId = config('gemini.store_id');
 
-            // 1. Upload to Gemini via RAG Service
+            // 1. Upload to Supabase with randomized filename (default behavior of putFile)
+            $supabasePath = Storage::disk('supabase')->putFile('materials', $file);
+            
+            if (!$supabasePath) {
+                throw new \Exception("File could not be written to Supabase.");
+            }
+
+            // 2. Upload to Gemini via RAG Service
             $geminiResponse = $this->ragService->uploadAndIndexFile(
                 $storeId,
                 $file->getRealPath(),
@@ -77,20 +95,22 @@ class ChatbotUploadController extends Controller
                 $title
             );
 
-            // 2. Save to Local Database
+            // 3. Save to Local Database
             ChatbotMaterial::create([
-                'file_content'         => file_get_contents($file->getRealPath()),
                 'display_name'         => $title,
                 'gemini_document_name' => $geminiResponse['gemini_document_name'],
                 'gemini_file_name'     => $geminiResponse['gemini_file_name'],
                 'mime_type'            => $file->getMimeType(),
                 'size_bytes'           => $geminiResponse['size_bytes'],
                 'gemini_state'         => 'STATE_ACTIVE',
+                'internal_file_path'   => $supabasePath // Randomized path stored here
             ]);
 
-            // Redirect to index so the user can see the new file in the list immediately
-            return redirect()->route('chatbot.details')->with('success', 'File uploaded and indexed successfully!');
+            return redirect()->route('chatbot.details')->with('success', 'File indexed and backed up with unique hash!');
         } catch (\Exception $e) {
+            if ($supabasePath) {
+                Storage::disk('supabase')->delete($supabasePath);
+            }
             Log::error("RAG Upload Error: " . $e->getMessage());
             return back()->withErrors(['file' => 'Upload failed: ' . $e->getMessage()]);
         }
@@ -102,39 +122,58 @@ class ChatbotUploadController extends Controller
     public function destroy($geminiDocumentName)
     {
         try {
+            $material = ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->first();
+
             // 1. Delete from Gemini API
             $this->ragService->deleteFile($geminiDocumentName);
 
-            // 2. Delete the record from local database
+            // 2. Delete from Supabase if path exists
+            if ($material && $material->internal_file_path) {
+                Storage::disk('supabase')->delete($material->internal_file_path);
+            }
+
+            // 3. Delete the record from local database
             ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->delete();
 
-            return back()->with('success', 'File deleted from AI memory.');
+            return back()->with('success', 'File deleted from all systems.');
         } catch (\Exception $e) {
             Log::error("RAG Deletion Error: " . $e->getMessage());
             return back()->withErrors(['error' => 'Deletion failed: ' . $e->getMessage()]);
         }
     }
 
-        /**
-     * Update the display name of the chatbot material.
-     */
     public function update(Request $request, $geminiDocumentName)
-    {
+    {               
+        $material = ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->firstOrFail();
+
         $request->validate([
-            'display_name' => 'required|string|max:255',
+            'display_name' => 'required|string|max:255|unique:chatbot_materials,display_name,' . $material->id,
         ]);
 
         try {
-            $material = ChatbotMaterial::where('gemini_document_name', $geminiDocumentName)->firstOrFail();
-            
             $material->update([
                 'display_name' => $request->display_name
             ]);
-
             return back()->with('success', 'Document name updated successfully!');
         } catch (\Exception $e) {
             Log::error("RAG Update Error: " . $e->getMessage());
             return back()->with('error', 'Failed to update document name.');
         }
+    }
+
+    public function download($id)
+    {
+        $material = ChatbotMaterial::findOrFail($id);
+
+        if (!$material->internal_file_path) {
+            return back()->with('error', 'Original file not found in storage.');
+        }
+
+        $url = Storage::disk('supabase')->temporaryUrl(
+            $material->internal_file_path, 
+            now()->addMinutes(5)
+        );
+
+        return redirect($url);
     }
 }

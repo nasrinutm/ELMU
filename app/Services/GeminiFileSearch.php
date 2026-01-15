@@ -118,13 +118,13 @@ class GeminiFileSearch
             'X-Goog-Upload-Header-Content-Length' => $fileSize,
             'X-Goog-Upload-Header-Content-Type' => $mimeType,
             'Content-Type' => 'application/json',
-        ])->post("https://generativelanguage.googleapis.com/upload/v1beta/files?key={$this->apiKey}", [
+        ])
+        ->timeout(60)
+        ->post("https://generativelanguage.googleapis.com/upload/v1beta/files?key={$this->apiKey}", [
             'file' => ['displayName' => $displayName]
         ]);
-        // ... (rest of A, B, C steps are unchanged) ...
 
         if ($initResponse->failed()) {
-            // ... (error handling) ...
             throw new \Exception("Failed to initialize upload.");
         }
 
@@ -137,10 +137,11 @@ class GeminiFileSearch
             'Content-Length' => $fileSize,
             'X-Goog-Upload-Offset' => '0',
             'X-Goog-Upload-Command' => 'upload, finalize',
-        ])->withBody($fileContent, $mimeType)->post($uploadUrl);
+        ])
+        ->timeout(120)
+        ->withBody($fileContent, $mimeType)->post($uploadUrl);
 
         if ($uploadResponse->failed()) {
-            // ... (error handling) ...
             throw new \Exception("Failed to upload file bytes.");
         }
 

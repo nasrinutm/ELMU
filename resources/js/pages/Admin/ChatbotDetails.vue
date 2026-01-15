@@ -7,12 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import {
     Server, Database, Cpu, Trash2, FileText, Plus,
     Search, ChevronUp, ChevronDown, X, Bot, Edit2, Save, UploadCloud, 
-    AlertCircle, FilePlus, CheckCircle2, Pencil
+    AlertCircle, FilePlus, CheckCircle2, Pencil, Download
 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 const props = defineProps<{
     files: Array<{
+        id: number;
         name: string;
         display_name: string;
         size_bytes: number;
@@ -133,7 +134,10 @@ const confirmDelete = () => {
     if (fileToDelete.value) {
         router.delete(route('upload.delete', fileToDelete.value), {
             preserveScroll: true,
-            onFinish: () => { isDeleteModalOpen.value = false; }
+            onFinish: () => { 
+                isDeleteModalOpen.value = false;
+                fileToDelete.value = null; 
+            }
         });
     }
 };
@@ -248,12 +252,24 @@ const formatBytes = (bytes: number) => {
                                         {{ file.state }}
                                     </Badge>
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                               <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end gap-1">
-                                        <Button variant="ghost" size="icon" @click="openEditNameModal(file)" class="text-slate-400 hover:text-blue-600 transition-colors">
+                                        <a v-if="file.id" 
+                                        :href="route('chatbot.download', { id: file.id })" 
+                                        target="_blank" 
+                                        title="Download Original File">
+                                            <Button variant="ghost" size="icon" class="text-slate-400 hover:text-emerald-600 transition-colors">
+                                                <Download class="w-4 h-4" />
+                                            </Button>
+                                        </a>
+
+                                        <Button variant="ghost" size="icon" @click="openEditNameModal(file)" 
+                                                class="text-slate-400 hover:text-blue-600 transition-colors">
                                             <Pencil class="w-4 h-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" @click="deleteFile(file)" class="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors">
+
+                                        <Button variant="ghost" size="icon" @click="deleteFile(file)" 
+                                                class="text-slate-400 hover:text-red-600 transition-colors">
                                             <Trash2 class="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -266,22 +282,63 @@ const formatBytes = (bytes: number) => {
         </div>
 
         <div v-if="isEditNameModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-            <div class="bg-white rounded-none shadow-2xl w-full max-w-md border border-slate-200 animate-in fade-in zoom-in duration-200">
-                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 class="font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2 text-sm">
-                        <Pencil class="w-4 h-4 text-action" /> Rename Document
+            <div class="bg-white rounded-none shadow-2xl w-full max-w-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+                
+                <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-bold text-slate-800 uppercase tracking-[0.2em] flex items-center gap-3 text-sm">
+                        <Pencil class="w-5 h-5 text-action" /> Rename Document
                     </h3>
-                    <button @click="isEditNameModalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors"><X class="w-5 h-5" /></button>
+                    <button @click="isEditNameModalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <X class="w-6 h-6" />
+                    </button>
                 </div>
-                <form @submit.prevent="submitNameUpdate" class="p-8 space-y-6">
-                    <div class="space-y-2">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Display Name</label>
-                        <input v-model="editNameForm.display_name" type="text" class="w-full text-lg font-black text-slate-900 tracking-tighter uppercase border-b-2 border-slate-200 bg-transparent outline-none focus:border-slate-900 transition-all py-2" required />
-                        <div v-if="editNameForm.errors.display_name" class="text-red-500 text-[10px] font-bold uppercase mt-1">{{ editNameForm.errors.display_name }}</div>
+
+                <form @submit.prevent="submitNameUpdate" class="p-10 space-y-10">
+                    
+                    <div class="group">
+                        <div class="flex justify-between items-end mb-4">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] group-focus-within:text-slate-900 transition-colors">
+                                Display Name 
+                                <span class="text-slate-300 font-normal lowercase italic ml-1">— required</span>
+                            </label>
+                            
+                            <span :class="[
+                                editNameForm.display_name.length === 0 ? 'text-slate-200' :
+                                editNameForm.display_name.length > 100 ? 'text-red-500' : 'text-emerald-500'
+                            ]" class="text-[10px] font-mono font-bold transition-colors">
+                                {{ editNameForm.display_name.length }} / 100
+                            </span>
+                        </div>
+                        
+                        <input 
+                            v-model="editNameForm.display_name" 
+                            type="text" 
+                            maxlength="100"
+                            class="w-full text-3xl font-black text-slate-900 tracking-normal border-b-2 bg-transparent outline-none transition-all py-3 placeholder:text-slate-100" 
+                            :class="editNameForm.errors.display_name ? 'border-red-500' : 'border-slate-200 focus:border-slate-900'"
+                            placeholder="ENTER NEW NAME..."
+                            required 
+                        />
+                        
+                        <div v-if="editNameForm.errors.display_name" class="text-red-500 text-[10px] font-bold uppercase mt-3 tracking-widest flex items-center gap-2">
+                            <AlertCircle class="w-4 h-4" /> {{ editNameForm.errors.display_name }}
+                        </div>
                     </div>
-                    <div class="flex justify-end gap-3 pt-4">
-                        <Button variant="ghost" type="button" @click="isEditNameModalOpen = false" class="text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
-                        <Button type="submit" :disabled="editNameForm.processing" class="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest px-8 shadow-md">
+
+                    <div class="flex justify-end gap-6 pt-6 border-t border-slate-50">
+                        <Button 
+                            variant="ghost" 
+                            type="button" 
+                            @click="isEditNameModalOpen = false" 
+                            class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            :disabled="editNameForm.processing || editNameForm.display_name.trim().length === 0" 
+                            class="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-[0.2em] px-12 py-5 h-auto shadow-2xl rounded-none hover:bg-teal-700 disabled:opacity-30 transition-all"
+                        >
                             {{ editNameForm.processing ? 'Updating...' : 'Save Name' }}
                         </Button>
                     </div>

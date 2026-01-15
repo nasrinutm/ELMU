@@ -31,11 +31,18 @@ const props = defineProps<{
         due_date: string | null;
         is_manual: boolean;
     }>;
-    total_unique_count: number; // Received from Controller (e.g., 6)
-    true_completed_count: number; // Received from Controller (ignores retakes)
+    total_unique_count: number;
+    true_completed_count: number;
+    // Bind to the corrected Controller names
+    stats: {
+        total: number;
+        completed: number;
+        pending: number;
+        overdue: number;
+    };
     completion_stats: {
         activity: number;
-        quiz: number;
+        evaluation: number; // Combined Quiz + Manual logic
         raw_activity_total: number;
         raw_quiz_total: number;
     };
@@ -61,21 +68,28 @@ watch(flashSuccess, async (newVal) => {
     }
 }, { immediate: true });
 
+// --- SORTING LOGIC ---
+const sortedActivities = computed(() => {
+    return [...props.activities].sort((a, b) => {
+        const priority: Record<string, number> = {
+            'Overdue': 0,
+            'OVERDUE': 0,
+            'Pending': 1,
+            'PENDING': 1,
+            'Completed': 2,
+            'COMPLETED': 2
+        };
+        return (priority[a.status] ?? 3) - (priority[b.status] ?? 3);
+    });
+});
+
 // --- STATS LOGIC ---
 const stats = computed(() => {
-    const totalUnique = props.total_unique_count;
-    const completed = props.true_completed_count; // Use unique completion from backend
-    const pending = Math.max(0, totalUnique - completed);
-    const overdue = props.activities.filter(a => {
-        if (!a.due_date || a.status === 'Completed') return false;
-        return new Date() > new Date(a.due_date);
-    }).length;
-
     return [
-        { label: 'Total Activities', val: totalUnique, color: 'bg-slate-300' },
-        { label: 'Completed', val: completed, color: 'bg-teal-500' },
-        { label: 'Pending', val: pending, color: 'bg-amber-500' },
-        { label: 'Overdue', val: overdue, color: 'bg-red-500' }
+        { label: 'Total Activities', val: props.stats.total, color: 'bg-slate-300' },
+        { label: 'Completed', val: props.stats.completed, color: 'bg-teal-500' },
+        { label: 'Pending', val: props.stats.pending, color: 'bg-amber-500' },
+        { label: 'Overdue', val: props.stats.overdue, color: 'bg-red-500' }
     ];
 });
 
@@ -90,40 +104,109 @@ const breadcrumbs = computed(() => {
     return crumbs;
 });
 
-// --- MANUAL SCORE LOGIC ---
-const showModal = ref(false);
+// --- MODAL STATES ---
+const showModal = ref(false); // Main Form
+const showDeleteModal = ref(false); // Delete Confirmation
+const showConfirmEditModal = ref(false); // Edit Confirmation (Yellow)
+
 const isEditing = ref(false);
 const editingId = ref<number | null>(null);
+const itemToDeleteId = ref<number | null>(null);
+
 const form = useForm({ title: '', score: '' });
 
-const openCreateModal = () => { isEditing.value = false; form.reset(); showModal.value = true; };
+// --- FORM FUNCTIONS ---
+const openCreateModal = () => {
+    isEditing.value = false;
+    form.reset();
+    form.clearErrors();
+    showModal.value = true;
+};
+
 const openEditModal = (activity: any) => {
     isEditing.value = true;
     editingId.value = activity.id;
     form.title = activity.title;
-    form.score = activity.score === '-' ? '' : String(activity.score);
+    form.score = activity.score === '-' || activity.score === null ? '' : String(activity.score).replace('%', '');
+    form.clearErrors();
     showModal.value = true;
 };
-const closeModal = () => { showModal.value = false; form.reset(); };
 
-const submit = () => {
-    if (isEditing.value && editingId.value) {
-        form.put(route('students.activities.update', [props.student.id, editingId.value]), { onSuccess: () => closeModal() });
+const closeModal = () => { showModal.value = false; form.reset(); form.clearErrors(); };
+
+const validateAndSubmit = () => {
+    form.clearErrors();
+    let hasError = false;
+
+    if (!form.title) {
+        form.setError('title', 'Activity title is required.');
+        hasError = true;
+    }
+
+    if (form.score === '' || form.score === null) {
+        form.setError('score', 'Score is required.');
+        hasError = true;
     } else {
-        form.post(route('students.activities.store', props.student.id), { onSuccess: () => closeModal() });
+        const scoreNum = Number(form.score);
+        if (scoreNum > 100) {
+            form.setError('score', 'Score cannot be more than 100.');
+            hasError = true;
+        } else if (scoreNum < 0) {
+            form.setError('score', 'Score cannot be negative.');
+            hasError = true;
+        }
+    }
+
+    if (hasError) return;
+
+    if (isEditing.value) {
+        showConfirmEditModal.value = true;
+    } else {
+        proceedWithSave();
     }
 };
 
-const handleDeleteManualActivity = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this manual record?')) {
-        router.delete(route('students.activities.destroy', [props.student.id, id]));
+const proceedWithSave = () => {
+    form.transform((data) => ({
+        ...data,
+        score: String(data.score),
+    }));
+
+    if (isEditing.value && editingId.value) {
+        form.put(route('students.activities.update', [props.student.id, editingId.value]), {
+            onSuccess: () => {
+                showConfirmEditModal.value = false;
+                closeModal();
+            }
+        });
+    } else {
+        form.post(route('students.activities.store', props.student.id), {
+            onSuccess: () => closeModal()
+        });
+    }
+};
+
+// --- DELETE FUNCTIONS ---
+const openDeleteModal = (id: number) => {
+    itemToDeleteId.value = id;
+    showDeleteModal.value = true;
+};
+
+const confirmDelete = () => {
+    if (itemToDeleteId.value) {
+        router.delete(route('students.activities.destroy', [props.student.id, itemToDeleteId.value]), {
+            onSuccess: () => {
+                showDeleteModal.value = false;
+                itemToDeleteId.value = null;
+            }
+        });
     }
 };
 
 const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
 const isOverdue = (activity: any) => {
-    if (!activity.due_date || activity.status === 'Completed') return false;
+    if (!activity.due_date || activity.status === 'Completed' || activity.status === 'COMPLETED') return false;
     return new Date() > new Date(activity.due_date);
 };
 </script>
@@ -132,7 +215,7 @@ const isOverdue = (activity: any) => {
     <Head :title="student.name" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 p-6 space-y-6 relative font-sans">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6 relative font-sans max-w-5xl mx-auto">
 
             <transition name="toast">
                 <div v-if="showNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
@@ -195,9 +278,9 @@ const isOverdue = (activity: any) => {
                         <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="3" />
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-purple-500 transition-all duration-1000 ease-out" stroke-width="3"
-                                stroke-linecap="round" :stroke-dasharray="`${completion_stats.quiz}, 100`" />
+                                stroke-linecap="round" :stroke-dasharray="`${completion_stats.evaluation}, 100`" />
                         </svg>
-                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-sans">{{ completion_stats.quiz }}%</div>
+                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-sans">{{ completion_stats.evaluation }}%</div>
                     </div>
                 </div>
             </div>
@@ -212,7 +295,7 @@ const isOverdue = (activity: any) => {
 
                     <span class="text-4xl font-bold mt-2 tracking-tighter transition-opacity duration-300"
                         :class="[
-                            stat.label === 'Overdue' ? 'text-red-600' : 'text-slate-900',
+                            stat.label === 'Overdue' && stat.val > 0 ? 'text-red-600' : 'text-slate-900',
                             stat.label === 'Total Activities' ? 'group-hover:opacity-0' : ''
                         ]"
                     >
@@ -259,25 +342,37 @@ const isOverdue = (activity: any) => {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-sans">
-                            <tr v-if="activities.length === 0">
+                            <tr v-if="sortedActivities.length === 0">
                                 <td colspan="5" class="px-8 py-20 text-center opacity-40">
                                     <PlusCircle class="w-12 h-12 text-slate-200 mx-auto mb-2" />
                                     <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-sans">No records found.</p>
                                 </td>
                             </tr>
-                            <tr v-for="activity in activities" :key="activity.id"
+                            <tr v-for="activity in sortedActivities" :key="activity.id"
                                 class="hover:bg-slate-50/80 transition-colors group border-l-4"
-                                :class="activity.status === 'Completed' ? 'border-l-emerald-500' : 'border-l-transparent'"
+                                :class="(activity.status === 'Completed' || activity.status === 'COMPLETED') ? 'border-l-emerald-500' : (isOverdue(activity) ? 'border-l-red-500' : 'border-l-transparent')"
                             >
                                 <td class="px-8 py-5">
                                     <div class="font-bold text-slate-900 uppercase tracking-tight flex items-center gap-3 font-sans">
                                         <div class="p-1.5 bg-slate-100 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors">
                                             <component :is="activity.type === 'Quiz' ? ClipboardList : FileText" class="w-4 h-4" />
                                         </div>
-                                        {{ activity.title }}
+
+                                        <div v-if="isOwnProfile && !activity.is_manual && ['Pending', 'Overdue', 'PENDING', 'OVERDUE'].includes(activity.status)">
+                                            <Link
+                                                :href="route('activities.show', activity.id)"
+                                                class="hover:text-teal-600 hover:underline cursor-pointer transition-colors"
+                                            >
+                                                {{ activity.title }}
+                                            </Link>
+                                        </div>
+                                        <div v-else>
+                                            {{ activity.title }}
+                                        </div>
+
                                     </div>
                                     <div class="flex items-center gap-3 mt-2 font-bold uppercase text-[8px] ml-9 font-sans">
-                                        <Badge class="rounded-none px-2 py-0 border-none"
+                                        <Badge class="rounded-none px-2 py-0 border-none shadow-none"
                                             :class="{'bg-purple-100 text-purple-700': activity.type === 'Quiz', 'bg-teal-100 text-teal-700': activity.type === 'Activity', 'bg-slate-100 text-slate-500': activity.type === 'Manual'}"
                                         >{{ activity.type }}</Badge>
                                         <div v-if="activity.due_date" class="flex items-center gap-1.5 px-2 py-0.5 bg-white border border-slate-100 shadow-sm" :class="isOverdue(activity) ? 'text-red-600' : 'text-slate-400'">
@@ -286,19 +381,21 @@ const isOverdue = (activity: any) => {
                                     </div>
                                 </td>
                                 <td class="px-8 py-5 text-center">
-                                    <Badge class="text-[9px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-none border-none shadow-sm" :class="activity.status === 'Completed' ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'">
+                                    <Badge class="text-[9px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-none border-none shadow-sm" :class="(activity.status === 'Completed' || activity.status === 'COMPLETED') ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'">
                                         {{ activity.status }}
                                     </Badge>
                                 </td>
-                                <td class="px-8 py-5 text-center font-bold text-slate-900 text-lg tracking-tighter font-sans">{{ activity.score }}</td>
+                                <td class="px-8 py-5 text-center font-bold text-slate-900 text-lg tracking-tighter font-sans">
+                                    {{ activity.score }}<span v-if="activity.is_manual && activity.score && activity.score !== '-'">%</span>
+                                </td>
                                 <td class="px-8 py-5 text-right text-[11px] font-medium text-slate-400 uppercase tracking-widest font-sans">
                                     {{ activity.submitted_at ? formatDate(activity.submitted_at) : '-' }}
                                 </td>
                                 <td v-if="!isOwnProfile" class="px-8 py-5 text-right">
-                                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div class="flex items-center justify-end gap-1">
                                         <template v-if="activity.is_manual">
                                             <button @click="openEditModal(activity)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"><Pencil class="h-4 w-4" /></button>
-                                            <button @click="handleDeleteManualActivity(activity.id)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all active:scale-90"><Trash2 class="h-4 w-4" /></button>
+                                            <button @click="openDeleteModal(activity.id)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all active:scale-90"><Trash2 class="h-4 w-4" /></button>
                                         </template>
                                     </div>
                                 </td>
@@ -315,14 +412,31 @@ const isOverdue = (activity: any) => {
                     <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900">{{ isEditing ? 'Edit Entry' : 'New Score' }}</h3>
                     <button @click="closeModal" class="text-slate-400 hover:text-slate-600 transition active:scale-90"><X class="h-5 w-5" /></button>
                 </div>
-                <form @submit.prevent="submit" class="space-y-6">
+
+                <form @submit.prevent="validateAndSubmit" class="space-y-6">
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Activity Title</label>
-                        <input v-model="form.title" type="text" class="w-full rounded-none border-slate-200 bg-slate-50 text-sm focus:border-teal-500 focus:ring-0 py-4 px-4 font-medium transition-all" required />
+                        <input
+                            v-model="form.title"
+                            type="text"
+                            placeholder="Enter activity title..."
+                            class="w-full rounded-none border border-slate-300 bg-slate-50 text-sm focus:border-teal-500 focus:ring-0 py-4 px-4 font-medium transition-all placeholder:text-slate-400"
+                        />
+                        <div v-if="form.errors.title" class="text-red-400 text-sm mt-1">
+                             {{ form.errors.title }}
+                        </div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Score / Grade</label>
-                        <input v-model="form.score" type="text" class="w-full rounded-none border-slate-200 bg-slate-50 text-sm focus:border-teal-500 focus:ring-0 py-4 px-4 font-medium transition-all" required />
+                        <input
+                            v-model="form.score"
+                            type="number"
+                            placeholder="Enter activity score"
+                            class="w-full rounded-none border border-slate-300 bg-slate-50 text-sm focus:border-teal-500 focus:ring-0 py-4 px-4 font-medium transition-all placeholder:text-slate-400"
+                        />
+                        <div v-if="form.errors.score" class="text-red-400 text-sm mt-1">
+                             {{ form.errors.score }}
+                        </div>
                     </div>
                     <div class="flex justify-end gap-4 pt-6 border-t border-slate-100">
                         <button type="button" @click="closeModal" class="text-[10px] font-bold uppercase text-slate-400 tracking-widest hover:text-slate-600 transition-colors">Cancel</button>
@@ -333,11 +447,41 @@ const isOverdue = (activity: any) => {
                 </form>
             </div>
         </div>
+
+        <div v-if="showConfirmEditModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
+            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
+                <div class="flex flex-col items-center text-center">
+                    <div class="mb-4 rounded-full bg-amber-50 p-3">
+                        <AlertTriangle class="h-6 w-6 text-amber-500" />
+                    </div>
+                    <h3 class="mb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Confirm Update</h3>
+                    <p class="mb-6 text-sm text-slate-500">
+                        Proceed with saving these changes? This will update the material details for all students.
+                    </p>
+                    <div class="flex w-full gap-3">
+                        <button @click="showConfirmEditModal = false" class="w-full border border-slate-200 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors">No, Cancel</button>
+                        <button @click="proceedWithSave" class="w-full bg-slate-900 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-teal-600 transition-colors shadow-md">Yes, Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showDeleteModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
+            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
+                <div class="flex flex-col items-center text-center">
+                    <div class="mb-4 rounded-full bg-red-50 p-3">
+                        <AlertTriangle class="h-6 w-6 text-red-600" />
+                    </div>
+                    <h3 class="mb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Confirm Deletion</h3>
+                    <p class="mb-6 text-sm text-slate-500">
+                        Are you sure you want to remove this resource permanently? This action cannot be undone.
+                    </p>
+                    <div class="flex w-full gap-3">
+                        <button @click="showDeleteModal = false" class="w-full border border-slate-200 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+                        <button @click="confirmDelete" class="w-full bg-red-600 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-red-700 transition-colors shadow-md">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </AppSidebarLayout>
 </template>
-
-<style scoped>
-.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.toast-enter-from { transform: translateX(100%); opacity: 0; }
-.toast-leave-to { transform: translateY(-20px); opacity: 0; }
-</style>
