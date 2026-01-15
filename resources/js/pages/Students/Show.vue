@@ -201,10 +201,14 @@ const isOverdue = (activity: any) => {
                 </div>
                 <Link v-if="!isOwnProfile" :href="route('students.index')">
                     <Button
-                        class="text-[10px] font-bold uppercase tracking-widest px-8 py-6 rounded-none transition shadow-lg flex items-center gap-2"
-                        :class="authUser?.role === 'admin' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-teal-600 hover:bg-teal-700'"
+                        class="text-[10px] font-bold uppercase tracking-widest px-8 py-6 rounded-none transition shadow-lg flex items-center gap-2 text-white border-none"
+                        :class="{
+                            'bg-teal-600 hover:bg-teal-700': authUser?.role === 'teacher',
+                            'bg-indigo-600 hover:bg-indigo-700': authUser?.role === 'admin',
+                            'bg-slate-900 hover:bg-slate-800': !authUser?.role
+                        }"
                     >
-                        <ArrowLeft class="w-4 h-4" /> Back to Student List
+                        <ArrowLeft class="w-4 h-4 text-white" /> Back to Student List
                     </Button>
                 </Link>
             </div>
