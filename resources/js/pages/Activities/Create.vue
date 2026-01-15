@@ -12,7 +12,7 @@ const page = usePage();
 const authUser = computed(() => (page.props as any).auth.user);
 
 const themeActionClass = computed(() => {
-    // Uses your CSS variables: --action-color and --action-hover
+    // Correctly binds to your CSS variables
     return 'bg-[var(--action-color)] hover:bg-[var(--action-hover)] text-white border-none shadow-lg transition-all font-bold uppercase text-[10px] tracking-widest px-8 py-6 rounded-none flex items-center gap-2';
 });
 
@@ -23,15 +23,21 @@ const breadcrumbs = [
 
 const form = useForm({
     title: '',
-    type: 'Submission', // Fixed to Submission as requested
+    type: 'Submission', // Forced to 'Submission' for Auto-Pilot logic
     description: '',
     due_date: '',
     file: null as File | null,
 });
 
 const submit = () => {
+    // Using .post() for creation.
+    // forceFormData is required because we are sending a File object
     form.post(route('activities.store'), {
         forceFormData: true,
+        onSuccess: () => {
+            // Optional: reset form if needed, though Inertia usually redirects
+            form.reset();
+        },
         onError: (errors) => {
             console.error('Creation Failed:', errors);
         }
@@ -50,7 +56,7 @@ const handleFileChange = (e: Event) => {
     <Head title="Create Activity" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 p-6 space-y-6">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6 max-w-5xl mx-auto">
 
             <div class="flex items-center justify-between">
                 <div>
@@ -64,8 +70,8 @@ const handleFileChange = (e: Event) => {
                 </Link>
             </div>
 
-            <div class="bg-white border border-slate-200 shadow-sm max-w-4xl rounded-none">
-                <form @submit.prevent="submit" class="p-8 space-y-8">
+            <div class="bg-white border border-slate-200 shadow-sm max-w-4xl mx-auto rounded-none w-full">
+                <form @submit.prevent="submit" class="p-10 space-y-8">
 
                     <div class="space-y-2">
                         <label for="title" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-900 flex items-center gap-1">
@@ -155,11 +161,9 @@ const handleFileChange = (e: Event) => {
 </template>
 
 <style scoped>
-/* Ensure input[type="date"] picker trigger covers the area for easier click */
 input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.6;
-    transition: opacity 0.2s;
 }
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;

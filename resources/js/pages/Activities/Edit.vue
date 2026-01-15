@@ -43,7 +43,7 @@ const form = useForm({
     _method: 'PUT',
     title: props.activity.title,
     description: props.activity.description,
-    type: 'Submission', // Forced to submission
+    type: 'Submission', // Forced to submission to support "Auto-Pilot" logic
     due_date: formatDateForInput(props.activity.due_date),
     file: null as File | null,
 });
@@ -69,7 +69,7 @@ const handleFileChange = (e: Event) => {
     <Head title="Edit Activity" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 p-6 space-y-6">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6 max-w-5xl mx-auto">
 
             <div class="flex items-center justify-between">
                 <div>
@@ -83,8 +83,8 @@ const handleFileChange = (e: Event) => {
                 </Link>
             </div>
 
-            <div class="bg-white border border-slate-200 shadow-sm max-w-4xl rounded-none">
-                <form @submit.prevent="submit" class="p-8 space-y-8">
+            <div class="bg-white border border-slate-200 shadow-sm max-w-4xl mx-auto rounded-none w-full">
+                <form @submit.prevent="submit" class="p-10 space-y-8">
 
                     <div class="space-y-2">
                         <label for="title" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-900 flex items-center gap-1">
@@ -135,7 +135,7 @@ const handleFileChange = (e: Event) => {
                             Attached Resource
                         </label>
 
-                        <div v-if="props.activity.file_name && !form.file" class="p-4 bg-slate-50 border border-slate-200 flex items-center justify-between group">
+                        <div v-if="props.activity.file_name && !form.file" class="p-4 bg-slate-50 border border-slate-200 flex items-center justify-between group mb-4">
                             <div class="flex items-center gap-3">
                                 <div class="p-2 bg-white border border-slate-200">
                                     <FileText class="w-5 h-5 text-slate-400" />
@@ -186,7 +186,7 @@ const handleFileChange = (e: Event) => {
 </template>
 
 <style scoped>
-/* Ensure input[type="date"] picker trigger covers the area for easier click */
+/* Custom styling for date input */
 input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.6;
