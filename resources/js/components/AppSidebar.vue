@@ -59,7 +59,7 @@ const sidebarTheme = computed(() => {
     if (hasRole('teacher')) {
         return {
             ...baseSettings,
-            '--sidebar-background': '174 75% 26%',   // Matches theme-teacher sidebar (Deep Teal)
+            '--sidebar-background': '174 75% 26%',   // Deep Teal
             '--sidebar-foreground': '160 30% 98%',   // White Text
             '--sidebar-primary': '170 75% 50%',      // Bright Teal Active
             '--sidebar-accent': '174 75% 22%',       // Darker Teal Hover
@@ -71,7 +71,7 @@ const sidebarTheme = computed(() => {
     if (hasRole('student')) {
         return {
             ...baseSettings,
-            '--sidebar-background': '243 45% 35%',   // Matches theme-student sidebar (Deep Indigo)
+            '--sidebar-background': '243 45% 35%',   // Deep Indigo
             '--sidebar-foreground': '226 100% 94%',  // Light Indigo Text
             '--sidebar-primary': '239 84% 67%',      // Bright Indigo Active
             '--sidebar-accent': '244 55% 41%',       // Hover Indigo
@@ -100,7 +100,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'Performance Reports', href: route('reports.index'), icon: BarChart3 },
             { title: 'Discussion Forum', href: route('forum.index'), icon: BookOpen },
             { title: 'Activities', href: route('activities.index'), icon: Gamepad2 },
-            // FIX: Ensure this matches the pluralized naming in web.php
             { title: 'Quiz Management', href: route('teacher.quiz.index'), icon: CheckCircle },
         ];
     }
@@ -112,7 +111,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             { title: 'My Progress', href: user.value ? route('students.show', user.value.id) : '#', icon: BarChart3 },
             { title: 'Discussion Forum', href: route('forum.index'), icon: BookOpen },
             { title: 'Activities', href: route('activities.index'), icon: Gamepad2 },
-            // FIX: Using plural route to match the updated web.php
             { title: 'Quizzes', href: route('quizzes.index'), icon: CheckCircle },
         ];
     }
@@ -127,7 +125,7 @@ const footerNavItems: NavItem[] = [];
         variant="inset"
         :style="sidebarTheme"
     >
-        <SidebarHeader>
+        <SidebarHeader class="bg-sidebar">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
@@ -139,11 +137,11 @@ const footerNavItems: NavItem[] = [];
             </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent class="bg-sidebar">
             <NavMain :items="mainNavItems" />
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter class="bg-sidebar">
             <NavFooter v-if="footerNavItems.length" :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>

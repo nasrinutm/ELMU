@@ -31,6 +31,9 @@ return new class extends Migration
                 $table->boolean('is_manual')->default(false);
                 
                 $table->timestamps();
+
+                $table->unique(['user_id', 'activity_id']); 
+
             });
         }
     }

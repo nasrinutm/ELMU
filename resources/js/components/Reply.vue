@@ -179,7 +179,7 @@ const submitEdit = () => {
                     rows="2"
                     :maxlength="limits.max"
                     class="w-full p-4 rounded-none border border-slate-300 bg-white text-slate-900 text-sm outline-none focus:ring-1 focus:ring-slate-900 shadow-inner"
-                    placeholder="Write a response..."
+                    placeholder="Write a response...*"
                     required
                 ></textarea>
                 <div class="flex justify-end mt-3">

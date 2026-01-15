@@ -7,12 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import {
     Server, Database, Cpu, Trash2, FileText, Plus,
     Search, ChevronUp, ChevronDown, X, Bot, Edit2, Save, UploadCloud, 
-    AlertCircle, FilePlus, CheckCircle2, Pencil
+    AlertCircle, FilePlus, CheckCircle2, Pencil, Download
 } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
 const props = defineProps<{
     files: Array<{
+        id: number;
         name: string;
         display_name: string;
         size_bytes: number;
@@ -133,7 +134,10 @@ const confirmDelete = () => {
     if (fileToDelete.value) {
         router.delete(route('upload.delete', fileToDelete.value), {
             preserveScroll: true,
-            onFinish: () => { isDeleteModalOpen.value = false; }
+            onFinish: () => { 
+                isDeleteModalOpen.value = false;
+                fileToDelete.value = null; 
+            }
         });
     }
 };
@@ -248,12 +252,24 @@ const formatBytes = (bytes: number) => {
                                         {{ file.state }}
                                     </Badge>
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                               <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end gap-1">
-                                        <Button variant="ghost" size="icon" @click="openEditNameModal(file)" class="text-slate-400 hover:text-blue-600 transition-colors">
+                                        <a v-if="file.id" 
+                                        :href="route('chatbot.download', { id: file.id })" 
+                                        target="_blank" 
+                                        title="Download Original File">
+                                            <Button variant="ghost" size="icon" class="text-slate-400 hover:text-emerald-600 transition-colors">
+                                                <Download class="w-4 h-4" />
+                                            </Button>
+                                        </a>
+
+                                        <Button variant="ghost" size="icon" @click="openEditNameModal(file)" 
+                                                class="text-slate-400 hover:text-blue-600 transition-colors">
                                             <Pencil class="w-4 h-4" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" @click="deleteFile(file)" class="text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors">
+
+                                        <Button variant="ghost" size="icon" @click="deleteFile(file)" 
+                                                class="text-slate-400 hover:text-red-600 transition-colors">
                                             <Trash2 class="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -298,7 +314,7 @@ const formatBytes = (bytes: number) => {
                             v-model="editNameForm.display_name" 
                             type="text" 
                             maxlength="100"
-                            class="w-full text-3xl font-black text-slate-900 tracking-tight uppercase border-b-2 bg-transparent outline-none transition-all py-3 placeholder:text-slate-100" 
+                            class="w-full text-3xl font-black text-slate-900 tracking-normal border-b-2 bg-transparent outline-none transition-all py-3 placeholder:text-slate-100" 
                             :class="editNameForm.errors.display_name ? 'border-red-500' : 'border-slate-200 focus:border-slate-900'"
                             placeholder="ENTER NEW NAME..."
                             required 

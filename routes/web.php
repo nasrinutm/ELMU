@@ -31,7 +31,7 @@ use App\Http\Controllers\ReportController;
 */
 
 Route::get('/', function () {
-    return redirect()->route('login');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 })->name('home');
 
 Route::get('/test-models', function () {
@@ -51,7 +51,7 @@ Route::get('/setup-ai', [ChatbotController::class, 'setupStore']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 1. DASHBOARD - Now uses the StudentController method for all roles
+    // 1. DASHBOARD
     Route::get('/dashboard', [StudentController::class, 'dashboardStats'])->name('dashboard');
 
     // 2. CHATBOT INTERACTION
@@ -74,13 +74,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('upload.delete');
         Route::put('/chatbot/upload/{geminiDocumentName}', [ChatbotUploadController::class, 'update'])
             ->name('upload.update')
-            ->where('geminiDocumentName', '.*'); // Important to allow slashes in the Gemini ID
+            ->where('geminiDocumentName', '.*');
 
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
+        Route::get('/chatbot/download/{id}', [ChatbotUploadController::class, 'download'])->name('chatbot.download');
     });
 
     // 4. FORUM
+    // Order is important: specific reply routes first
+    Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
+    Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
+    Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
+
     Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
     Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');
     Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
@@ -88,17 +94,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
     Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
     Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
-    Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
-    Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
-    Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
     // 5. MATERIALS
-    // These routes are accessible to EVERYONE (Students, Teachers, Admins)
     Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
 
-    // These routes are restricted to Teachers/Admins for general access,
-    // and the Controller will further check if the user is the owner.
     Route::middleware(['role:teacher|admin'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');
@@ -106,7 +106,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{material}', [MaterialController::class, 'update'])->name('materials.update');
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
     });
-});
 
     // 6. ACTIVITIES
     Route::resource('activities', ActivityController::class);
@@ -114,7 +113,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
 
-    // 7. STUDENT SUBMISSIONS
+    // 7. STUDENT SUBMISSIONS & PROGRESS
     Route::post('/activities/{activity}/submit', [ActivityController::class, 'submit'])->name('activities.submit');
     Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])->name('activities.downloadSubmission');
     Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
@@ -126,41 +125,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quizzes.submit');
     Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quizzes.history');
 
-    // 9. TEACHER QUIZ MANAGEMENT (UPDATED SECTION)
+    // 9. TEACHER QUIZ MANAGEMENT
     Route::middleware(['role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
-        
-        // Standard Quiz CRUD
         Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
         Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
         Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
         Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
         Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
         Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
-        
-        // Results & Attempts Management
+
         Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
         Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
-        
-        // NEW ROUTES FOR DETAILED REVIEW & DELETE
         Route::get('/attempts/{id}/review', [TeacherQuizController::class, 'showAttempt'])->name('attempt.review');
         Route::delete('/attempts/{id}', [TeacherQuizController::class, 'destroyAttempt'])->name('attempt.destroy');
     });
 
-    // 10. STUDENTS ROSTER
+    // 10. STUDENTS ROSTER & PROGRESS UPDATE
     Route::get('/students', [StudentController::class, 'index'])->name('students.index');
     Route::get('/students/{student}', [StudentController::class, 'show'])->name('students.show');
     Route::post('/students/{student}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
     Route::put('/students/{student}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
     Route::delete('/students/{student}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
 
-    // 11. REPORTS
+    // 11. REPORTS & REMARKS
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])->name('reports.student.detail');
+
     Route::middleware(['role:teacher|admin'])->group(function () {
         Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
 
-
+}); // End of auth/verified middleware group
 
 require __DIR__.'/settings.php';

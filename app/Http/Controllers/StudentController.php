@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class StudentController extends Controller
 {
@@ -22,98 +23,70 @@ class StudentController extends Controller
         $user = Auth::user();
         $userId = $user->id;
 
-        // --- GLOBAL SYSTEM COUNTS ---
         $totalSystemMaterials = Material::count();
         $totalSystemQuizzes = Quiz::count();
         $totalSystemStudents = User::role('student')->count();
 
-        // 1. ADMIN DASHBOARD LOGIC
+        // 1. ADMIN DASHBOARD
         if ($user->hasRole('admin')) {
             return Inertia::render('AdminDashboard', [
-                'auth' => [
-                    'user' => $user,
-                    'roles' => $user->getRoleNames(),
-                ],
+                'auth' => ['user' => $user, 'roles' => $user->getRoleNames()],
                 'stats' => [
                     'admins' => User::role('admin')->count(),
                     'teachers' => User::role('teacher')->count(),
                     'students' => $totalSystemStudents,
                     'total_users' => User::count(),
                     'materials' => $totalSystemMaterials,
-                    'available_quizzes' => $totalSystemQuizzes, // Admins see all quizzes
+                    'available_quizzes' => $totalSystemQuizzes,
                 ],
-                'recentUsers' => User::latest()
-                    ->select('id', 'name', 'email', 'created_at')
-                    ->take(5)
-                    ->get()
+                'recentUsers' => User::latest()->select('id', 'name', 'email', 'created_at')->take(5)->get()
             ]);
         }
 
-        // 2. TEACHER DASHBOARD LOGIC
+        // 2. TEACHER DASHBOARD
         if ($user->hasRole('teacher')) {
             return Inertia::render('TeacherDashboard', [
-                'auth' => [
-                    'user' => $user,
-                    'roles' => $user->getRoleNames(),
-                ],
+                'auth' => ['user' => $user, 'roles' => $user->getRoleNames()],
                 'stats' => [
                     'students' => $totalSystemStudents,
                     'materials' => $totalSystemMaterials,
-                    'available_quizzes' => $totalSystemQuizzes, // Teachers see all quizzes
+                    'available_quizzes' => $totalSystemQuizzes,
                 ],
-                'recentMaterials' => Material::with('user:id,name')
-                    ->latest()
-                    ->take(5)
-                    ->get()
+                'recentMaterials' => Material::with('user:id,name')->latest()->take(5)->get()
             ]);
         }
 
-        // 3. STUDENT DASHBOARD LOGIC - FIXED UNIQUE COUNTS
-
-        // Count unique system assignments submitted
+        // 3. STUDENT DASHBOARD
         $uniqueSystemActivities = DB::table('activity_submissions')
             ->where('user_id', $userId)
             ->distinct('activity_id')
             ->count('activity_id');
 
-        // Count manual activities added by teacher
         $manualActivitiesCount = DB::table('student_manual_activities')
             ->where('user_id', $userId)
             ->count();
 
-        // Calculate unique quizzes attempted (ignores retakes for the count)
         $uniqueQuizzesAttempted = DB::table('quiz_attempts')
             ->where('user_id', $userId)
             ->distinct('quiz_id')
             ->count('quiz_id');
 
-        // For students, "Available" means "Remaining Unattempted Quizzes"
         $remainingQuizzes = max(0, $totalSystemQuizzes - $uniqueQuizzesAttempted);
 
         return Inertia::render('StudentDashboard', [
-            'auth' => [
-                'user' => $user,
-                'roles' => $user->getRoleNames(),
-            ],
+            'auth' => ['user' => $user, 'roles' => $user->getRoleNames()],
             'stats' => [
                 'materials' => $totalSystemMaterials,
-                'my_materials' => $uniqueSystemActivities + $manualActivitiesCount, // Correctly shows total unique work done
-                'available_quizzes' => $remainingQuizzes, // Correctly shows 0 if all quizzes are tried at least once
+                'my_materials' => $uniqueSystemActivities + $manualActivitiesCount,
+                'available_quizzes' => $remainingQuizzes,
             ],
-            'recentMaterials' => Material::with('user:id,name')
-                ->latest()
-                ->take(5)
-                ->get()
+            'recentMaterials' => Material::with('user:id,name')->latest()->take(5)->get()
         ]);
     }
 
-    /**
-     * Display a listing of students.
-     */
     public function index(Request $request)
     {
-        $query = User::role('student')
-            ->select('id', 'name', 'email', 'username', 'created_at');
+        $query = User::role('student')->select('id', 'name', 'email', 'username', 'created_at');
 
         if ($request->search) {
             $query->where(function($q) use ($request) {
@@ -123,132 +96,129 @@ class StudentController extends Controller
             });
         }
 
-        $students = $query->latest()->paginate(10)->withQueryString();
-
         return Inertia::render('Students/Index', [
-            'students' => $students,
+            'students' => $query->latest()->paginate(10)->withQueryString(),
             'filters' => $request->only(['search']),
         ]);
     }
 
     /**
-     * Display the specified student's activity and quiz report.
+     * Display student report with correct combined Evaluation logic.
      */
     public function show(User $student)
     {
-        $allTeacherActivities = Activity::all();
-        $studentSubmissions = DB::table('activity_submissions')
+        $now = Carbon::now();
+
+        // 1. Get Totals from the System
+        $allSystemActivities = Activity::all();
+        $allSystemQuizzes = Quiz::all();
+
+        // 2. Fetch Student Data
+        $submissions = DB::table('activity_submissions')
             ->where('user_id', $student->id)
             ->get()
             ->keyBy('activity_id');
 
-        $activitiesReport = $allTeacherActivities->map(function ($activity) use ($studentSubmissions) {
-            $submission = $studentSubmissions->get($activity->id);
-            return [
-                'id' => $activity->id,
-                'submission_id' => $submission ? $submission->id : null,
-                'title' => $activity->title,
-                'type' => 'Activity',
-                'due_date' => $activity->due_date,
-                'status' => $submission ? 'Completed' : 'Pending',
-                'score' => $submission->score ?? '-',
-                'percentage' => null,
-                'submitted_at' => $submission->created_at ?? null,
-                'is_manual' => false,
-            ];
-        });
+        $firstQuizAttempts = DB::table('quiz_attempts')
+            ->where('user_id', $student->id)
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->groupBy('quiz_id')
+            ->map(fn($attempts) => $attempts->first());
 
-        $quizSubmissions = DB::table('quiz_attempts')
-            ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
-            ->where('quiz_attempts.user_id', $student->id)
-            ->select('quiz_attempts.id', 'quiz_attempts.quiz_id', 'quizzes.title', 'quiz_attempts.score', 'quiz_attempts.total_questions', 'quiz_attempts.created_at')
-            ->orderBy('quiz_attempts.created_at', 'asc')
+        $manualScores = DB::table('student_manual_activities')
+            ->where('user_id', $student->id)
             ->get();
 
-        $attemptTracker = [];
-        $formattedQuizzes = $quizSubmissions->map(function ($q) use (&$attemptTracker) {
-            $attemptTracker[$q->quiz_id] = ($attemptTracker[$q->quiz_id] ?? 0) + 1;
-            $attemptNo = $attemptTracker[$q->quiz_id];
-            $displayTitle = $q->title . ($attemptNo > 1 ? " (Attempt $attemptNo)" : "");
-            $rawPercentage = ($q->total_questions > 0) ? round(($q->score / $q->total_questions) * 100) : 0;
-
+        // 3. BUILD THE COMBINED HISTORY LIST
+        // FIX: Ensure 'id' is present for Ziggy route calls
+        $activitiesHistory = $allSystemActivities->map(function ($act) use ($submissions, $now) {
+            $sub = $submissions->get($act->id);
+            $isOverdue = !$sub && $act->due_date && Carbon::parse($act->due_date)->isPast();
             return [
-                'id' => $q->id,
-                'submission_id' => $q->id,
-                'title' => $displayTitle,
-                'type' => 'Quiz',
-                'status' => 'Completed',
-                'score' => $rawPercentage . '%',
-                'percentage' => $rawPercentage,
-                'submitted_at' => $q->created_at,
-                'due_date' => null,
-                'is_manual' => false,
+                'id' => $act->id, // Critical for Ziggy
+                'title' => $act->title,
+                'type' => 'Activity',
+                'status' => $sub ? 'COMPLETED' : ($isOverdue ? 'OVERDUE' : 'PENDING'),
+                'score' => $sub->score ?? '-',
+                'submitted_at' => $sub->created_at ?? null,
+                'due_date' => $act->due_date,
             ];
         });
 
-        $manualActivities = DB::table('student_manual_activities')
-            ->where('user_id', $student->id)
-            ->get()
-            ->map(function ($act) {
-                return [
-                    'id' => $act->id,
-                    'submission_id' => null,
-                    'title' => $act->title,
-                    'type' => 'Manual',
-                    'status' => 'Completed',
-                    'score' => $act->score,
-                    'percentage' => null,
-                    'submitted_at' => $act->created_at,
-                    'due_date' => null,
-                    'is_manual' => true,
-                ];
-            });
+        $quizzesHistory = $allSystemQuizzes->map(function ($quiz) use ($firstQuizAttempts) {
+            $attempt = $firstQuizAttempts->get($quiz->id);
+            $scoreDisplay = $attempt ? (($attempt->total_questions > 0) ? round(($attempt->score / $attempt->total_questions) * 100) . '%' : '0%') : '-';
+            return [
+                'id' => $quiz->id, // Critical for Ziggy
+                'title' => $quiz->title . ($attempt ? '' : ' (Not Attempted)'),
+                'type' => 'Quiz',
+                'status' => $attempt ? 'COMPLETED' : 'PENDING',
+                'score' => $scoreDisplay,
+                'submitted_at' => $attempt->created_at ?? null,
+                'due_date' => null,
+            ];
+        });
 
-        $uniqueActivitiesDoneCount = DB::table('activity_submissions')
-            ->where('user_id', $student->id)
-            ->distinct('activity_id')
-            ->count('activity_id');
+        $manualHistory = $manualScores->map(function ($m) {
+            return [
+                'id' => $m->id,
+                'title' => $m->title,
+                'type' => 'Manual',
+                'status' => 'COMPLETED',
+                'score' => $m->score . '%',
+                'submitted_at' => $m->created_at,
+                'due_date' => null,
+            ];
+        });
 
-        $uniqueQuizzesDoneCount = DB::table('quiz_attempts')
-            ->where('user_id', $student->id)
-            ->distinct('quiz_id')
-            ->count('quiz_id');
+        // 4. STATS CALCULATION
+        $totalActivitiesCount = $allSystemActivities->count();
+        $totalQuizzesCount = $allSystemQuizzes->count();
+        $totalManualCount = $manualScores->count();
 
-        $totalSystemQuizzes = Quiz::count();
-        $totalSystemActivities = Activity::count();
-        $totalUniqueItemsPossible = $totalSystemQuizzes + $totalSystemActivities;
+        $totalSystemPossible = $totalActivitiesCount + $totalQuizzesCount;
+        $completedOverall = $submissions->count() + $firstQuizAttempts->count();
+        $pendingOverall = max(0, $totalSystemPossible - $completedOverall);
 
-        $assignmentCircle = $totalSystemActivities > 0 ? min(100, round(($uniqueActivitiesDoneCount / $totalSystemActivities) * 100)) : 0;
-        $quizCircle = $totalSystemQuizzes > 0 ? min(100, round(($uniqueQuizzesDoneCount / $totalSystemQuizzes) * 100)) : 0;
+        $overdueCount = $allSystemActivities->filter(function($act) use ($submissions, $now) {
+            return !$submissions->has($act->id) && $act->due_date && Carbon::parse($act->due_date)->isPast();
+        })->count();
 
-        $finalTimeline = $activitiesReport
-            ->concat($formattedQuizzes)
-            ->concat($manualActivities)
+        $assignmentPercent = ($totalActivitiesCount > 0) ? round(($submissions->count() / $totalActivitiesCount) * 100) : 0;
+        $evalPoolTotal = $totalQuizzesCount + $totalManualCount;
+        $evalPoolDone = $firstQuizAttempts->count() + $totalManualCount;
+        $evaluationPercent = ($evalPoolTotal > 0) ? round(($evalPoolDone / $evalPoolTotal) * 100) : 0;
+
+        $finalTimeline = $activitiesHistory
+            ->concat($quizzesHistory)
+            ->concat($manualHistory)
             ->sortByDesc(fn($item) => $item['submitted_at'] ?? $item['due_date'])
             ->values();
 
         return Inertia::render('Students/Show', [
             'student' => $student,
             'activities' => $finalTimeline,
-            'total_unique_count' => $totalUniqueItemsPossible,
-            'true_completed_count' => $uniqueActivitiesDoneCount + $uniqueQuizzesDoneCount,
+            'stats' => [
+                'total' => (int)$totalSystemPossible,
+                'completed' => (int)$completedOverall,
+                'pending' => (int)$pendingOverall,
+                'overdue' => (int)$overdueCount,
+            ],
             'completion_stats' => [
-                'activity' => $assignmentCircle,
-                'quiz' => $quizCircle,
-                'raw_activity_total' => $totalSystemActivities,
-                'raw_quiz_total' => $totalSystemQuizzes,
+                'activity' => (int)min(100, $assignmentPercent),
+                'evaluation' => (int)min(100, $evaluationPercent),
+                'raw_activity_total' => $totalActivitiesCount,
+                'raw_quiz_total' => $totalQuizzesCount,
             ]
         ]);
     }
 
-    /**
-     * Store a manual activity for a student.
-     */
     public function storeActivity(Request $request, User $student)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'score' => 'required|string|max:10',
+            'score' => 'required|numeric|min:0|max:100', // Changed to numeric for better safety
         ]);
 
         DB::table('student_manual_activities')->insert([
@@ -262,14 +232,11 @@ class StudentController extends Controller
         return back()->with('success', 'Manual activity recorded.');
     }
 
-    /**
-     * Update a manual activity for a student.
-     */
     public function updateActivity(Request $request, User $student, $activityId)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'score' => 'required|string|max:10',
+            'score' => 'required|numeric|min:0|max:100',
         ]);
 
         DB::table('student_manual_activities')
@@ -284,9 +251,6 @@ class StudentController extends Controller
         return back()->with('success', 'Activity record updated.');
     }
 
-    /**
-     * Remove a manual activity for a student.
-     */
     public function destroyActivity(User $student, $activityId)
     {
         DB::table('student_manual_activities')

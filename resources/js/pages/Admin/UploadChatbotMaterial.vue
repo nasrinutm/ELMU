@@ -3,7 +3,7 @@ import { ref, watch, nextTick, computed } from 'vue';
 import { useForm, Head, Link, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { route } from 'ziggy-js';
-import { FilePlus, UploadCloud, AlertCircle, ArrowLeft, CheckCircle2, X } from 'lucide-vue-next';
+import { FilePlus, UploadCloud, AlertCircle, ArrowLeft, CheckCircle2, X, Loader2 } from 'lucide-vue-next'; // Added Loader2
 import { Button } from '@/components/ui/button';
 
 const breadcrumbs = [
@@ -17,7 +17,7 @@ const showSuccessNotification = ref(false);
 
 // --- VALIDATION LIMITS ---
 const limits = {
-    title: 100 // Typical limit for document titles
+    title: 100 
 };
 
 const form = useForm({
@@ -25,14 +25,12 @@ const form = useForm({
     file: null as File | null,
 });
 
-// --- VALIDATION LOGIC ---
 const isValid = computed(() => {
     return form.title.trim().length > 0 && 
            form.title.length <= limits.title && 
            form.file !== null;
 });
 
-// --- NOTIFICATION WATCHER ---
 watch(
     () => (page.props as any).flash,
     (flash) => {
@@ -70,6 +68,28 @@ const submit = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="w-full mx-auto py-8 px-6 relative min-h-screen bg-white">
             
+            <transition name="fade">
+                <div v-if="form.processing" class="fixed inset-0 z-[150] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                    <div class="flex flex-col items-center gap-6">
+                        <div class="relative">
+                            <Loader2 class="w-16 h-16 text-slate-900 animate-spin" />
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <UploadCloud class="w-6 h-6 text-slate-400" />
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <h2 class="text-xl font-black uppercase tracking-tighter text-slate-900">Syncing Knowledge</h2>
+                            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mt-2">
+                                Uploading to Supabase & Training Gemini AI...
+                            </p>
+                        </div>
+                        <div v-if="form.progress" class="w-48 bg-slate-100 h-1 overflow-hidden mt-2">
+                            <div class="bg-emerald-500 h-full transition-all duration-300" :style="{ width: form.progress.percentage + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
             <transition name="toast">
                 <div v-if="showSuccessNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
                     <div class="bg-emerald-500/20 p-2"><CheckCircle2 class="w-6 h-6 text-emerald-500" /></div>
@@ -99,7 +119,7 @@ const submit = () => {
                     </div>
                 </div>
 
-                <div class="w-full bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
+                <div class="w-full bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden" :class="{'opacity-50 pointer-events-none': form.processing}">
                     <div class="p-8 sm:p-12">
                         <form @submit.prevent="submit" class="space-y-12">
                             
@@ -120,7 +140,8 @@ const submit = () => {
                                     v-model="form.title" 
                                     type="text"
                                     :maxlength="limits.title"
-                                    class="w-full text-2xl font-black text-slate-900 tracking-tighter uppercase border-b-2 bg-transparent outline-none transition-all py-2 placeholder:text-slate-100"
+                                    :disabled="form.processing"
+                                    class="w-full text-2xl font-black text-slate-900 tracking-normal border-b-2 bg-transparent outline-none transition-all py-2 placeholder:text-slate-100"
                                     :class="form.errors.title ? 'border-red-500' : 'border-slate-200 focus:border-slate-900'"
                                     placeholder="e.g., Physics Chapter 1"
                                 />
@@ -138,13 +159,10 @@ const submit = () => {
                                 <input 
                                     type="file" 
                                     @input="form.file = ($event.target as HTMLInputElement).files?.[0] || null"
+                                    :disabled="form.processing"
                                     class="block w-full text-xs text-slate-500 border border-dashed p-6 bg-slate-50 shadow-inner hover:bg-white transition-all cursor-pointer" 
                                     :class="form.errors.file ? 'border-red-500' : 'border-slate-300 hover:border-slate-900'"
                                 />
-
-                                <div v-if="form.progress" class="w-full bg-slate-100 h-1.5 mt-4 overflow-hidden">
-                                    <div class="bg-slate-900 h-full transition-all duration-300" :style="{ width: form.progress.percentage + '%' }"></div>
-                                </div>
 
                                 <div v-if="form.file && !form.errors.file" class="mt-3 flex items-center gap-2 text-emerald-600">
                                     <CheckCircle2 class="w-3 h-3" />
@@ -158,6 +176,7 @@ const submit = () => {
 
                            <div class="flex justify-end items-center pt-10 border-t border-slate-100 gap-8">
                                 <Link 
+                                    v-if="!form.processing"
                                     :href="route('chatbot.details')" 
                                     class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-red-500 transition-colors"
                                 >
@@ -169,7 +188,7 @@ const submit = () => {
                                     :disabled="form.processing || !isValid"
                                     class="bg-[#0f172a] hover:bg-teal-700 text-white font-bold text-[10px] uppercase tracking-[0.2em] px-12 py-5 h-auto rounded-none transition-all shadow-2xl disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
-                                    {{ form.processing ? 'Indexing...' : 'Publish to Base' }}
+                                    {{ form.processing ? 'Handshaking...' : 'Publish to Base' }}
                                 </Button>
                             </div>
                         </form>
@@ -184,4 +203,7 @@ const submit = () => {
 .toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .toast-enter-from { transform: translateX(100%); opacity: 0; }
 .toast-leave-to { transform: translateY(-20px); opacity: 0; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

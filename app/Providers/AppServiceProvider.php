@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
-use Laravel\Fortify\Fortify; // 👈 1. Import Fortify
-use App\Models\User;         // 👈 2. Import User
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Routing\UrlGenerator;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Fortify;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,28 +22,33 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(UrlGenerator $url): void
+    public function boot(): void
     {
+        // Force HTTPS in production to prevent mixed content errors on Railway
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
+
+        // Define permissions for teachers and admins
         Gate::define('manage activities', function (User $user) {
-            // Check if the user's role is 'teacher' (or 'admin')
-            // This matches the logic you used in your RoleMiddleware
+            $privilegedRoles = ['teacher', 'admin'];
+
             if (method_exists($user, 'hasRole')) {
-                return $user->hasRole('teacher');
+                return $user->hasAnyRole($privilegedRoles);
             }
-            return $user->roles->contains('name', 'teacher');
+
+            return $user->roles->pluck('name')->intersect($privilegedRoles)->isNotEmpty();
         });
 
+        // Custom Fortify authentication: allows login via Email OR Username
         Fortify::authenticateUsing(function ($request) {
-            // Check for a user by email OR username
             $user = User::where('email', $request->email)
-                        ->orWhere('username', $request->email)
-                        ->first();
+                ->orWhere('username', $request->email)
+                ->first();
 
-            if ($user &&
-                Hash::check($request->password, $user->password)) {
+            if ($user && Hash::check($request->password, $user->password)) {
                 return $user;
             }
-        });
 
         if (env('APP_ENV') == 'production') {
             $url->forceScheme('https');
