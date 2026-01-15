@@ -46,6 +46,7 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+// FIX: Using optional chaining for auth user
 const authUser = computed(() => (page.props as any).auth?.user);
 const isOwnProfile = computed(() => authUser.value?.id === props.student?.id);
 
@@ -173,7 +174,7 @@ const isOverdue = (activity: any) => {
     <Head :title="student?.name || 'Student Profile'" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 p-4 md:p-8 space-y-8 relative font-sans max-w-7xl mx-auto w-full">
+        <div class="min-h-screen bg-slate-50 p-6 space-y-6 relative font-sans max-w-5xl mx-auto">
 
             <transition name="toast">
                 <div v-if="showNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
@@ -186,21 +187,21 @@ const isOverdue = (activity: any) => {
                 </div>
             </transition>
 
-            <div class="bg-white rounded-none border border-slate-200 shadow-sm p-6 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-8 relative overflow-hidden">
+            <div class="bg-white rounded-none border border-slate-200 shadow-sm p-8 flex flex-col md:flex-row items-start md:items-center gap-8 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-teal-500/20"></div>
-                <div class="h-20 w-20 md:h-24 md:w-24 rounded-none bg-teal-50 text-teal-600 flex items-center justify-center text-4xl font-bold border border-teal-100 shrink-0 shadow-inner">
+                <div class="h-24 w-24 rounded-none bg-teal-50 text-teal-600 flex items-center justify-center text-4xl font-bold border border-teal-100 shrink-0 shadow-inner">
                     {{ student?.name?.charAt(0).toUpperCase() || 'S' }}
                 </div>
                 <div class="flex-1">
-                    <h1 class="text-2xl md:text-4xl font-bold text-slate-900 uppercase tracking-tight leading-none">{{ student?.name || 'Loading...' }}</h1>
-                    <div class="flex flex-wrap gap-4 md:gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-4">
+                    <h1 class="text-3xl font-bold text-slate-900 uppercase tracking-tight leading-none">{{ student?.name || 'Loading...' }}</h1>
+                    <div class="flex flex-wrap gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-4">
                         <span class="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100"><Mail class="w-3.5 h-3.5 text-teal-500" /> {{ student?.email }}</span>
                         <span class="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100"><GraduationCap class="w-3.5 h-3.5 text-teal-500" /> @{{ student?.username }}</span>
                     </div>
                 </div>
                 <Link v-if="!isOwnProfile" :href="route('students.index')">
                     <Button
-                        class="text-[10px] font-bold uppercase tracking-widest px-6 py-5 rounded-none transition shadow-lg flex items-center gap-2 text-white border-none"
+                        class="text-[10px] font-bold uppercase tracking-widest px-8 py-6 rounded-none transition shadow-lg flex items-center gap-2 text-white border-none"
                         :class="{
                             'bg-teal-600 hover:bg-teal-700': authUser?.role === 'teacher',
                             'bg-indigo-600 hover:bg-indigo-700': authUser?.role === 'admin',
@@ -212,13 +213,13 @@ const isOverdue = (activity: any) => {
                 </Link>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                <div class="bg-white p-6 md:p-10 border border-slate-200 rounded-none shadow-sm flex items-center justify-between">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-8 border border-slate-200 rounded-none shadow-sm flex items-center justify-between">
                     <div>
                         <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Activity Completion</h4>
-                        <p class="text-xl md:text-2xl font-bold text-slate-900 mt-1">Assignments</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-1">Assignments</p>
                     </div>
-                    <div class="relative h-20 w-20 md:h-24 md:w-24">
+                    <div class="relative h-24 w-24">
                         <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="3" />
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-teal-500 transition-all duration-1000" stroke-width="3"
@@ -227,12 +228,12 @@ const isOverdue = (activity: any) => {
                         <div class="absolute inset-0 flex items-center justify-center text-xs font-bold">{{ completion_stats?.activity || 0 }}%</div>
                     </div>
                 </div>
-                <div class="bg-white p-6 md:p-10 border border-slate-200 rounded-none shadow-sm flex items-center justify-between">
+                <div class="bg-white p-8 border border-slate-200 rounded-none shadow-sm flex items-center justify-between">
                     <div>
                         <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Quiz Completion</h4>
-                        <p class="text-xl md:text-2xl font-bold text-slate-900 mt-1">Evaluations</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-1">Evaluations</p>
                     </div>
-                    <div class="relative h-20 w-20 md:h-24 md:w-24">
+                    <div class="relative h-24 w-24">
                         <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="3" />
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-purple-500 transition-all duration-1000" stroke-width="3"
@@ -243,28 +244,29 @@ const isOverdue = (activity: any) => {
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                <div v-for="stat in statsData" :key="stat.label" class="bg-white p-5 md:p-8 border border-slate-200 rounded-none shadow-sm flex flex-col relative overflow-hidden group">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div v-for="stat in statsData" :key="stat.label" class="bg-white p-6 border border-slate-200 rounded-none shadow-sm flex flex-col relative overflow-hidden group">
                     <div :class="['absolute top-0 left-0 w-full h-1', stat.color]"></div>
-                    <span class="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ stat.label }}</span>
-                    <span class="text-3xl md:text-4xl font-bold mt-2 tracking-tighter" :class="stat.label === 'Overdue' && stat.val > 0 ? 'text-red-600' : 'text-slate-900'">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ stat.label }}</span>
+                    <span class="text-4xl font-bold mt-2 tracking-tighter" :class="stat.label === 'Overdue' && stat.val > 0 ? 'text-red-600' : 'text-slate-900'">
                         {{ stat.val }}
                     </span>
-                    <div v-if="stat.label === 'Total Activities'" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 px-4 text-center">
-                        <div class="space-y-1">
-                            <span class="block text-[9px] font-black uppercase text-slate-600">Assigned: {{ completion_stats?.raw_activity_total || 0 }}</span>
-                            <span class="block text-[9px] font-black uppercase text-slate-600">Quizzes: {{ completion_stats?.raw_quiz_total || 0 }}</span>
+
+                    <div v-if="stat.label === 'Total Activities'" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 px-4">
+                        <div class="text-center space-y-1.5">
+                            <span class="block text-[10px] font-black uppercase text-slate-600">Assigned: {{ completion_stats?.raw_activity_total || 0 }}</span>
+                            <span class="block text-[10px] font-black uppercase text-slate-600">Quizzes: {{ completion_stats?.raw_quiz_total || 0 }}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white rounded-none border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-6 py-5 md:px-8 md:py-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/40">
+                <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
                     <div class="flex items-center gap-3">
-                        <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">Performance Timeline</h3>
+                        <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">Activity History & Performance</h3>
                     </div>
-                    <Button v-if="!isOwnProfile" @click="openCreateModal" class="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-bold uppercase tracking-widest px-6 py-3 h-auto rounded-none">
+                    <Button v-if="!isOwnProfile" @click="openCreateModal" class="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 rounded-none">
                         <Plus class="h-4 w-4 mr-2" /> Add Manual Score
                     </Button>
                 </div>
@@ -273,24 +275,27 @@ const isOverdue = (activity: any) => {
                     <table class="w-full text-left text-sm">
                         <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold tracking-widest border-b border-slate-100">
                             <tr>
-                                <th class="px-6 py-5 md:px-8">Activity Details</th>
-                                <th class="px-6 py-5 text-center">Status</th>
-                                <th class="px-6 py-5 text-center">Score</th>
-                                <th class="px-6 py-5 text-right">Date</th>
-                                <th v-if="!isOwnProfile" class="px-6 py-5 text-right">Actions</th>
+                                <th class="px-8 py-5">Activity Details</th>
+                                <th class="px-8 py-5 text-center">Status</th>
+                                <th class="px-8 py-5 text-center">Score</th>
+                                <th class="px-8 py-5 text-right">Date</th>
+                                <th v-if="!isOwnProfile" class="px-8 py-5 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr v-if="sortedActivities.length === 0">
-                                <td colspan="5" class="px-8 py-20 text-center opacity-40 italic text-slate-400">No activity records found for this student.</td>
+                                <td colspan="5" class="px-8 py-20 text-center opacity-40">
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">No records found.</p>
+                                </td>
                             </tr>
                             <tr v-for="activity in sortedActivities" :key="activity.id"
                                 class="hover:bg-slate-50/80 transition-colors group border-l-4"
                                 :class="['Completed', 'COMPLETED'].includes(activity.status) ? 'border-l-emerald-500' : (isOverdue(activity) ? 'border-l-red-500' : 'border-l-transparent')"
                             >
-                                <td class="px-6 py-5 md:px-8">
+                                <td class="px-8 py-5">
                                     <div class="font-bold text-slate-900 uppercase tracking-tight flex items-center gap-3">
                                         <component :is="activity.type === 'Quiz' ? ClipboardList : FileText" class="w-4 h-4 text-slate-400 group-hover:text-teal-600" />
+
                                         <div v-if="isOwnProfile && !activity.is_manual && ['Pending', 'Overdue', 'PENDING', 'OVERDUE'].includes(activity.status)">
                                             <Link v-if="activity?.id" :href="route('activities.show', activity.id)" class="hover:text-teal-600 hover:underline">
                                                 {{ activity.title }}
@@ -299,25 +304,25 @@ const isOverdue = (activity: any) => {
                                         </div>
                                         <div v-else>{{ activity.title }}</div>
                                     </div>
-                                    <div class="flex items-center gap-2 mt-2 font-bold uppercase text-[8px] ml-7">
-                                        <Badge class="rounded-none border-none py-0 px-2" :class="activity.type === 'Quiz' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'">{{ activity.type }}</Badge>
+                                    <div class="flex items-center gap-3 mt-2 font-bold uppercase text-[8px] ml-7">
+                                        <Badge class="rounded-none border-none" :class="activity.type === 'Quiz' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'">{{ activity.type }}</Badge>
                                         <div v-if="activity.due_date" class="flex items-center gap-1.5" :class="isOverdue(activity) ? 'text-red-600' : 'text-slate-400'">
                                             <Calendar class="w-3 h-3" /> Due: {{ formatDate(activity.due_date) }}
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-5 text-center">
-                                    <Badge class="text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-none border-none" :class="['Completed', 'COMPLETED'].includes(activity.status) ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'">
+                                <td class="px-8 py-5 text-center">
+                                    <Badge class="text-[9px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-none border-none" :class="['Completed', 'COMPLETED'].includes(activity.status) ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'">
                                         {{ activity.status }}
                                     </Badge>
                                 </td>
-                                <td class="px-6 py-5 text-center font-bold text-slate-900 text-lg tracking-tighter">
+                                <td class="px-8 py-5 text-center font-bold text-slate-900 text-lg tracking-tighter">
                                     {{ activity.score }}<span v-if="activity.is_manual && activity.score && activity.score !== '-'">%</span>
                                 </td>
-                                <td class="px-6 py-5 text-right text-[11px] font-medium text-slate-400 uppercase tracking-widest">
+                                <td class="px-8 py-5 text-right text-[11px] font-medium text-slate-400 uppercase tracking-widest">
                                     {{ activity.submitted_at ? formatDate(activity.submitted_at) : '-' }}
                                 </td>
-                                <td v-if="!isOwnProfile" class="px-6 py-5 text-right">
+                                <td v-if="!isOwnProfile" class="px-8 py-5 text-right">
                                     <div v-if="activity.is_manual" class="flex items-center justify-end gap-1">
                                         <button @click="openEditModal(activity)" class="p-2 text-slate-400 hover:text-blue-600 transition-all"><Pencil class="h-4 w-4" /></button>
                                         <button @click="openDeleteModal(activity.id)" class="p-2 text-slate-400 hover:text-red-600 transition-all"><Trash2 class="h-4 w-4" /></button>
@@ -357,5 +362,5 @@ const isOverdue = (activity: any) => {
             </div>
         </div>
 
-    </AppSidebarLayout>
+        </AppSidebarLayout>
 </template>
