@@ -81,7 +81,7 @@ class ChatbotUploadController extends Controller
             $storeId = config('gemini.store_id');
 
             // 1. Upload to Supabase with randomized filename (default behavior of putFile)
-            $supabasePath = Storage::disk('supabase')->putFile('materials', $file);
+            $supabasePath = Storage::disk('supabase')->putFile('chatbot-materials', $file);
             
             if (!$supabasePath) {
                 throw new \Exception("File could not be written to Supabase.");
