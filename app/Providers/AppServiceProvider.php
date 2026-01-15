@@ -24,12 +24,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Force HTTPS in production to prevent mixed content errors on Railway
-        if (config('app.env') === 'production') {
+        // 1. Force HTTPS in production to prevent mixed content errors on Railway
+        if (config('app.env') === 'production' || env('APP_ENV') === 'production') {
             URL::forceScheme('https');
         }
 
-        // Define permissions for teachers and admins
+        // 2. Define permissions for teachers and admins
         Gate::define('manage activities', function (User $user) {
             $privilegedRoles = ['teacher', 'admin'];
 
@@ -40,7 +40,8 @@ class AppServiceProvider extends ServiceProvider
             return $user->roles->pluck('name')->intersect($privilegedRoles)->isNotEmpty();
         });
 
-        // Custom Fortify authentication: allows login via Email OR Username
+        // 3. Custom Fortify authentication: allows login via Email OR Username
+        // FIXED: Added missing closing parenthesis and semicolon ');' below
         Fortify::authenticateUsing(function ($request) {
             $user = User::where('email', $request->email)
                 ->orWhere('username', $request->email)
@@ -50,8 +51,7 @@ class AppServiceProvider extends ServiceProvider
                 return $user;
             }
 
-        if (env('APP_ENV') == 'production') {
-            $url->forceScheme('https');
-        }
+            return null; // Return null if authentication fails
+        });
     }
 }
