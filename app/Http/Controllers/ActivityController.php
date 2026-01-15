@@ -31,7 +31,7 @@ class ActivityController extends Controller
         if (Auth::check()) {
             /** @var \App\Models\User $user */
             $user = Auth::user();
-            $permissions['manage_activities'] = $user->hasRole(['admin', 'teacher']) || $user->can('manage activities');
+            $permissions['manage_activities'] = $user->hasRole(['admin', 'teacher']);
         }
 
         $activities = $query->paginate(50);
@@ -70,7 +70,8 @@ class ActivityController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $data['file_path'] = $file->store('activities', 'public');
+            // Move from 'public' disk to 'supabase' disk
+            $data['file_path'] = $file->store('activities', 'supabase');
             $data['file_name'] = $file->getClientOriginalName();
             $data['file_type'] = $file->getClientOriginalExtension();
         }
@@ -78,7 +79,7 @@ class ActivityController extends Controller
         Activity::create($data);
 
         return redirect()->route('activities.index')
-            ->with('success', 'Activity created successfully.');
+            ->with('success', 'Activity successfully deployed to the cloud.');
     }
 
     public function show(Activity $activity)
@@ -87,10 +88,8 @@ class ActivityController extends Controller
         $user = Auth::user();
         $isTeacher = $user->hasRole(['admin', 'teacher']);
 
-        // Load specific submission for the logged-in user
         $activity->load('mySubmission');
 
-        // If teacher, load ALL submissions with student names
         $allSubmissions = [];
         if ($isTeacher) {
             $allSubmissions = ActivitySubmission::where('activity_id', $activity->id)
@@ -106,25 +105,15 @@ class ActivityController extends Controller
         ]);
     }
 
-    /**
-     * FIX: Handles user submissions correctly to update status from Pending to Completed.
-     */
     public function submit(Request $request, Activity $activity)
     {
-        // Ensure 'file' is required and is a valid file type
         $request->validate([
-            'file' => [
-                'required', 
-                'file', 
-                'mimes:pdf,docx,pptx,zip', // Specify allowed types for better security
-                'max:10240'
-            ],
-        ], [
-            'file.required' => 'You must upload a file to complete this submission.'
+            'file' => ['required', 'file', 'mimes:pdf,docx,pptx,zip', 'max:10240'],
         ]);
 
         $file = $request->file('file');
-        $path = $file->store('submissions', 'public');
+        // Store student submission in Supabase
+        $path = $file->store('submissions', 'supabase');
 
         ActivitySubmission::updateOrCreate(
             ['user_id' => Auth::id(), 'activity_id' => $activity->id],
@@ -135,7 +124,7 @@ class ActivityController extends Controller
             ]
         );
 
-        return back()->with('success', 'Work submitted successfully!');
+        return back()->with('success', 'Work submitted to cloud vault successfully!');
     }
 
     public function downloadSubmission(ActivitySubmission $submission)
@@ -146,13 +135,17 @@ class ActivityController extends Controller
             abort(403);
         }
 
-        $path = storage_path('app/public/' . $submission->file_path);
-
-        if (!file_exists($path)) {
-            return back()->with('error', 'File not found.');
+        // Use the "Friend Method" (Redirect to Temporary Supabase URL)
+        if (!Storage::disk('supabase')->exists($submission->file_path)) {
+            return back()->with('error', 'File not found in cloud storage.');
         }
 
-        return response()->download($path, $submission->file_name);
+        $url = Storage::disk('supabase')->temporaryUrl(
+            $submission->file_path,
+            now()->addMinutes(15)
+        );
+
+        return redirect($url);
     }
 
     public function edit(Activity $activity)
@@ -180,12 +173,13 @@ class ActivityController extends Controller
         ];
 
         if ($request->hasFile('file')) {
-            if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
-                Storage::disk('public')->delete($activity->file_path);
+            // Remove old file from Supabase before uploading new one
+            if ($activity->file_path && Storage::disk('supabase')->exists($activity->file_path)) {
+                Storage::disk('supabase')->delete($activity->file_path);
             }
 
             $file = $request->file('file');
-            $data['file_path'] = $file->store('activities', 'public');
+            $data['file_path'] = $file->store('activities', 'supabase');
             $data['file_name'] = $file->getClientOriginalName();
             $data['file_type'] = $file->getClientOriginalExtension();
         }
@@ -193,27 +187,33 @@ class ActivityController extends Controller
         $activity->update($data);
 
         return redirect()->route('activities.index')
-            ->with('success', 'Activity updated successfully.');
+            ->with('success', 'Activity updated and re-synced with cloud.');
     }
 
     public function destroy(Activity $activity)
     {
-        if ($activity->file_path && Storage::disk('public')->exists($activity->file_path)) {
-            Storage::disk('public')->delete($activity->file_path);
+        if ($activity->file_path && Storage::disk('supabase')->exists($activity->file_path)) {
+            Storage::disk('supabase')->delete($activity->file_path);
         }
         $activity->delete();
 
         return redirect()->route('activities.index')
-            ->with('success', 'Activity deleted successfully.');
+            ->with('success', 'Activity removed from cloud permanently.');
     }
 
     public function download(Activity $activity)
     {
-        if (!$activity->file_path || !Storage::disk('public')->exists($activity->file_path)) {
-            return back()->with('error', 'File not found.');
+        if (!$activity->file_path || !Storage::disk('supabase')->exists($activity->file_path)) {
+            return back()->with('error', 'File not found in cloud storage.');
         }
-        $path = storage_path('app/public/' . $activity->file_path);
-        return response()->download($path, $activity->file_name);
+
+        // Generate temporary URL for the activity file
+        $url = Storage::disk('supabase')->temporaryUrl(
+            $activity->file_path,
+            now()->addMinutes(15)
+        );
+
+        return redirect($url);
     }
 
     public function unsubmit(Activity $activity)
@@ -222,22 +222,21 @@ class ActivityController extends Controller
             ->where('user_id', Auth::id())
             ->first();
 
-        if (! $submission) {
+        if (!$submission) {
             return back()->with('error', 'No submission found to remove.');
         }
 
-        // Standard 2-minute window for unsubmitting
         if ($submission->created_at->diffInMinutes(now()) >= 2) {
-            return back()->with('error', 'Time limit exceeded. You can only remove a submission within 2 minutes.');
+            return back()->with('error', 'Time limit exceeded (2 mins). Contact your teacher.');
         }
 
-        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
-            Storage::disk('public')->delete($submission->file_path);
+        if ($submission->file_path && Storage::disk('supabase')->exists($submission->file_path)) {
+            Storage::disk('supabase')->delete($submission->file_path);
         }
 
         $submission->delete();
 
-        return back()->with('success', 'Submission removed. You can now upload a new file.');
+        return back()->with('success', 'Submission removed. Cloud storage updated.');
     }
 
     public function destroySubmission(ActivitySubmission $submission)
@@ -248,12 +247,12 @@ class ActivityController extends Controller
             abort(403);
         }
 
-        if ($submission->file_path && Storage::disk('public')->exists($submission->file_path)) {
-            Storage::disk('public')->delete($submission->file_path);
+        if ($submission->file_path && Storage::disk('supabase')->exists($submission->file_path)) {
+            Storage::disk('supabase')->delete($submission->file_path);
         }
 
         $submission->delete();
 
-        return back()->with('success', 'Submission has been permanently deleted.');
+        return back()->with('success', 'Submission has been deleted from cloud.');
     }
 }

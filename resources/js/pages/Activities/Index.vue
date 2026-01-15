@@ -23,8 +23,22 @@ const breadcrumbs = [
     { title: 'Classroom Activities', href: route('activities.index') },
 ];
 
-// --- NOTIFICATION & MODAL STATE ---
+// --- NOTIFICATION & ROLE STATE ---
 const page = usePage();
+const authUser = computed(() => (page.props as any).auth.user);
+
+// Dynamic Theme Logic (Using your CSS Variables)
+const themeActionClass = computed(() => {
+    // This applies your --action-color logic from CSS
+    return 'bg-[var(--action-color)] hover:bg-[var(--action-hover)] text-white border-none';
+});
+
+const themeBorderClass = computed(() => {
+    if (authUser.value?.role === 'teacher') return 'border-teal-500 hover:border-teal-600';
+    if (authUser.value?.role === 'admin') return 'border-slate-800 hover:border-slate-900';
+    return 'border-indigo-500 hover:border-indigo-600';
+});
+
 const flashSuccess = computed(() => (page.props as any).flash?.success);
 const flashError = computed(() => (page.props as any).flash?.error);
 
@@ -82,7 +96,7 @@ const getActivityTypeStyle = (type: string | undefined) => {
     const t = (type || '').toLowerCase();
     if (t.includes('game') || t.includes('quiz')) return { icon: Gamepad2, class: 'bg-purple-100 text-purple-600 border-purple-200' };
     if (t.includes('lab')) return { icon: Shapes, class: 'bg-blue-100 text-blue-600 border-blue-200' };
-    return { icon: FileText, class: 'bg-teal-50 text-teal-600 border-teal-100' };
+    return { icon: FileText, class: 'bg-slate-50 text-slate-600 border-slate-100' };
 };
 </script>
 
@@ -106,11 +120,14 @@ const getActivityTypeStyle = (type: string | undefined) => {
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-3xl font-bold tracking-tight text-slate-900 uppercase">Classroom Activities</h1>
-                    <p class="text-slate-500 mt-1 text-sm italic font-medium">Manage assignments, games, and exercises.</p>
+                    <p class="text-slate-500 mt-1 text-sm italic font-medium">Access and complete assignments in the cloud.</p>
                 </div>
 
                 <Link v-if="can.manage_activities" :href="route('activities.create')">
-                    <Button class="bg-slate-900 hover:bg-teal-700 text-white font-bold uppercase text-[10px] tracking-widest px-8 py-5 rounded-none shadow-lg transition-all">
+                    <Button
+                        class="font-bold uppercase text-[10px] tracking-widest px-8 py-5 rounded-none shadow-lg transition-all"
+                        :class="themeActionClass"
+                    >
                         <Plus class="w-4 h-4 mr-2" /> Create New
                     </Button>
                 </Link>
@@ -129,7 +146,10 @@ const getActivityTypeStyle = (type: string | undefined) => {
                     <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">No activities found</h3>
                 </div>
 
-                <div v-for="activity in activities.data" :key="activity.id" class="group bg-white rounded-none border border-slate-200 p-5 shadow-sm hover:border-teal-500 transition-all flex flex-col md:flex-row gap-5 items-start md:items-center border-l-4">
+                <div v-for="activity in activities.data" :key="activity.id"
+                    class="group bg-white rounded-none border-y border-r border-slate-200 p-5 shadow-sm transition-all flex flex-col md:flex-row gap-5 items-start md:items-center border-l-4"
+                    :class="themeBorderClass"
+                >
 
                     <div class="shrink-0 hidden md:block">
                          <div class="h-12 w-12 rounded-none flex items-center justify-center border" :class="getActivityTypeStyle(activity.type).class">
@@ -140,7 +160,7 @@ const getActivityTypeStyle = (type: string | undefined) => {
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-3 mb-1">
                             <Link :href="route('activities.show', activity.id)" class="hover:underline">
-                                <h3 class="text-lg font-bold text-slate-900 truncate group-hover:text-teal-700 transition-colors uppercase">
+                                <h3 class="text-lg font-bold text-slate-900 truncate transition-colors uppercase">
                                     {{ activity.title }}
                                 </h3>
                             </Link>
@@ -152,7 +172,7 @@ const getActivityTypeStyle = (type: string | undefined) => {
 
                         <div class="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
                             <span class="flex items-center gap-1.5 text-slate-600">
-                                <Clock class="w-3.5 h-3.5 text-teal-500" /> Posted: {{ formatDate(activity.created_at) }}
+                                <Clock class="w-3.5 h-3.5" /> Posted: {{ formatDate(activity.created_at) }}
                             </span>
                             <span v-if="activity.due_date" class="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-2 py-0.5 border border-orange-100">
                                 <Calendar class="w-3.5 h-3.5" /> Due: {{ formatDate(activity.due_date) }}
@@ -162,14 +182,14 @@ const getActivityTypeStyle = (type: string | undefined) => {
 
                     <div class="flex items-center gap-2 border-l border-slate-100 pl-4 ml-2 md:self-center self-end w-full md:w-auto justify-end">
                         <Link :href="route('activities.show', activity.id)">
-                            <Button size="sm" variant="outline" class="text-teal-600 border-teal-200 hover:bg-teal-50 gap-2 rounded-none text-[10px] uppercase font-bold px-4">
-                                <Eye class="w-4 h-4" /> View
+                            <Button size="sm" variant="outline" class="gap-2 rounded-none text-[10px] uppercase font-bold px-4 hover:bg-slate-50">
+                                <Eye class="w-4 h-4" /> View Details
                             </Button>
                         </Link>
 
                         <template v-if="can.manage_activities">
                             <Link :href="route('activities.edit', activity.id)">
-                                <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-teal-600"><Pencil class="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-blue-600"><Pencil class="w-4 h-4" /></Button>
                             </Link>
                             <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-400 hover:text-red-600" @click="openDeleteModal(activity.id)">
                                 <Trash2 class="w-4 h-4" />
@@ -198,12 +218,12 @@ const getActivityTypeStyle = (type: string | undefined) => {
          </div>
 
          <div v-if="showDeleteModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div class="bg-white max-w-sm w-full p-8 border border-slate-200 rounded-none shadow-2xl animate-in zoom-in duration-200">
+            <div class="bg-white max-w-sm w-full p-8 border border-slate-200 rounded-none shadow-2xl">
                 <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900 mb-2 flex items-center gap-2">
-                    <AlertCircle class="w-5 h-5 text-red-500" /> Confirm Delete
+                    <AlertCircle class="w-5 h-5 text-red-500" /> Confirm Deletion
                 </h3>
                 <p class="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-                    Delete this activity and all student work permanently? This cannot be undone.
+                    Delete this activity and all student work permanently from the cloud?
                 </p>
                 <div class="flex gap-3">
                     <Button variant="ghost" @click="showDeleteModal = false" class="flex-1 text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
