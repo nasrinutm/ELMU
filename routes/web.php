@@ -3,7 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Gemini\Laravel\Facades\Gemini;
+
+// --- MODEL IMPORTS ---
+use App\Models\User;
+use App\Models\Material;
+use App\Models\Quiz;
+use App\Models\Activity;
 
 // --- CONTROLLER IMPORTS ---
 use App\Http\Controllers\UserController;
@@ -24,10 +31,9 @@ use App\Http\Controllers\ReportController;
 */
 
 Route::get('/', function () {
-    return redirect()->route('login');
+    return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 })->name('home');
 
-// AI Capability Test Route
 Route::get('/test-models', function () {
     try {
         $response = Gemini::models()->list();
@@ -51,7 +57,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 2. CHATBOT INTERACTION
     Route::post('/chat/send', [ChatbotController::class, 'send'])->name('chat.send');
 
-    // 3. ADMIN & CHATBOT MANAGEMENT (Separate logic for AI Training)
+    // 3. ADMIN ROUTES
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/add', [UserController::class, 'create'])->name('users.create');
@@ -60,7 +66,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // Chatbot Knowledge Base (Friend's Logic)
         Route::get('/chatbot', [ChatbotUploadController::class, 'index'])->name('chatbot.details');
         Route::get('/chatbot/upload', [ChatbotUploadController::class, 'create'])->name('upload.create');
         Route::post('/chatbot/upload', [ChatbotUploadController::class, 'store'])->name('upload.store');
@@ -70,24 +75,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/chatbot/upload/{geminiDocumentName}', [ChatbotUploadController::class, 'update'])
             ->name('upload.update')
             ->where('geminiDocumentName', '.*');
-        Route::get('/chatbot/download/{id}', [ChatbotUploadController::class, 'download'])->name('chatbot.download');
 
         Route::get('/chatbot/prompt', [ChatbotController::class, 'editPrompt'])->name('chatbot.prompt.edit');
         Route::put('/chatbot/prompt', [ChatbotController::class, 'updatePrompt'])->name('chatbot.prompt.update');
+        Route::get('/chatbot/download/{id}', [ChatbotUploadController::class, 'download'])->name('chatbot.download');
     });
 
     // 4. FORUM
-    Route::resource('forum', ForumController::class);
+    // Order is important: specific reply routes first
     Route::post('/replies', [ForumController::class, 'storeReply'])->name('replies.store');
     Route::put('/replies/{reply}', [ForumController::class, 'updateReply'])->name('replies.update');
     Route::delete('/replies/{reply}', [ForumController::class, 'destroyReply'])->name('replies.destroy');
 
-    // 5. GENERAL MATERIALS (Student resources - Your Logic)
-    // Public Access: View and Cloud Download
-    Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
-    Route::get('/materials/download/{material}', [MaterialController::class, 'download'])->name('materials.download');
+    Route::get('/forum', [ForumController::class, 'index'])->name('forum.index');
+    Route::get('/forum/create', [ForumController::class, 'create'])->name('forum.create');
+    Route::post('/forum', [ForumController::class, 'store'])->name('forum.store');
+    Route::get('/forum/{post}', [ForumController::class, 'show'])->name('forum.show');
+    Route::get('/forum/{post}/edit', [ForumController::class, 'edit'])->name('forum.edit');
+    Route::put('/forum/{post}', [ForumController::class, 'update'])->name('forum.update');
+    Route::delete('/forum/{post}', [ForumController::class, 'destroy'])->name('forum.destroy');
 
-    // Management: Restricted to Teacher/Admin
+    // 5. MATERIALS
+    Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
+    Route::get('/materials/{material}/download', [MaterialController::class, 'download'])->name('materials.download');
+
     Route::middleware(['role:teacher|admin'])->prefix('materials')->group(function () {
         Route::get('/create', [MaterialController::class, 'create'])->name('materials.create');
         Route::post('/', [MaterialController::class, 'store'])->name('materials.store');
@@ -96,41 +107,55 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{material}', [MaterialController::class, 'destroy'])->name('materials.destroy');
     });
 
-    // 6. ACTIVITIES & SUBMISSIONS
+    // 6. ACTIVITIES
     Route::resource('activities', ActivityController::class);
     Route::get('/activities/{activity}/download', [ActivityController::class, 'download'])->name('activities.download');
     Route::get('/activities/{activity}/play', [ActivityController::class, 'play'])->name('activities.play');
     Route::post('/activities/{activity}/score', [ActivityController::class, 'submitScore'])->name('activities.score');
+
+    // 7. STUDENT SUBMISSIONS & PROGRESS
     Route::post('/activities/{activity}/submit', [ActivityController::class, 'submit'])->name('activities.submit');
     Route::get('/activities/download-submission/{submission}', [ActivityController::class, 'downloadSubmission'])->name('activities.downloadSubmission');
     Route::delete('/activities/{activity}/unsubmit', [ActivityController::class, 'unsubmit'])->name('activities.unsubmit');
     Route::delete('/submissions/{submission}', [ActivityController::class, 'destroySubmission'])->name('submissions.destroy')->middleware('role:teacher|admin');
 
-    // 7. QUIZZES (Student & Teacher)
+    // 8. QUIZZES (Student Facing)
     Route::get('/quiz', [QuizController::class, 'index'])->name('quizzes.index');
     Route::get('/quiz/{id}', [QuizController::class, 'show'])->name('quizzes.show');
     Route::post('/quiz/submit', [QuizController::class, 'store'])->name('quizzes.submit');
     Route::get('/quiz/{id}/history', [QuizController::class, 'history'])->name('quizzes.history');
 
+    // 9. TEACHER QUIZ MANAGEMENT
     Route::middleware(['role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
-        Route::resource('quiz', TeacherQuizController::class);
+        Route::get('/quizzes', [TeacherQuizController::class, 'index'])->name('quiz.index');
+        Route::get('/quizzes/create', [TeacherQuizController::class, 'create'])->name('quiz.create');
+        Route::post('/quizzes', [TeacherQuizController::class, 'store'])->name('quiz.store');
+        Route::get('/quizzes/{id}/edit', [TeacherQuizController::class, 'edit'])->name('quiz.edit');
+        Route::put('/quizzes/{id}', [TeacherQuizController::class, 'update'])->name('quiz.update');
+        Route::delete('/quizzes/{id}', [TeacherQuizController::class, 'destroy'])->name('quiz.destroy');
+
         Route::get('/quizzes/{id}/results', [TeacherQuizController::class, 'results'])->name('quiz.results');
         Route::post('/quizzes/{quiz}/{user}/grant', [TeacherQuizController::class, 'grantAttempt'])->name('attempt.grant');
         Route::get('/attempts/{id}/review', [TeacherQuizController::class, 'showAttempt'])->name('attempt.review');
         Route::delete('/attempts/{id}', [TeacherQuizController::class, 'destroyAttempt'])->name('attempt.destroy');
     });
 
-    // 8. STUDENTS ROSTER & REPORTS
+    // 10. STUDENTS ROSTER & PROGRESS UPDATE
     Route::get('/students', [StudentController::class, 'index'])->name('students.index');
     Route::get('/students/{student}', [StudentController::class, 'show'])->name('students.show');
     Route::post('/students/{student}/activities', [StudentController::class, 'storeActivity'])->name('students.activities.store');
+    Route::put('/students/{student}/activities/{activity}', [StudentController::class, 'updateActivity'])->name('students.activities.update');
+    Route::delete('/students/{student}/activities/{activity}', [StudentController::class, 'destroyActivity'])->name('students.activities.destroy');
 
+    // 11. REPORTS & REMARKS
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/student/{student}', [ReportController::class, 'showStudentPerformance'])->name('reports.student.detail');
+
     Route::middleware(['role:teacher|admin'])->group(function () {
         Route::post('/reports/remark', [ReportController::class, 'saveRemark'])->name('reports.remark.save');
         Route::delete('/reports/remark/{report}', [ReportController::class, 'deleteRemark'])->name('reports.remark.delete');
     });
-});
+
+}); // End of auth/verified middleware group
 
 require __DIR__.'/settings.php';
