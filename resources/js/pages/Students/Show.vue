@@ -357,5 +357,61 @@ const isOverdue = (activity: any) => {
             </div>
         </div>
 
+        <div v-if="showConfirmEditModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
+            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
+                <div class="flex flex-col items-center text-center">
+                    <div class="mb-4 rounded-full bg-amber-50 p-3">
+                        <AlertTriangle class="h-6 w-6 text-amber-500" />
+                    </div>
+                    <h3 class="mb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Confirm Update</h3>
+                    <p class="mb-6 text-sm text-slate-500">
+                        Proceed with saving these changes? This will update the material details for all students.
+                    </p>
+                    <div class="flex w-full gap-3">
+                        <button 
+                            @click="showConfirmEditModal = false"
+                            class="w-full border border-slate-200 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors"
+                        >
+                            No, Cancel
+                        </button>
+                        <button 
+                            @click="proceedWithSave"
+                            class="w-full bg-slate-900 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-teal-600 transition-colors shadow-md"
+                        >
+                            Yes, Proceed
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+    
+        <div v-if="showDeleteModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
+            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
+                <div class="flex flex-col items-center text-center">
+                    <div class="mb-4 rounded-full bg-red-50 p-3">
+                        <AlertTriangle class="h-6 w-6 text-red-600" />
+                    </div>
+                    <h3 class="mb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Confirm Deletion</h3>
+                    <p class="mb-6 text-sm text-slate-500">
+                        Are you sure you want to remove this resource permanently? This action cannot be undone.
+                    </p>
+                    <div class="flex w-full gap-3">
+                        <button 
+                            @click="showDeleteModal = false"
+                            class="w-full border border-slate-200 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            @click="confirmDelete"
+                            class="w-full bg-red-600 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-red-700 transition-colors shadow-md"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </AppSidebarLayout>
 </template>

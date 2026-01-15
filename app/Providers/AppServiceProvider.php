@@ -50,7 +50,8 @@ class AppServiceProvider extends ServiceProvider
                 return $user;
             }
 
-            return null;
-        });
+        if (env('APP_ENV') == 'production') {
+            $url->forceScheme('https');
+        }
     }
 }
