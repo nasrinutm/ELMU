@@ -14,15 +14,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
+        // Trust all proxies for Railway's Load Balancer
+        $middleware->trustProxies(at: '*');
+
+        // Note: Disabling CSRF for '*' makes your app vulnerable to attacks.
+        // It is better to list specific routes if needed.
         $middleware->validateCsrfTokens(except: [
             '*',
         ]);
 
-        // Removed 'appearance' from except list
-        $middleware->validateCsrfTokens(except: [
-            '*', // This excludes EVERY route in your app from CSRF protection
+        $middleware->encryptCookies(except: [
+            'sidebar_state'
         ]);
-        $middleware->encryptCookies(except: ['sidebar_state']);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,
@@ -35,11 +38,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
-
     ->withProviders([
         \Spatie\Permission\PermissionServiceProvider::class,
     ])
-
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
