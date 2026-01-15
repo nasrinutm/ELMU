@@ -87,6 +87,7 @@ class StudentController extends Controller
     public function index(Request $request)
     {
         $query = User::role('student')->select('id', 'name', 'email', 'username', 'created_at');
+
         if ($request->search) {
             $query->where(function($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
@@ -94,6 +95,7 @@ class StudentController extends Controller
                   ->orWhere('username', 'like', '%' . $request->search . '%');
             });
         }
+
         return Inertia::render('Students/Index', [
             'students' => $query->latest()->paginate(10)->withQueryString(),
             'filters' => $request->only(['search']),
@@ -117,7 +119,6 @@ class StudentController extends Controller
             ->get()
             ->keyBy('activity_id');
 
-        // Logic: Group attempts by quiz_id and take the OLDEST one (First Attend)
         $firstQuizAttempts = DB::table('quiz_attempts')
             ->where('user_id', $student->id)
             ->orderBy('created_at', 'asc')
@@ -130,12 +131,12 @@ class StudentController extends Controller
             ->get();
 
         // 3. BUILD THE COMBINED HISTORY LIST
-
-        // Activities
+        // FIX: Ensure 'id' is present for Ziggy route calls
         $activitiesHistory = $allSystemActivities->map(function ($act) use ($submissions, $now) {
             $sub = $submissions->get($act->id);
             $isOverdue = !$sub && $act->due_date && Carbon::parse($act->due_date)->isPast();
             return [
+                'id' => $act->id, // Critical for Ziggy
                 'title' => $act->title,
                 'type' => 'Activity',
                 'status' => $sub ? 'COMPLETED' : ($isOverdue ? 'OVERDUE' : 'PENDING'),
@@ -145,11 +146,11 @@ class StudentController extends Controller
             ];
         });
 
-        // Quizzes (This fix ensures unattempted quizzes show up for Abu)
         $quizzesHistory = $allSystemQuizzes->map(function ($quiz) use ($firstQuizAttempts) {
             $attempt = $firstQuizAttempts->get($quiz->id);
             $scoreDisplay = $attempt ? (($attempt->total_questions > 0) ? round(($attempt->score / $attempt->total_questions) * 100) . '%' : '0%') : '-';
             return [
+                'id' => $quiz->id, // Critical for Ziggy
                 'title' => $quiz->title . ($attempt ? '' : ' (Not Attempted)'),
                 'type' => 'Quiz',
                 'status' => $attempt ? 'COMPLETED' : 'PENDING',
@@ -159,9 +160,9 @@ class StudentController extends Controller
             ];
         });
 
-        // Manual Evaluations
         $manualHistory = $manualScores->map(function ($m) {
             return [
+                'id' => $m->id,
                 'title' => $m->title,
                 'type' => 'Manual',
                 'status' => 'COMPLETED',
@@ -171,12 +172,11 @@ class StudentController extends Controller
             ];
         });
 
-        // 4. PERFORM FINAL MATH (Stats Cards & Circular Progress)
+        // 4. STATS CALCULATION
         $totalActivitiesCount = $allSystemActivities->count();
-        $totalQuizzesCount = $allSystemQuizzesCount = $allSystemQuizzes->count();
+        $totalQuizzesCount = $allSystemQuizzes->count();
         $totalManualCount = $manualScores->count();
 
-        // Stats Cards: Completed vs Total
         $totalSystemPossible = $totalActivitiesCount + $totalQuizzesCount;
         $completedOverall = $submissions->count() + $firstQuizAttempts->count();
         $pendingOverall = max(0, $totalSystemPossible - $completedOverall);
@@ -185,16 +185,11 @@ class StudentController extends Controller
             return !$submissions->has($act->id) && $act->due_date && Carbon::parse($act->due_date)->isPast();
         })->count();
 
-        // Circular Progress 1: Assignment (Files)
         $assignmentPercent = ($totalActivitiesCount > 0) ? round(($submissions->count() / $totalActivitiesCount) * 100) : 0;
-
-        // Circular Progress 2: Evaluation (Quiz First Attend + Manual Scores)
-        // Pool = System Quizzes + Manual Entries
         $evalPoolTotal = $totalQuizzesCount + $totalManualCount;
         $evalPoolDone = $firstQuizAttempts->count() + $totalManualCount;
         $evaluationPercent = ($evalPoolTotal > 0) ? round(($evalPoolDone / $evalPoolTotal) * 100) : 0;
 
-        // Combine all lists for the timeline table
         $finalTimeline = $activitiesHistory
             ->concat($quizzesHistory)
             ->concat($manualHistory)
@@ -212,7 +207,7 @@ class StudentController extends Controller
             ],
             'completion_stats' => [
                 'activity' => (int)min(100, $assignmentPercent),
-                'evaluation' => (int)min(100, $evaluationPercent), // Fixed: evaluation combined
+                'evaluation' => (int)min(100, $evaluationPercent),
                 'raw_activity_total' => $totalActivitiesCount,
                 'raw_quiz_total' => $totalQuizzesCount,
             ]
@@ -223,7 +218,7 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'score' => 'required|string|max:10',
+            'score' => 'required|numeric|min:0|max:100', // Changed to numeric for better safety
         ]);
 
         DB::table('student_manual_activities')->insert([
@@ -241,7 +236,7 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'score' => 'required|string|max:10',
+            'score' => 'required|numeric|min:0|max:100',
         ]);
 
         DB::table('student_manual_activities')

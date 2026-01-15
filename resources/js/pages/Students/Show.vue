@@ -31,9 +31,6 @@ const props = defineProps<{
         due_date: string | null;
         is_manual: boolean;
     }>;
-    total_unique_count: number;
-    true_completed_count: number;
-    // Bind to the corrected Controller names
     stats: {
         total: number;
         completed: number;
@@ -42,17 +39,17 @@ const props = defineProps<{
     };
     completion_stats: {
         activity: number;
-        evaluation: number; // Combined Quiz + Manual logic
+        evaluation: number;
         raw_activity_total: number;
         raw_quiz_total: number;
     };
 }>();
 
 const page = usePage();
-const authUser = computed(() => (page.props as any).auth.user);
-const isOwnProfile = computed(() => authUser.value?.id === props.student.id);
+// FIX: Using optional chaining for auth user
+const authUser = computed(() => (page.props as any).auth?.user);
+const isOwnProfile = computed(() => authUser.value?.id === props.student?.id);
 
-// --- NOTIFICATION STATE ---
 const flashSuccess = computed(() => (page.props as any).flash?.success);
 const showNotification = ref(false);
 
@@ -63,33 +60,29 @@ watch(flashSuccess, async (newVal) => {
         showNotification.value = true;
         setTimeout(() => {
             showNotification.value = false;
-            (page.props as any).flash.success = null;
+            if ((page.props as any).flash) (page.props as any).flash.success = null;
         }, 5000);
     }
 }, { immediate: true });
 
-// --- SORTING LOGIC ---
 const sortedActivities = computed(() => {
+    if (!props.activities) return [];
     return [...props.activities].sort((a, b) => {
         const priority: Record<string, number> = {
-            'Overdue': 0,
-            'OVERDUE': 0,
-            'Pending': 1,
-            'PENDING': 1,
-            'Completed': 2,
-            'COMPLETED': 2
+            'Overdue': 0, 'OVERDUE': 0,
+            'Pending': 1, 'PENDING': 1,
+            'Completed': 2, 'COMPLETED': 2
         };
         return (priority[a.status] ?? 3) - (priority[b.status] ?? 3);
     });
 });
 
-// --- STATS LOGIC ---
-const stats = computed(() => {
+const statsData = computed(() => {
     return [
-        { label: 'Total Activities', val: props.stats.total, color: 'bg-slate-300' },
-        { label: 'Completed', val: props.stats.completed, color: 'bg-teal-500' },
-        { label: 'Pending', val: props.stats.pending, color: 'bg-amber-500' },
-        { label: 'Overdue', val: props.stats.overdue, color: 'bg-red-500' }
+        { label: 'Total Activities', val: props.stats?.total ?? 0, color: 'bg-slate-300' },
+        { label: 'Completed', val: props.stats?.completed ?? 0, color: 'bg-teal-500' },
+        { label: 'Pending', val: props.stats?.pending ?? 0, color: 'bg-amber-500' },
+        { label: 'Overdue', val: props.stats?.overdue ?? 0, color: 'bg-red-500' }
     ];
 });
 
@@ -99,23 +92,20 @@ const breadcrumbs = computed(() => {
         crumbs.push({ title: 'My Progress', href: '#' });
     } else {
         crumbs.push({ title: 'Student Progress', href: route('students.index') });
-        crumbs.push({ title: props.student.name, href: '#' });
+        crumbs.push({ title: props.student?.name || 'Student', href: '#' });
     }
     return crumbs;
 });
 
-// --- MODAL STATES ---
-const showModal = ref(false); // Main Form
-const showDeleteModal = ref(false); // Delete Confirmation
-const showConfirmEditModal = ref(false); // Edit Confirmation (Yellow)
-
+const showModal = ref(false);
+const showDeleteModal = ref(false);
+const showConfirmEditModal = ref(false);
 const isEditing = ref(false);
 const editingId = ref<number | null>(null);
 const itemToDeleteId = ref<number | null>(null);
 
 const form = useForm({ title: '', score: '' });
 
-// --- FORM FUNCTIONS ---
 const openCreateModal = () => {
     isEditing.value = false;
     form.reset();
@@ -137,47 +127,24 @@ const closeModal = () => { showModal.value = false; form.reset(); form.clearErro
 const validateAndSubmit = () => {
     form.clearErrors();
     let hasError = false;
-
-    if (!form.title) {
-        form.setError('title', 'Activity title is required.');
-        hasError = true;
-    }
-
+    if (!form.title) { form.setError('title', 'Activity title is required.'); hasError = true; }
     if (form.score === '' || form.score === null) {
         form.setError('score', 'Score is required.');
         hasError = true;
     } else {
         const scoreNum = Number(form.score);
-        if (scoreNum > 100) {
-            form.setError('score', 'Score cannot be more than 100.');
-            hasError = true;
-        } else if (scoreNum < 0) {
-            form.setError('score', 'Score cannot be negative.');
-            hasError = true;
-        }
+        if (scoreNum > 100) { form.setError('score', 'Score cannot be more than 100.'); hasError = true; }
+        else if (scoreNum < 0) { form.setError('score', 'Score cannot be negative.'); hasError = true; }
     }
-
     if (hasError) return;
-
-    if (isEditing.value) {
-        showConfirmEditModal.value = true;
-    } else {
-        proceedWithSave();
-    }
+    if (isEditing.value) { showConfirmEditModal.value = true; }
+    else { proceedWithSave(); }
 };
 
 const proceedWithSave = () => {
-    form.transform((data) => ({
-        ...data,
-        score: String(data.score),
-    }));
-
     if (isEditing.value && editingId.value) {
         form.put(route('students.activities.update', [props.student.id, editingId.value]), {
-            onSuccess: () => {
-                showConfirmEditModal.value = false;
-                closeModal();
-            }
+            onSuccess: () => { showConfirmEditModal.value = false; closeModal(); }
         });
     } else {
         form.post(route('students.activities.store', props.student.id), {
@@ -186,33 +153,25 @@ const proceedWithSave = () => {
     }
 };
 
-// --- DELETE FUNCTIONS ---
-const openDeleteModal = (id: number) => {
-    itemToDeleteId.value = id;
-    showDeleteModal.value = true;
-};
-
+const openDeleteModal = (id: number) => { itemToDeleteId.value = id; showDeleteModal.value = true; };
 const confirmDelete = () => {
     if (itemToDeleteId.value) {
         router.delete(route('students.activities.destroy', [props.student.id, itemToDeleteId.value]), {
-            onSuccess: () => {
-                showDeleteModal.value = false;
-                itemToDeleteId.value = null;
-            }
+            onSuccess: () => { showDeleteModal.value = false; itemToDeleteId.value = null; }
         });
     }
 };
 
-const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
 const isOverdue = (activity: any) => {
-    if (!activity.due_date || activity.status === 'Completed' || activity.status === 'COMPLETED') return false;
+    if (!activity?.due_date || ['Completed', 'COMPLETED'].includes(activity.status)) return false;
     return new Date() > new Date(activity.due_date);
 };
 </script>
 
 <template>
-    <Head :title="student.name" />
+    <Head :title="student?.name || 'Student Profile'" />
 
     <AppSidebarLayout :breadcrumbs="breadcrumbs">
         <div class="min-h-screen bg-slate-50 p-6 space-y-6 relative font-sans max-w-5xl mx-auto">
@@ -221,8 +180,8 @@ const isOverdue = (activity: any) => {
                 <div v-if="showNotification" class="fixed top-10 right-10 z-[100] flex items-center gap-4 bg-slate-900 text-white p-5 shadow-2xl border-l-4 border-emerald-500 min-w-[350px]">
                     <div class="bg-emerald-500/20 p-2"><CheckCircle2 class="w-6 h-6 text-emerald-500" /></div>
                     <div class="flex-grow">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 font-sans">System Notification</p>
-                        <p class="text-sm font-medium font-sans">{{ flashSuccess }}</p>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">System Notification</p>
+                        <p class="text-sm font-medium">{{ flashSuccess }}</p>
                     </div>
                     <button @click="showNotification = false" class="text-slate-500 hover:text-white transition"><X class="w-4 h-4" /></button>
                 </div>
@@ -231,23 +190,19 @@ const isOverdue = (activity: any) => {
             <div class="bg-white rounded-none border border-slate-200 shadow-sm p-8 flex flex-col md:flex-row items-start md:items-center gap-8 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-teal-500/20"></div>
                 <div class="h-24 w-24 rounded-none bg-teal-50 text-teal-600 flex items-center justify-center text-4xl font-bold border border-teal-100 shrink-0 shadow-inner">
-                    {{ student.name.charAt(0).toUpperCase() }}
+                    {{ student?.name?.charAt(0).toUpperCase() || 'S' }}
                 </div>
                 <div class="flex-1">
-                    <h1 class="text-3xl font-bold text-slate-900 uppercase tracking-tight leading-none">{{ student.name }}</h1>
-                    <div class="flex flex-wrap gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-4 font-sans">
-                        <span class="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100"><Mail class="w-3.5 h-3.5 text-teal-500" /> {{ student.email }}</span>
-                        <span class="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100"><GraduationCap class="w-3.5 h-3.5 text-teal-500" /> @{{ student.username }}</span>
+                    <h1 class="text-3xl font-bold text-slate-900 uppercase tracking-tight leading-none">{{ student?.name || 'Loading...' }}</h1>
+                    <div class="flex flex-wrap gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-4">
+                        <span class="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100"><Mail class="w-3.5 h-3.5 text-teal-500" /> {{ student?.email }}</span>
+                        <span class="flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100"><GraduationCap class="w-3.5 h-3.5 text-teal-500" /> @{{ student?.username }}</span>
                     </div>
                 </div>
                 <Link v-if="!isOwnProfile" :href="route('students.index')">
                     <Button
                         class="text-[10px] font-bold uppercase tracking-widest px-8 py-6 rounded-none transition shadow-lg flex items-center gap-2"
-                        :class="{
-                            'bg-teal-600 hover:bg-teal-700 text-white': authUser.role === 'teacher',
-                            'bg-indigo-600 hover:bg-indigo-700 text-white': authUser.role === 'admin',
-                            'bg-slate-900 hover:bg-slate-800 text-white': !authUser.role
-                        }"
+                        :class="authUser?.role === 'admin' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-teal-600 hover:bg-teal-700'"
                     >
                         <ArrowLeft class="w-4 h-4" /> Back to Student List
                     </Button>
@@ -255,7 +210,7 @@ const isOverdue = (activity: any) => {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-8 border border-slate-200 rounded-none shadow-sm flex items-center justify-between group">
+                <div class="bg-white p-8 border border-slate-200 rounded-none shadow-sm flex items-center justify-between">
                     <div>
                         <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Activity Completion</h4>
                         <p class="text-2xl font-bold text-slate-900 mt-1">Assignments</p>
@@ -263,13 +218,13 @@ const isOverdue = (activity: any) => {
                     <div class="relative h-24 w-24">
                         <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="3" />
-                            <circle cx="18" cy="18" r="16" fill="none" class="stroke-teal-500 transition-all duration-1000 ease-out" stroke-width="3"
-                                stroke-linecap="round" :stroke-dasharray="`${completion_stats.activity}, 100`" />
+                            <circle cx="18" cy="18" r="16" fill="none" class="stroke-teal-500 transition-all duration-1000" stroke-width="3"
+                                stroke-linecap="round" :stroke-dasharray="`${completion_stats?.activity || 0}, 100`" />
                         </svg>
-                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-sans">{{ completion_stats.activity }}%</div>
+                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold">{{ completion_stats?.activity || 0 }}%</div>
                     </div>
                 </div>
-                <div class="bg-white p-8 border border-slate-200 rounded-none shadow-sm flex items-center justify-between group">
+                <div class="bg-white p-8 border border-slate-200 rounded-none shadow-sm flex items-center justify-between">
                     <div>
                         <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Quiz Completion</h4>
                         <p class="text-2xl font-bold text-slate-900 mt-1">Evaluations</p>
@@ -277,43 +232,26 @@ const isOverdue = (activity: any) => {
                     <div class="relative h-24 w-24">
                         <svg class="h-full w-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="16" fill="none" class="stroke-slate-100" stroke-width="3" />
-                            <circle cx="18" cy="18" r="16" fill="none" class="stroke-purple-500 transition-all duration-1000 ease-out" stroke-width="3"
-                                stroke-linecap="round" :stroke-dasharray="`${completion_stats.evaluation}, 100`" />
+                            <circle cx="18" cy="18" r="16" fill="none" class="stroke-purple-500 transition-all duration-1000" stroke-width="3"
+                                stroke-linecap="round" :stroke-dasharray="`${completion_stats?.evaluation || 0}, 100`" />
                         </svg>
-                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold font-sans">{{ completion_stats.evaluation }}%</div>
+                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold">{{ completion_stats?.evaluation || 0 }}%</div>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 font-sans">
-                <div v-for="stat in stats" :key="stat.label"
-                    class="bg-white p-6 border border-slate-200 rounded-none shadow-sm flex flex-col relative overflow-hidden group transition-all duration-300"
-                    :class="stat.label === 'Total Activities' ? 'cursor-help' : ''"
-                >
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div v-for="stat in statsData" :key="stat.label" class="bg-white p-6 border border-slate-200 rounded-none shadow-sm flex flex-col relative overflow-hidden group">
                     <div :class="['absolute top-0 left-0 w-full h-1', stat.color]"></div>
                     <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ stat.label }}</span>
-
-                    <span class="text-4xl font-bold mt-2 tracking-tighter transition-opacity duration-300"
-                        :class="[
-                            stat.label === 'Overdue' && stat.val > 0 ? 'text-red-600' : 'text-slate-900',
-                            stat.label === 'Total Activities' ? 'group-hover:opacity-0' : ''
-                        ]"
-                    >
+                    <span class="text-4xl font-bold mt-2 tracking-tighter" :class="stat.label === 'Overdue' && stat.val > 0 ? 'text-red-600' : 'text-slate-900'">
                         {{ stat.val }}
                     </span>
 
-                    <div v-if="stat.label === 'Total Activities'"
-                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-4 bg-white/95"
-                    >
+                    <div v-if="stat.label === 'Total Activities'" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 px-4">
                         <div class="text-center space-y-1.5">
-                            <div class="flex items-center gap-2 justify-center">
-                                <FileText class="w-3 h-3 text-teal-500" />
-                                <span class="text-[10px] font-black uppercase text-slate-600 tracking-wider">Assigned: {{ completion_stats.raw_activity_total }}</span>
-                            </div>
-                            <div class="flex items-center gap-2 justify-center">
-                                <ClipboardList class="w-3 h-3 text-purple-500" />
-                                <span class="text-[10px] font-black uppercase text-slate-600 tracking-wider">Quizzes: {{ completion_stats.raw_quiz_total }}</span>
-                            </div>
+                            <span class="block text-[10px] font-black uppercase text-slate-600">Assigned: {{ completion_stats?.raw_activity_total || 0 }}</span>
+                            <span class="block text-[10px] font-black uppercase text-slate-600">Quizzes: {{ completion_stats?.raw_quiz_total || 0 }}</span>
                         </div>
                     </div>
                 </div>
@@ -322,16 +260,15 @@ const isOverdue = (activity: any) => {
             <div class="bg-white rounded-none border border-slate-200 shadow-sm overflow-hidden">
                 <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 bg-teal-50 border border-teal-100 shadow-sm"><ClipboardList class="w-5 h-5 text-teal-600" /></div>
-                        <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900 font-sans">Activity History & Performance</h3>
+                        <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">Activity History & Performance</h3>
                     </div>
-                    <Button v-if="!isOwnProfile" @click="openCreateModal" class="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 rounded-none shadow-md transition-all active:translate-y-0.5">
+                    <Button v-if="!isOwnProfile" @click="openCreateModal" class="bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-bold uppercase tracking-widest px-5 h-10 rounded-none">
                         <Plus class="h-4 w-4 mr-2" /> Add Manual Score
                     </Button>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm font-sans">
+                    <table class="w-full text-left text-sm">
                         <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-bold tracking-widest border-b border-slate-100">
                             <tr>
                                 <th class="px-8 py-5">Activity Details</th>
@@ -341,62 +278,50 @@ const isOverdue = (activity: any) => {
                                 <th v-if="!isOwnProfile" class="px-8 py-5 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 font-sans">
+                        <tbody class="divide-y divide-slate-100">
                             <tr v-if="sortedActivities.length === 0">
                                 <td colspan="5" class="px-8 py-20 text-center opacity-40">
-                                    <PlusCircle class="w-12 h-12 text-slate-200 mx-auto mb-2" />
-                                    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 font-sans">No records found.</p>
+                                    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">No records found.</p>
                                 </td>
                             </tr>
                             <tr v-for="activity in sortedActivities" :key="activity.id"
                                 class="hover:bg-slate-50/80 transition-colors group border-l-4"
-                                :class="(activity.status === 'Completed' || activity.status === 'COMPLETED') ? 'border-l-emerald-500' : (isOverdue(activity) ? 'border-l-red-500' : 'border-l-transparent')"
+                                :class="['Completed', 'COMPLETED'].includes(activity.status) ? 'border-l-emerald-500' : (isOverdue(activity) ? 'border-l-red-500' : 'border-l-transparent')"
                             >
                                 <td class="px-8 py-5">
-                                    <div class="font-bold text-slate-900 uppercase tracking-tight flex items-center gap-3 font-sans">
-                                        <div class="p-1.5 bg-slate-100 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors">
-                                            <component :is="activity.type === 'Quiz' ? ClipboardList : FileText" class="w-4 h-4" />
-                                        </div>
+                                    <div class="font-bold text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                                        <component :is="activity.type === 'Quiz' ? ClipboardList : FileText" class="w-4 h-4 text-slate-400 group-hover:text-teal-600" />
 
                                         <div v-if="isOwnProfile && !activity.is_manual && ['Pending', 'Overdue', 'PENDING', 'OVERDUE'].includes(activity.status)">
-                                            <Link
-                                                :href="route('activities.show', activity.id)"
-                                                class="hover:text-teal-600 hover:underline cursor-pointer transition-colors"
-                                            >
+                                            <Link v-if="activity?.id" :href="route('activities.show', activity.id)" class="hover:text-teal-600 hover:underline">
                                                 {{ activity.title }}
                                             </Link>
+                                            <span v-else>{{ activity.title }}</span>
                                         </div>
-                                        <div v-else>
-                                            {{ activity.title }}
-                                        </div>
-
+                                        <div v-else>{{ activity.title }}</div>
                                     </div>
-                                    <div class="flex items-center gap-3 mt-2 font-bold uppercase text-[8px] ml-9 font-sans">
-                                        <Badge class="rounded-none px-2 py-0 border-none shadow-none"
-                                            :class="{'bg-purple-100 text-purple-700': activity.type === 'Quiz', 'bg-teal-100 text-teal-700': activity.type === 'Activity', 'bg-slate-100 text-slate-500': activity.type === 'Manual'}"
-                                        >{{ activity.type }}</Badge>
-                                        <div v-if="activity.due_date" class="flex items-center gap-1.5 px-2 py-0.5 bg-white border border-slate-100 shadow-sm" :class="isOverdue(activity) ? 'text-red-600' : 'text-slate-400'">
+                                    <div class="flex items-center gap-3 mt-2 font-bold uppercase text-[8px] ml-7">
+                                        <Badge class="rounded-none border-none" :class="activity.type === 'Quiz' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'">{{ activity.type }}</Badge>
+                                        <div v-if="activity.due_date" class="flex items-center gap-1.5" :class="isOverdue(activity) ? 'text-red-600' : 'text-slate-400'">
                                             <Calendar class="w-3 h-3" /> Due: {{ formatDate(activity.due_date) }}
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-8 py-5 text-center">
-                                    <Badge class="text-[9px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-none border-none shadow-sm" :class="(activity.status === 'Completed' || activity.status === 'COMPLETED') ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'">
+                                    <Badge class="text-[9px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-none border-none" :class="['Completed', 'COMPLETED'].includes(activity.status) ? 'bg-emerald-500 text-white' : 'bg-amber-100 text-amber-700'">
                                         {{ activity.status }}
                                     </Badge>
                                 </td>
-                                <td class="px-8 py-5 text-center font-bold text-slate-900 text-lg tracking-tighter font-sans">
+                                <td class="px-8 py-5 text-center font-bold text-slate-900 text-lg tracking-tighter">
                                     {{ activity.score }}<span v-if="activity.is_manual && activity.score && activity.score !== '-'">%</span>
                                 </td>
-                                <td class="px-8 py-5 text-right text-[11px] font-medium text-slate-400 uppercase tracking-widest font-sans">
+                                <td class="px-8 py-5 text-right text-[11px] font-medium text-slate-400 uppercase tracking-widest">
                                     {{ activity.submitted_at ? formatDate(activity.submitted_at) : '-' }}
                                 </td>
                                 <td v-if="!isOwnProfile" class="px-8 py-5 text-right">
-                                    <div class="flex items-center justify-end gap-1">
-                                        <template v-if="activity.is_manual">
-                                            <button @click="openEditModal(activity)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"><Pencil class="h-4 w-4" /></button>
-                                            <button @click="openDeleteModal(activity.id)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all active:scale-90"><Trash2 class="h-4 w-4" /></button>
-                                        </template>
+                                    <div v-if="activity.is_manual" class="flex items-center justify-end gap-1">
+                                        <button @click="openEditModal(activity)" class="p-2 text-slate-400 hover:text-blue-600 transition-all"><Pencil class="h-4 w-4" /></button>
+                                        <button @click="openDeleteModal(activity.id)" class="p-2 text-slate-400 hover:text-red-600 transition-all"><Trash2 class="h-4 w-4" /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -406,41 +331,26 @@ const isOverdue = (activity: any) => {
             </div>
         </div>
 
-        <div v-if="showModal && !isOwnProfile" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
-            <div class="w-full max-w-md bg-white p-10 shadow-2xl border-t-4 border-teal-600 rounded-none font-sans">
+        <div v-if="showModal && !isOwnProfile" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+            <div class="w-full max-w-md bg-white p-10 shadow-2xl border-t-4 border-teal-600 rounded-none">
                 <div class="mb-8 flex items-center justify-between">
                     <h3 class="text-sm font-bold uppercase tracking-[0.2em] text-slate-900">{{ isEditing ? 'Edit Entry' : 'New Score' }}</h3>
-                    <button @click="closeModal" class="text-slate-400 hover:text-slate-600 transition active:scale-90"><X class="h-5 w-5" /></button>
+                    <button @click="closeModal" class="text-slate-400 hover:text-slate-600"><X class="h-5 w-5" /></button>
                 </div>
-
                 <form @submit.prevent="validateAndSubmit" class="space-y-6">
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Activity Title</label>
-                        <input
-                            v-model="form.title"
-                            type="text"
-                            placeholder="Enter activity title..."
-                            class="w-full rounded-none border border-slate-300 bg-slate-50 text-sm focus:border-teal-500 focus:ring-0 py-4 px-4 font-medium transition-all placeholder:text-slate-400"
-                        />
-                        <div v-if="form.errors.title" class="text-red-400 text-sm mt-1">
-                             {{ form.errors.title }}
-                        </div>
+                        <input v-model="form.title" type="text" class="w-full rounded-none border-slate-300 bg-slate-50 text-sm py-4 px-4 focus:border-teal-500 focus:ring-0" />
+                        <div v-if="form.errors.title" class="text-red-400 text-sm mt-1">{{ form.errors.title }}</div>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Score / Grade</label>
-                        <input
-                            v-model="form.score"
-                            type="number"
-                            placeholder="Enter activity score"
-                            class="w-full rounded-none border border-slate-300 bg-slate-50 text-sm focus:border-teal-500 focus:ring-0 py-4 px-4 font-medium transition-all placeholder:text-slate-400"
-                        />
-                        <div v-if="form.errors.score" class="text-red-400 text-sm mt-1">
-                             {{ form.errors.score }}
-                        </div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 tracking-widest">Score (%)</label>
+                        <input v-model="form.score" type="number" class="w-full rounded-none border-slate-300 bg-slate-50 text-sm py-4 px-4 focus:border-teal-500 focus:ring-0" />
+                        <div v-if="form.errors.score" class="text-red-400 text-sm mt-1">{{ form.errors.score }}</div>
                     </div>
                     <div class="flex justify-end gap-4 pt-6 border-t border-slate-100">
-                        <button type="button" @click="closeModal" class="text-[10px] font-bold uppercase text-slate-400 tracking-widest hover:text-slate-600 transition-colors">Cancel</button>
-                        <Button type="submit" class="bg-slate-900 text-white rounded-none uppercase text-[10px] tracking-widest py-4 px-10 hover:bg-teal-600 transition-colors shadow-lg active:scale-95" :disabled="form.processing">
+                        <button type="button" @click="closeModal" class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Cancel</button>
+                        <Button type="submit" class="bg-slate-900 text-white rounded-none uppercase text-[10px] tracking-widest py-4 px-10 hover:bg-teal-600" :disabled="form.processing">
                             Save Entry
                         </Button>
                     </div>
@@ -448,40 +358,5 @@ const isOverdue = (activity: any) => {
             </div>
         </div>
 
-        <div v-if="showConfirmEditModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
-            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
-                <div class="flex flex-col items-center text-center">
-                    <div class="mb-4 rounded-full bg-amber-50 p-3">
-                        <AlertTriangle class="h-6 w-6 text-amber-500" />
-                    </div>
-                    <h3 class="mb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Confirm Update</h3>
-                    <p class="mb-6 text-sm text-slate-500">
-                        Proceed with saving these changes? This will update the material details for all students.
-                    </p>
-                    <div class="flex w-full gap-3">
-                        <button @click="showConfirmEditModal = false" class="w-full border border-slate-200 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors">No, Cancel</button>
-                        <button @click="proceedWithSave" class="w-full bg-slate-900 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-teal-600 transition-colors shadow-md">Yes, Proceed</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showDeleteModal" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans">
-            <div class="bg-white max-w-md w-full p-10 shadow-2xl border border-slate-200 rounded-none">
-                <div class="flex flex-col items-center text-center">
-                    <div class="mb-4 rounded-full bg-red-50 p-3">
-                        <AlertTriangle class="h-6 w-6 text-red-600" />
-                    </div>
-                    <h3 class="mb-2 text-lg font-bold uppercase tracking-widest text-slate-900">Confirm Deletion</h3>
-                    <p class="mb-6 text-sm text-slate-500">
-                        Are you sure you want to remove this resource permanently? This action cannot be undone.
-                    </p>
-                    <div class="flex w-full gap-3">
-                        <button @click="showDeleteModal = false" class="w-full border border-slate-200 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-                        <button @click="confirmDelete" class="w-full bg-red-600 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-red-700 transition-colors shadow-md">Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </AppSidebarLayout>
+        </AppSidebarLayout>
 </template>
